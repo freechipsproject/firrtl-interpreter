@@ -24,7 +24,7 @@ ANY, PROVIDED HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION
 TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
 MODIFICATIONS.
 */
-package fir_terp
+package firrtl_interpreter
 
 object TestUtils {
   val MaxWidth = InterpreterMaxSupportedWidth
@@ -78,7 +78,7 @@ object TestUtils {
   }
 }
 
-import TestUtils._
+import firrtl_interpreter.TestUtils._
 
 /**
   * Is an iterator for a list of values limited to those within (-1,0,+1) of a power of two, including the

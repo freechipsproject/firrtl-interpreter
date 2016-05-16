@@ -1,4 +1,4 @@
-package fir_terp
+package firrtl_interpreter
 
 /**
   * Created by chick on 4/21/16.

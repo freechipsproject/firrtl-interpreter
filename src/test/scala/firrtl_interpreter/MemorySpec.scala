@@ -24,10 +24,10 @@ ANY, PROVIDED HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION
 TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
 MODIFICATIONS.
 */
-package fir_terp
+package firrtl_interpreter
 
-import firrtl.{IntWidth, UIntType, NoInfo, DefMemory}
-import org.scalatest.{Matchers, FlatSpec}
+import firrtl.{DefMemory, IntWidth, NoInfo, UIntType}
+import org.scalatest.{FlatSpec, Matchers}
 
 
 class MemorySpec extends FlatSpec with Matchers {

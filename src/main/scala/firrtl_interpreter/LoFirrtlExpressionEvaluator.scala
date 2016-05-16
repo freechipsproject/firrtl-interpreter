@@ -25,7 +25,7 @@ TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
 MODIFICATIONS.
 */
 
-package fir_terp
+package firrtl_interpreter
 
 import firrtl._
 

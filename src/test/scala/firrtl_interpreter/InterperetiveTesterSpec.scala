@@ -1,8 +1,8 @@
 // See LICENSE for license details.
 
-package fir_terp
+package firrtl_interpreter
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 class InterperetiveTesterSpec extends FlatSpec with Matchers {
   behavior of "cycle mechanism"

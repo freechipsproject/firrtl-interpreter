@@ -1,7 +1,7 @@
-package fir_terp
+package firrtl_interpreter
 
 import firrtl._
-import org.scalatest.{ShouldMatchers, FlatSpec}
+import org.scalatest.{FlatSpec, ShouldMatchers}
 
 /**
   * Created by chick on 4/21/16.

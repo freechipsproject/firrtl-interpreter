@@ -24,12 +24,12 @@ ANY, PROVIDED HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION
 TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
 MODIFICATIONS.
 */
-package fir_terp
+package firrtl_interpreter
 
-import firrtl._
 import firrtl.Utils._
-import TestUtils._
-import org.scalatest.{Matchers, FlatSpec}
+import firrtl._
+import firrtl_interpreter.TestUtils._
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * Created by chick on 4/25/16.

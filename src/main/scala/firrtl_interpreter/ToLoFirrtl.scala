@@ -25,27 +25,21 @@ TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
 MODIFICATIONS.
 */
 
-package fir_terp
+package firrtl_interpreter
 
-import firrtl._
+import java.io.{StringWriter, Writer}
+
+import firrtl.{LowFirrtlCompiler, Circuit}
+import firrtl.passes._
 
 /**
   * Created by chick on 4/21/16.
   */
+object ToLoFirrtl {
+  def lower(c: Circuit): Circuit = {
+    val compiler = new LowFirrtlCompiler
 
-object TypeInstanceFactory {
-  def apply(typ: Type, initialValue: BigInt = 0): Concrete = {
-    typ match {
-      case u: UIntType => ConcreteUInt(initialValue, widthToInt(u.width))
-      case s: SIntType => ConcreteSInt(initialValue, widthToInt(s.width))
-      case c: ClockType => ConcreteUInt(if(initialValue > 0) 1 else 0, 1)
-      case _ => throw new InterpreterException(s"Unsupported LoFIRRTL type for interpreter $typ")
-    }
-  }
-  def apply(template: Concrete, value: BigInt) = {
-    template match {
-      case ConcreteUInt(_, width) => ConcreteUInt(value, width)
-      case ConcreteSInt(_, width) => ConcreteSInt(value, width)
-    }
+    val compileResult = compiler.compile(c, Seq(), new StringWriter())
+    compileResult.circuit
   }
 }

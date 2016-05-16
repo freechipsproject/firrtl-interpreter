@@ -1,4 +1,4 @@
-package object fir_terp {
+package object firrtl_interpreter {
 
   import firrtl._
 
