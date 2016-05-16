@@ -1,5 +1,7 @@
 package object fir_terp {
 
+  import firrtl._
+
   val InterpreterMaxSupportedWidth = 100
 
   val Big0 = BigInt(0)

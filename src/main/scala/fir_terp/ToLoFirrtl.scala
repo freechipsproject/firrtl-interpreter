@@ -27,50 +27,19 @@ MODIFICATIONS.
 
 package fir_terp
 
-import firrtl.Circuit
+import java.io.{StringWriter, Writer}
+
+import firrtl.{LowFirrtlCompiler, Circuit}
 import firrtl.passes._
 
 /**
   * Created by chick on 4/21/16.
   */
 object ToLoFirrtl {
-  // TODO: Verify this is the proper subset of passes that guarantees LoFirrtl
-  val passes = Seq(
-    CInferTypes,
-    CInferMDir,
-    RemoveCHIRRTL,
-    ToWorkingIR,
-    CheckHighForm,
-    ResolveKinds,
-    InferTypes,
-    CheckTypes,
-    Uniquify,
-    ResolveKinds,
-    InferTypes,
-    ResolveGenders,
-    CheckGenders,
-    InferWidths,
-    CheckWidths,
-    PullMuxes,
-    ExpandConnects,
-    RemoveAccesses,
-    ExpandWhens,
-    CheckInitialization,
-    ResolveKinds,
-    InferTypes,
-    ResolveGenders,
-    InferWidths,
-    Legalize,
-    LowerTypes,
-    ResolveKinds,
-    InferTypes,
-    ResolveGenders,
-    InferWidths,
-    SplitExp,
-    ConstProp
-  )
-
   def lower(c: Circuit): Circuit = {
-    PassUtils.executePasses(c, passes)
+    val compiler = new LowFirrtlCompiler
+
+    val compileResult = compiler.compile(c, Seq(), new StringWriter())
+    compileResult.circuit
   }
 }

@@ -28,7 +28,6 @@ MODIFICATIONS.
 package fir_terp
 
 import firrtl._
-import TypeInstanceFactory
 
 // TODO: Add poison concept/multi-state
 // TODO: try inlining pass
@@ -159,7 +158,7 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
 
 object FirrtlTerp {
   def apply(input: String, verbose: Boolean = false): FirrtlTerp = {
-    val ast = Parser.parse("", input.split("\n").toIterator)
+    val ast = firrtl.Parser.parse(input.split("\n").toIterator)
     val interpreter = new FirrtlTerp(ast)
     interpreter.setVerbose(verbose)
     interpreter.evaluateCircuit()
