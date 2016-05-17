@@ -72,7 +72,7 @@ class LifeCellSpec extends FlatSpec with Matchers {
         |      """.stripMargin
 
     new InterpretiveTester(input) {
-      setVerbose()
+      // setVerbose()
 
       def setAlive(alive: Boolean): Unit = {
         poke("io_running", 0)
@@ -205,6 +205,7 @@ class LifeCellSpec extends FlatSpec with Matchers {
       step(1)
       expect("io_is_alive", 0)
 
+      report()
     }
 
 

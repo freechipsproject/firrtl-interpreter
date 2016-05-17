@@ -111,7 +111,7 @@ class MemorySpec extends FlatSpec with Matchers {
     var lastValue = Big0
     val key = "memory1.write1"
     for (i <- 0 until memory.depth) {
-      println(s"Write test slot $i" + ("="*80))
+      // println(s"Write test slot $i" + ("="*80))
       memory.setValue(key + ".en", ConcreteUInt(1, 1))
       memory.setValue(key + ".addr", ConcreteUInt(i, memory.addressWidth))
       memory.setValue(key + ".mask", ConcreteUInt(1, dataWidth))
@@ -136,24 +136,24 @@ class MemorySpec extends FlatSpec with Matchers {
       memory.dataStore(i) = ConcreteUInt(i * 4, dataWidth)
     }
 
-    println(s"memory is ${memory.dataStore.map(_.value).mkString(",")}")
+    // println(s"memory is ${memory.dataStore.map(_.value).mkString(",")}")
 
     lastValue = 999
     val staleValue = ConcreteUInt(lastValue, dataWidth)
     memory.setValue(key + ".data", staleValue)
 
     for (i <- 0 until memory.depth) {
-      println(s"Checking memory slot $i" + ("=" * 80))
+      // println(s"Checking memory slot $i" + ("=" * 80))
       memory.setValue(key + ".en", ConcreteUInt(1, 1))
       memory.setValue(key + ".addr", ConcreteUInt(i, memory.addressWidth))
-      println("enable and address set")
+      // println("enable and address set")
 
       memory.cycle()
       memory.getValue(key + ".data").value should be (i * 4)
 
       lastValue = i * 4
 
-      println(s"got value $i ${memory.getValue(key+".data").value}")
+      // println(s"got value $i ${memory.getValue(key+".data").value}")
     }
   }
 
@@ -170,7 +170,7 @@ class MemorySpec extends FlatSpec with Matchers {
       memory.dataStore(i) = ConcreteUInt(i * 3, dataWidth)
     }
 
-    println(s"memory is ${memory.dataStore.map(_.value).mkString(",")}")
+    // println(s"memory is ${memory.dataStore.map(_.value).mkString(",")}")
 
     lastValue = 999
     val staleValue = ConcreteUInt(lastValue, dataWidth)
