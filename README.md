@@ -101,6 +101,7 @@ class InterpreterUsageSpec extends FlatSpec with Matchers {
     tester.report()
   }
 }
+```
 
 ### About ports and names
 The firrtl transformations that result in LoFirrtl alter the names of ports.  What would be io.a becomes io_a and so forth.
