@@ -59,7 +59,6 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
   val loweredAst = ToLoFirrtl.lower(ast)
   println("LoFirrtl" + "="*120)
   println(loweredAst.serialize)
-  println(s"ast $loweredAst")
 
   override def setVerbose(value: Boolean): Unit = {
     super.setVerbose(value)

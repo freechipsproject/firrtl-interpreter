@@ -1,6 +1,8 @@
-name := "chisel-module-template"
+name := "firrtl-interpreter"
 
-version := "1.0"
+organization := "edu.berkeley.cs"
+
+version := "0.1"
 
 val chiselVersion = System.getProperty("chiselVersion", "3.0")
 
