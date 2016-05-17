@@ -74,33 +74,33 @@ class GCD extends Module {
 
 class InterpreterUsageSpec extends FlatSpec with Matchers {
 
-  "a" should "b" in {
+  "GCD" should "return correct values for a range of inputs" in {
     val s = Driver.emit(() => new GCD)
 
-    val interpretiveTester = new InterpretiveTester(s)
+    val tester = new InterpretiveTester(s)
 
     for {
-      i <- 20 to 60
-      j <- 20 to 60 
+      i <- 1 to 100
+      j <- 1 to 100
     } {
-      interpretiveTester.poke("io_a", i)
-      interpretiveTester.poke("io_b", j)
-      interpretiveTester.poke("io_e", 1)
-      interpretiveTester.step()
-      interpretiveTester.poke("io_e", 0)
+      tester.poke("io_a", i)
+      tester.poke("io_b", j)
+      tester.poke("io_e", 1)
+      tester.step()
+      tester.poke("io_e", 0)
 
       var cycles = 0
-      while (interpretiveTester.peek("io_v") != BigInt(1)) {
-        interpretiveTester.step()
+      while (tester.peek("io_v") != BigInt(1)) {
+        tester.step()
         cycles += 1
       }
-      interpretiveTester.peek("io_z") should be(BigInt(GCDCalculator.computeGcd(i, j)._1))
-      println(f"GCD(${i}%3d, ${j}%3d) => ${interpretiveTester.peek("io_z")}%3d in $cycles%3d cycles")
+      tester.expect("io_z", BigInt(GCDCalculator.computeGcd(i, j)._1))
+      // uncomment the println to see a lot of output
+      // println(f"GCD(${i}%3d, ${j}%3d) => ${interpretiveTester.peek("io_z")}%3d in $cycles%3d cycles")
     }
+    tester.report()
   }
 }
-```
-
 
 ### About ports and names
 The firrtl transformations that result in LoFirrtl alter the names of ports.  What would be io.a becomes io_a and so forth.
