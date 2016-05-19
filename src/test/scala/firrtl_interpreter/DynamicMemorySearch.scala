@@ -1,29 +1,4 @@
-/*
-Copyright (c) 2014 - 2016 The Regents of the University of
-California (Regents). All Rights Reserved.  Redistribution and use in
-source and binary forms, with or without modification, are permitted
-provided that the following conditions are met:
-   * Redistributions of source code must retain the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer.
-   * Redistributions in binary form must reproduce the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer in the documentation and/or other materials
-     provided with the distribution.
-   * Neither the name of the Regents nor the names of its contributors
-     may be used to endorse or promote products derived from this
-     software without specific prior written permission.
-IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT,
-SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS,
-ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF
-REGENTS HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF
-ANY, PROVIDED HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION
-TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
-MODIFICATIONS.
-*/
+// See LICENSE for license details.
 package firrtl_interpreter
 
 import org.scalatest.{FlatSpec, Matchers}
@@ -96,13 +71,15 @@ class DynamicMemorySearch extends FlatSpec with Matchers {
         step(1)
       }
 
+      println(s"${interpreter.circuitState.memories("list").toString}")
+
       for (k <- 0 until 160) {
         println(s"memory test iteration $k") // ${"X"*80}")
 
         // Compute a random address and value
         val wrAddr = random.nextInt(n - 1)
         val data   = random.nextInt((1 << w) - 1)
-//        println(s"setting memory($wrAddr) = $data")
+        println(s"setting memory($wrAddr) = $data")
 
         // poke it intro memory
         poke("io_en", 0)
@@ -119,18 +96,18 @@ class DynamicMemorySearch extends FlatSpec with Matchers {
         poke("io_en", 1)
         step(1)
         poke("io_en", 0)
-//        step(1)
         val expectedIndex = if (list.contains(target)) {
           list.indexOf(target)
         } else {
           list.length - 1
         }
+        // println(s"test pass $k ${this.interpreter.circuitState.prettyString()}")
 
         var waitCount = 0
         while(waitCount <= n && peek("io_done") == Big0) {
-//          println(s"Waiting for done $waitCount")
-//          println(this.interpreter.circuitState.prettyString())
-//          println(s"external list ${list.mkString(",")}")
+          // println(s"Waiting for done $waitCount")
+          // println(this.interpreter.circuitState.prettyString())
+          // println(s"external list ${list.mkString(",")}")
           step(1)
           waitCount += 1
         }

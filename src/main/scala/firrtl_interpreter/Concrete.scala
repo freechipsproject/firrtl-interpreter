@@ -1,33 +1,9 @@
-/*
-Copyright (c) 2014 - 2016 The Regents of the University of
-California (Regents). All Rights Reserved.  Redistribution and use in
-source and binary forms, with or without modification, are permitted
-provided that the following conditions are met:
-   * Redistributions of source code must retain the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer.
-   * Redistributions in binary form must reproduce the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer in the documentation and/or other materials
-     provided with the distribution.
-   * Neither the name of the Regents nor the names of its contributors
-     may be used to endorse or promote products derived from this
-     software without specific prior written permission.
-IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT,
-SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS,
-ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF
-REGENTS HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF
-ANY, PROVIDED HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION
-TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
-MODIFICATIONS.
-*/
+// See LICENSE for license details.
 package firrtl_interpreter
 
 import firrtl._
 
+// scalastyle:off number.of.methods
 trait Concrete {
   val value : BigInt
   val width : Int
@@ -60,33 +36,33 @@ trait Concrete {
   def /(that: Concrete): Concrete = {
     (this, that) match {
       case (ConcreteUInt(v1, w1), ConcreteUInt(v2, w2)) =>
-        if(that.value == BigInt(0)) PoisonedUInt(w1)
-        else ConcreteUInt(v1 / v2, w1)
+        if(that.value == BigInt(0)) { PoisonedUInt(w1) }
+        else { ConcreteUInt(v1 / v2, w1) }
       case (ConcreteUInt(v1, w1), ConcreteSInt(v2, w2)) =>
-        if(that.value == BigInt(0)) PoisonedSInt(w1)
-        else ConcreteSInt(v1 / v2, w1+1)
+        if(that.value == BigInt(0)) { PoisonedSInt(w1) }
+        else { ConcreteSInt(v1 / v2, w1 + 1) }
       case (ConcreteSInt(v1, w1), ConcreteUInt(v2, w2)) =>
-        if(that.value == BigInt(0)) PoisonedSInt(w1)
-        else ConcreteSInt(v1 / v2, w1)
+        if(that.value == BigInt(0)) { PoisonedSInt(w1) }
+        else { ConcreteSInt(v1 / v2, w1) }
       case (ConcreteSInt(v1, w1), ConcreteSInt(v2, w2)) =>
-        if(that.value == BigInt(0)) PoisonedSInt(w1)
-        else ConcreteSInt(v1 / v2, w1+1)
+        if(that.value == BigInt(0)) { PoisonedSInt(w1) }
+        else { ConcreteSInt(v1 / v2, w1 + 1) }
     }
   }
   def %(that: Concrete): Concrete = {
     (this, that) match {
       case (ConcreteUInt(v1, w1), ConcreteUInt(v2, w2)) =>
-        if(that.value == BigInt(0)) PoisonedUInt(w1.min(w2))
-        else ConcreteUInt(v1 % v2, w1.min(w2))
+        if(that.value == BigInt(0)) { PoisonedUInt(w1.min(w2)) }
+        else { ConcreteUInt(v1 % v2, w1.min(w2)) }
       case (ConcreteUInt(v1, w1), ConcreteSInt(v2, w2)) =>
-        if(that.value == BigInt(0)) PoisonedUInt(w1.min(w2))
-        else ConcreteUInt(v1 % v2, w1.min(w2))
+        if(that.value == BigInt(0)) { PoisonedUInt(w1.min(w2)) }
+        else { ConcreteUInt(v1 % v2, w1.min(w2)) }
       case (ConcreteSInt(v1, w1), ConcreteUInt(v2, w2)) =>
-        if(that.value == BigInt(0)) PoisonedSInt(w1.min(w2+1))
-        else ConcreteSInt(v1 % v2, w1.min(w2+1))
+        if(that.value == BigInt(0)) { PoisonedSInt(w1.min(w2 + 1)) }
+        else { ConcreteSInt(v1 % v2, w1.min(w2 + 1)) }
       case (ConcreteSInt(v1, w1), ConcreteSInt(v2, w2)) =>
-        if(that.value == BigInt(0)) PoisonedSInt(w1.min(w2))
-        else ConcreteSInt(v1 % v2, w1.min(w2))
+        if(that.value == BigInt(0)) { PoisonedSInt(w1.min(w2)) }
+        else { ConcreteSInt(v1 % v2, w1.min(w2)) }
     }
   }
   // Comparison operators
@@ -103,9 +79,14 @@ trait Concrete {
     case ConcreteSInt(v, w) => ConcreteSInt(this.value, this.width.max(n))
   }
   // Casting     TODO: I don't think this is done right, need to look at top bit each way
-  def asUInt: ConcreteUInt = ConcreteUInt(this.value, this.width)
+  def asUInt: ConcreteUInt = {
+    this match {
+      case si: ConcreteSInt => tail(0)
+      case _ => ConcreteUInt(this.value, this.width)
+    }
+  }
   def asSInt: ConcreteSInt = {
-    ConcreteSInt(this.value, this.width)
+    ConcreteSInt(if(this.value == Big1 && this.width == 1) -1 else this.value, this.width)
   }
   def asClock: ConcreteClock = ConcreteClock(boolToBigInt((this.value & BigInt(1)) > BigInt(0)))
   // Shifting
@@ -141,7 +122,7 @@ trait Concrete {
   }
   def >>(that: BigInt): Concrete = >>(that.toInt)
   def >>(shift: Int): Concrete = {
-    assert(shift > 0, s"ERROR:$this >> $shift $shift must be >= 0")
+    assert(shift >= 0, s"ERROR:$this >> $shift $shift must be >= 0")
     assert(shift < this.width, s"ERROR:$this >> $shift $shift must be >= 0")
     this match {
       case ConcreteUInt(thisValue, thisWidth) => ConcreteUInt(this.value >> shift, thisWidth - shift)
@@ -150,12 +131,12 @@ trait Concrete {
   }
   // Signed
   def cvt: ConcreteSInt = this match {
-    case ConcreteUInt(thisValue, thisWidth) => ConcreteSInt(thisValue, thisWidth+1)
+    case ConcreteUInt(thisValue, thisWidth) => ConcreteSInt(thisValue, thisWidth + 1)
     case ConcreteSInt(thisValue, thisWidth) => ConcreteSInt(thisValue, thisWidth)
   }
   def neg: ConcreteSInt = {
     //TODO: Is this right?
-    ConcreteSInt(-value, width+1)
+    ConcreteSInt(-value, width + 1)
   }
   def not: ConcreteUInt = this match {
     case ConcreteUInt(v, _) =>
@@ -207,18 +188,17 @@ trait Concrete {
   def tail(n: Int): ConcreteUInt = {
     assert(n >= 0, s"Error:TAIL_OP($this, n=$n) n must be >= 0")
     assert(n < width, s"Error:TAIL_OP($this, n=$n) n must be < ${this.width}")
-    if(n == 0) {
-      ConcreteUInt(value, width)
-    }
-    else {
+//    if(n == 0) {
+//      ConcreteUInt(value, width)
+//    }
+//    else {
       var x = Big0
       val bitsWanted = width - n
       for(i <- 0 until bitsWanted) {
         if(value.testBit(i)) x = x.setBit(i)
       }
-      x
       ConcreteUInt(x, bitsWanted)
-    }
+//    }
   }
 
   def andReduce: Concrete = this match {
@@ -292,12 +272,15 @@ case class ConcreteUInt(val value: BigInt, val width: Int) extends Concrete {
   }
   val bitsRequired = requiredBits(value)
   if((width > 0) && (bitsRequired > width)) {
-    throw new InterpreterException(s"error: ConcreteUInt($value, $width) bad width $width needs ${requiredBits(value.toInt)}")
+    throw new InterpreterException(
+      s"error: ConcreteUInt($value, $width) bad width $width needs ${requiredBits(value.toInt)}"
+    )
   }
   def forceWidth(newWidth:Int): ConcreteUInt = {
     if(newWidth == width) this else ConcreteUInt(this.value, newWidth)
   }
   def forceWidth(tpe: Type): ConcreteUInt = forceWidth(typeToWidth(tpe))
+  override def toString: String = s"$value.U<$width>"
 }
 /**
   * A runtime instance of a SInt
@@ -317,7 +300,9 @@ case class ConcreteSInt(val value: BigInt, val width: Int) extends Concrete {
   else {
     val bitsRequired = requiredBits(value)
     if ((width > 0) && (bitsRequired > width)) {
-      throw new InterpreterException(s"error: ConcreteSInt($value, $width) bad width $width needs ${requiredBits(value.toInt)}")
+      throw new InterpreterException(
+        s"error: ConcreteSInt($value, $width) bad width $width needs ${requiredBits(value.toInt)}"
+      )
     }
   }
 
@@ -325,13 +310,14 @@ case class ConcreteSInt(val value: BigInt, val width: Int) extends Concrete {
     if(newWidth == width) this else ConcreteSInt(this.value, newWidth)
   }
   def forceWidth(tpe: Type): ConcreteSInt = forceWidth(typeToWidth(tpe))
+  override def toString: String = s"$value.U<$width>"
 }
 case class ConcreteClock(val value: BigInt) extends Concrete {
   val width = 1
 
   def forceWidth(width: Int): ConcreteClock = {
-    if(width == 1) this
-    else throw new InterpreterException(s"withWidth($width) not supported for $this")
+    if(width == 1) { this }
+    else { throw new InterpreterException(s"withWidth($width) not supported for $this") }
   }
   def forceWidth(tpe: Type): ConcreteClock = forceWidth(typeToWidth(tpe))
 }

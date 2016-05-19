@@ -1,29 +1,4 @@
-/*
-Copyright (c) 2014 - 2016 The Regents of the University of
-California (Regents). All Rights Reserved.  Redistribution and use in
-source and binary forms, with or without modification, are permitted
-provided that the following conditions are met:
-   * Redistributions of source code must retain the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer.
-   * Redistributions in binary form must reproduce the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer in the documentation and/or other materials
-     provided with the distribution.
-   * Neither the name of the Regents nor the names of its contributors
-     may be used to endorse or promote products derived from this
-     software without specific prior written permission.
-IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT,
-SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS,
-ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF
-REGENTS HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF
-ANY, PROVIDED HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION
-TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
-MODIFICATIONS.
-*/
+// See LICENSE for license details.
 
 package firrtl_interpreter
 
@@ -54,7 +29,7 @@ import firrtl._
 class FirrtlTerp(ast: Circuit) extends SimpleLogger {
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
-  def stopResult       = lastStopResult.get
+  def stopResult: Int  = lastStopResult.get
 
   val loweredAst = ToLoFirrtl.lower(ast)
   println("LoFirrtl" + "="*120)
@@ -68,10 +43,13 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
   val dependencyGraph    = DependencyGraph(loweredAst)
 
   var circuitState = CircuitState(dependencyGraph)
+  println("Circuit state created")
+
   val evaluator = new LoFirrtlExpressionEvaluator(
     dependencyGraph = dependencyGraph,
     circuitState = circuitState
   )
+  println("evaluator created")
 
   def getValue(name: String): Concrete = {
     assert(dependencyGraph.validNames.contains(name),
@@ -105,8 +83,8 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
     circuitState.setValue(name, concreteValue)
   }
 
-  def hasInput(name: String)  = dependencyGraph.hasInput(name)
-  def hasOutput(name: String) = dependencyGraph.hasOutput(name)
+  def hasInput(name: String): Boolean  = dependencyGraph.hasInput(name)
+  def hasOutput(name: String): Boolean = dependencyGraph.hasOutput(name)
 
   def evaluateCircuit(specificDependencies: Seq[String] = Seq()): Unit = {
     log(s"clear ephemera")
@@ -129,13 +107,15 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
     evaluateCircuit(Seq(name))
   }
 
-  def cycle(showState: Boolean = false) = {
+  def cycle(showState: Boolean = false): Unit = {
     if(circuitState.isStale) {
       log("interpreter cycle() called, state is stale, re-evaluate Circuit")
       log(circuitState.prettyString())
       evaluateCircuit()
     }
-    else log(s"interpreter cycle() called, state is fresh")
+    else {
+      log(s"interpreter cycle() called, state is fresh")
+    }
 
     circuitState.cycle()
 
@@ -162,8 +142,5 @@ object FirrtlTerp {
     interpreter.setVerbose(verbose)
     interpreter.evaluateCircuit()
     interpreter
-  }
-
-  def main(args: Array[String]) {
   }
 }
