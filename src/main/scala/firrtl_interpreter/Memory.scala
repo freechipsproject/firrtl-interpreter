@@ -1,29 +1,4 @@
-/*
-Copyright (c) 2014 - 2016 The Regents of the University of
-California (Regents). All Rights Reserved.  Redistribution and use in
-source and binary forms, with or without modification, are permitted
-provided that the following conditions are met:
-   * Redistributions of source code must retain the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer.
-   * Redistributions in binary form must reproduce the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer in the documentation and/or other materials
-     provided with the distribution.
-   * Neither the name of the Regents nor the names of its contributors
-     may be used to endorse or promote products derived from this
-     software without specific prior written permission.
-IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT,
-SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS,
-ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF
-REGENTS HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF
-ANY, PROVIDED HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION
-TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
-MODIFICATIONS.
-*/
+// See LICENSE for license details.
 package firrtl_interpreter
 
 import firrtl.{DefMemory, Info, Type}
@@ -47,7 +22,7 @@ import scala.collection.mutable.ArrayBuffer
   * @param readWriters list of named read/write ports
   * @param readUnderWrite behavior
   */
-// TODO: Should we enable choke if fed values other than zero or 1 or things wider than 1
+// TODO: Should enable choke if fed values other than zero or 1 or things wider than 1
 class Memory(
               val info: Info,
               val name: String,
@@ -65,6 +40,9 @@ class Memory(
   val dataWidth    = typeToWidth(dataType)
   val addressWidth = requiredBits(depth)
   val bigDepth     = BigInt(depth)
+  var moduloIndex  = true
+
+  val maxMemoryInDefaultDisplay = 20
 
   assert(writeLatency == 1, s"Interpreter memory $name write latency $writeLatency not supported, must be 1")
   assert(readLatency <  2,  s"Interpreter memory $name read latency $readLatency not supported, must be 0 or 1")
@@ -79,9 +57,23 @@ class Memory(
   }
   val writePorts:     Array[WritePort]     = writers.map(writer => ports(writer).asInstanceOf[WritePort]).toArray
   val readPorts:      Array[ReadPort]      = readers.map(reader => ports(reader).asInstanceOf[ReadPort]).toArray
-  val readWritePorts: Array[ReadWritePort] = readWriters.map(readWriter => ports(readWriter).asInstanceOf[ReadWritePort]).toArray
+  val readWritePorts: Array[ReadWritePort] = readWriters.map { readWriter =>
+    ports(readWriter).asInstanceOf[ReadWritePort]
+  }.toArray
 
-  val dataStore: Array[Concrete] = Array.fill(depth)(Concrete(dataType))
+  /**
+    * wrap underlying data storage array so indexing is automatically constrained at depth
+    */
+  class DataStore {
+    val underlyingData: Array[Concrete] = Array.fill(depth)(Concrete(dataType))
+    def apply(index: Int): Concrete = underlyingData(index % depth)
+    def update(index: Int, value: Concrete): Unit = {
+      underlyingData(index % depth) = value
+    }
+    def length: Int = underlyingData.length
+  }
+
+  val dataStore = new DataStore
 
   def getValue(key: String): Concrete = {
     key match {
@@ -100,7 +92,7 @@ class Memory(
     * @param key full ram.port.field specifier
     * @param concreteValue current value
     */
-  def setValue(key: String, concreteValue: Concrete) = {
+  def setValue(key: String, concreteValue: Concrete): Unit = {
     key match {
       case KeyPattern(memoryName, portName, fieldName) =>
         assert(name == memoryName, s"Error:bad dispatch memory($name).setValue($key, $concreteValue)")
@@ -124,16 +116,21 @@ class Memory(
     log(s"memory cycled $toString")
   }
 
-  def getFieldDependencies(portName: String): Seq[String] = {
-    ports(portName).fieldDependencies
+  def getAllFieldDependencies: Seq[String] = {
+    (readPorts ++ writePorts ++ readWritePorts).flatMap { case port: MemoryPort => port.fieldDependencies}
+  }
+  def getAllOutputFields: Seq[(String, Seq[String])] = {
+    (readPorts ++ writePorts ++ readWritePorts).map { case port: MemoryPort =>
+      (port.outputFieldName, port.fieldDependencies)
+    }
   }
 
   override def toString: String = {
     s"memory $name" +
     readPorts.mkString(" rp:", ",", "") +
     writePorts.mkString(" wp:", ",", " ") +
-    readWritePorts.mkString(" rwp:", ",", " ") +
-      (0 until depth.min(20)).map( a => dataStore(a).value).mkString(",")
+    readWritePorts.mkString(" rwp:[", ",", "] mem: ") +
+      (0 until depth.min(maxMemoryInDefaultDisplay)).map(a => dataStore(a).value).mkString(",")
   }
 
   trait PipeLineElement
@@ -168,6 +165,7 @@ class Memory(
       }
     }
     def fieldDependencies: Seq[String]
+    val outputFieldName: String = s"$name.$portName.data"
     val fullName: String = s"memory $name.$portName"
   }
 
@@ -232,7 +230,7 @@ class Memory(
         Array.fill(latency)(elementFromSnapshot)
     }
 
-    def elementFromSnapshot = {
+    def elementFromSnapshot: WritePipeLineElement = {
       WritePipeLineElement(enable, address, data, mask)
     }
 
@@ -300,7 +298,7 @@ class Memory(
     val writePipeLine : ArrayBuffer[WritePipeLineElement] = {
       ArrayBuffer.fill[WritePipeLineElement](writeLatency)(writeElementFromSnapshot)
     }
-    def writeElementFromSnapshot = {
+    def writeElementFromSnapshot: WritePipeLineElement = {
       WritePipeLineElement(enable && writeMode, address, data, mask)
     }
     def inputHasChanged(): Unit = {
@@ -366,6 +364,7 @@ class Memory(
 
     }
     val fieldDependencies = Seq("en", "addr", "mask", "wmode").map { fieldName => s"$name.$portName.$fieldName"}
+    override val outputFieldName = "$name.$portName.rdata"
 
     override def toString: String = {
       s"[${if(writeMode)"W" else "R"}:$enable:$address:${data.value}:${readData.value},${mask.value}" +
@@ -397,5 +396,5 @@ object Memory {
       case _ => key
     }
   }
-  val KeyPattern = """([^\.]*)\.([^\.]*)\.([^\.]*)""".r
+  val KeyPattern = """(.*)\.([^\.]*)\.([^\.]*)""".r
 }

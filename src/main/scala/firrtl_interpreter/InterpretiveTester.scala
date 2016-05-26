@@ -1,29 +1,4 @@
-/*
-Copyright (c) 2014 - 2016 The Regents of the University of
-California (Regents). All Rights Reserved.  Redistribution and use in
-source and binary forms, with or without modification, are permitted
-provided that the following conditions are met:
-   * Redistributions of source code must retain the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer.
-   * Redistributions in binary form must reproduce the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer in the documentation and/or other materials
-     provided with the distribution.
-   * Neither the name of the Regents nor the names of its contributors
-     may be used to endorse or promote products derived from this
-     software without specific prior written permission.
-IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT,
-SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS,
-ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF
-REGENTS HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF
-ANY, PROVIDED HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION
-TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
-MODIFICATIONS.
-*/
+// See LICENSE for license details.
 package firrtl_interpreter
 
 /**
@@ -46,6 +21,8 @@ class InterpretiveTester(input: String) {
   def setVerbose(value: Boolean = true): Unit = {
     interpreter.setVerbose(value)
   }
+
+  val startTime = System.nanoTime()
 
   /**
     * Pokes value to the port referenced by string
@@ -82,6 +59,7 @@ class InterpretiveTester(input: String) {
 
   /**
     * require that a value be present on the named component
+ *
     * @param name component name
     * @param expectedValue the BigInt value required
     */
@@ -104,6 +82,7 @@ class InterpretiveTester(input: String) {
   /**
     * Cycles the circuit n steps (with a default of one)
     * At each step registers and memories are advanced and all other elements recomputed
+ *
     * @param n cycles to perform
     */
   def step(n: Int = 1): Unit = {
@@ -116,9 +95,13 @@ class InterpretiveTester(input: String) {
     * A simplistic report of the number of expects that passed and
     */
   def report(): Unit = {
+    val endTime = System.nanoTime()
+    val elapsedSeconds = (endTime - startTime).toDouble / 1000000000.0
     println(
       s"test ${interpreter.loweredAst.modules.head.name} " +
         s"Success: $expectationsMet tests passed " +
-        s"in ${interpreter.circuitState.stateCounter} cycles")
+        s"in ${interpreter.circuitState.stateCounter} cycles " +
+        f"taking $elapsedSeconds%.6f seconds"
+    )
   }
 }

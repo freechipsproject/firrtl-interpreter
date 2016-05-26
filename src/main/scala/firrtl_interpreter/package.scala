@@ -1,3 +1,5 @@
+// See LICENSE for license details.
+
 package object firrtl_interpreter {
 
   import firrtl._
@@ -32,8 +34,10 @@ package object firrtl_interpreter {
     * @return
     */
   def requiredBits(num: BigInt): Int = {
-    //    if(num > BitsRequiredOverflowSizeBigInt) throw new InterpreterException(s"Error:requiredBits num $num > $BitsRequiredOverflowSizeBigInt")
-    if(num < 2) 1 + (if(num < 0) 1 else 0)
+    // if(num > BitsRequiredOverflowSizeBigInt) {
+    //   throw new InterpreterException(s"Error:requiredBits num $num > $BitsRequiredOverflowSizeBigInt")
+    // }
+    if(num < 2) { 1 + (if(num < 0) 1 else 0) }
     else if(num > BitsRequiredOverflowSizeBigInt) {
       var width = DangerShiftSize
       var comparison = Big1 << width
