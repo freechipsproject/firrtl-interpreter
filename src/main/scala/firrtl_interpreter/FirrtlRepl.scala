@@ -22,7 +22,7 @@ abstract class Command(val name: String) {
   }
 }
 
-class FirrtlRepl(replConfig: ReplConfig) {
+class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
   val terminal = TerminalFactory.create()
   val console = new ConsoleReader
   val historyPath = "~/.firrtl_repl_history".replaceFirst("^~",System.getProperty("user.home"))
@@ -590,6 +590,14 @@ class FirrtlRepl(replConfig: ReplConfig) {
 
 
   def run() {
+    if(replConfig.firrtlSourceName.nonEmpty) {
+      loadFile(replConfig.firrtlSourceName)
+    }
+    if(replConfig.scriptName.nonEmpty) {
+      loadScript(replConfig.scriptName)
+    }
+
+
     buildCompletions()
 
     console.setPrompt("firrtl>> ")
@@ -659,19 +667,12 @@ object FirrtlRepl {
     opt[String]('s', "script") action { (x, c) =>
       c.copy(scriptName = x)
     } text { "script file to load" }
-
   }
+
   def main(args: Array[String]): Unit = {
     parser.parse(args, ReplConfig()) match {
       case Some(replConfig) =>
         val repl = new FirrtlRepl(replConfig)
-        if(replConfig.firrtlSourceName.nonEmpty) {
-          repl.loadFile(replConfig.firrtlSourceName)
-        }
-        if(replConfig.scriptName.nonEmpty) {
-          repl.loadScript(replConfig.scriptName)
-        }
-
         repl.run()
       case _ =>
     }
