@@ -1,29 +1,4 @@
-/*
-Copyright (c) 2014 - 2016 The Regents of the University of
-California (Regents). All Rights Reserved.  Redistribution and use in
-source and binary forms, with or without modification, are permitted
-provided that the following conditions are met:
-   * Redistributions of source code must retain the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer.
-   * Redistributions in binary form must reproduce the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer in the documentation and/or other materials
-     provided with the distribution.
-   * Neither the name of the Regents nor the names of its contributors
-     may be used to endorse or promote products derived from this
-     software without specific prior written permission.
-IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT,
-SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS,
-ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF
-REGENTS HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF
-ANY, PROVIDED HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION
-TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
-MODIFICATIONS.
-*/
+// See LICENSE for license details.
 
 package firrtl_interpreter
 
@@ -38,11 +13,41 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @param circuitState  the state of the system, should not be modified before all dependencies have been resolved
   */
-class LoFirrtlExpressionEvaluator(dependencyGraph: DependencyGraph, circuitState: CircuitState) extends SimpleLogger {
+class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circuitState: CircuitState)
+  extends SimpleLogger {
   var toResolve = mutable.HashSet(dependencyGraph.keys.toSeq:_*)
-  val inProcess = toResolve.empty
 
-  val expressionStack = new ArrayBuffer[Expression]
+  var evaluateAll = false
+
+  var exceptionCaught = false
+
+  var useTopologicalSortedKeys = false
+
+  var allowCombinationalLoops = false
+
+  case class StackItem(lhsOpt: Option[String], expression: Expression) {
+    override def toString: String = {
+      s"${dependencyGraph.addKind(lhsOpt.getOrElse("     "))} -> ${expression.serialize}"
+    }
+  }
+
+  val evaluationStack = new ExpressionExecutionStack(this)
+
+  var defaultKeysToResolve = {
+    val keys = new mutable.HashSet[String]
+
+    keys ++= circuitState.memories.flatMap {
+      case (name, memory) => memory.getAllFieldDependencies
+    }.filter(dependencyGraph.nameToExpression.contains)
+
+    keys ++= dependencyGraph.outputPorts
+
+    keys ++= dependencyGraph.registerNames
+    keys.toArray
+  }
+
+  var keyOrderInitialized = false
+  val orderedKeysToResolve = new ArrayBuffer[String]()
 
   /**
     * get the value from the current circuit state, if it is dependent on something else
@@ -53,20 +58,11 @@ class LoFirrtlExpressionEvaluator(dependencyGraph: DependencyGraph, circuitState
     * @return
     */
   def getValue(key: String): Concrete = {
-    key match {
-      case Memory.KeyPattern(memoryName, portName, fieldName) =>
-        if(fieldName == "data") {
-          log(s"resolving: rhs memory data reference, dispatching implicit dependencies")
-          circuitState.getMemoryDependencies(memoryName, portName).foreach { dependentKey =>
-            if(toResolve.contains(dependentKey)) {
-              resolveDependency(dependentKey)
-            }
-          }
-        }
-        else {
-          log("resolving memory key")
-        }
-      case _ =>
+    if(dependencyGraph.memoryOutputKeys.contains(key)) {
+      val dependentKeys = dependencyGraph.memoryOutputKeys(key)
+      for (elem <- dependentKeys) {
+        resolveDependency(elem)
+      }
     }
     circuitState.getValue(key) match {
       case Some(value) => value
@@ -251,33 +247,53 @@ class LoFirrtlExpressionEvaluator(dependencyGraph: DependencyGraph, circuitState
     * Note: OpCodes here are double matched, once in main loop herein, then again in function suitable for that
     * family of opCodes, it makes the code cleaner, I think, but may ultimately need to be inlined for performance
     */
-  def evaluate(expression: Expression): Concrete = {
-    log(s"evaluate $expression")
+  // scalastyle:off cyclomatic.complexity method.length
+  def evaluate(expression: Expression, leftHandSideOption: Option[String] = None): Concrete = {
+    log(
+      leftHandSideOption match {
+        case Some(key) => s"evaluate     ${leftHandSideOption.getOrElse("")} <= ${expression.serialize}"
+        case _         => s"evaluate     ${expression.serialize}"
+      }
+    )
     indent()
-    expressionStack += expression
+
+    if(! evaluationStack.push(leftHandSideOption, expression)) {
+      if(allowCombinationalLoops) {
+        return ConcreteUInt(1, 1)
+      }
+    }
 
     val result = try {
       expression match {
         case Mux(condition, trueExpression, falseExpression, tpe) =>
-          val v = if (evaluate(condition).value > 0) {
-            evaluate(trueExpression)
+          evaluate(condition) match {
+            case ConcreteUInt(value, 1) =>
+              val v = if (evaluate(condition).value > 0) {
+                if(evaluateAll) { evaluate(falseExpression)}
+                evaluate(trueExpression)
+              }
+              else {
+                if(evaluateAll) { evaluate(trueExpression)}
+                evaluate(falseExpression)
+              }
+              v.forceWidth(tpe)
+            case v =>
+              throw InterpreterException(s"mux($condition) must be (0|1).U<1> was $v")
           }
-          else {
-            evaluate(falseExpression)
-          }
-          v.forceWidth(tpe)
         case WRef(name, tpe, kind, gender) => getValue(name).forceWidth(tpe)
         case ws: WSubField =>
-          val name = expression.serialize
+          val name = ws.serialize
           getValue(name).forceWidth(ws.tpe)
         case ws: WSubIndex =>
-          val name = expression.serialize
+          val name = ws.serialize
           getValue(name).forceWidth(ws.tpe)
         case ValidIf(condition, value, tpe) =>
           if (evaluate(condition).value > 0) {
             evaluate(value).forceWidth(tpe)
           }
           else {
+            if(evaluateAll) { evaluate(value)}
+
             tpe match {
               case UIntType(IntWidth(w)) => Concrete.randomUInt(w.toInt)
               case SIntType(IntWidth(w)) => Concrete.randomSInt(w.toInt)
@@ -340,85 +356,84 @@ class LoFirrtlExpressionEvaluator(dependencyGraph: DependencyGraph, circuitState
     }
     catch {
       case ie: Exception =>
-        println(s"Error: ${ie.getMessage}")
-        println("Expression Evaluation stack")
-        println(expressionStack.mkString("  ", "\n  ", ""))
+        if(! exceptionCaught) {
+          println(s"Exception during evaluation: ${ie.getMessage}")
+          showStack()
+          exceptionCaught = true
+        }
         throw ie
       case ie: AssertionError =>
-        println(s"Error: ${ie.getMessage}")
-        println("Expression Evaluation stack")
-        println(expressionStack.mkString("  ", "\n  ", ""))
+        if(! exceptionCaught) {
+          println(s"Assertion during evaluation: ${ie.getMessage}")
+          showStack()
+          exceptionCaught = true
+        }
         throw ie
     }
 
-    expressionStack.remove(expressionStack.size-1)
+    evaluationStack.pop()
     dedent()
     log(s"evaluator:returns:$result")
 
     result
   }
+  // scalastyle:on
+
+
+  def showStack(): Unit = {
+    println("Expression Evaluation stack")
+    println(evaluationStack.stackListing)
+  }
 
   private def resolveDependency(key: String): Concrete = {
-    if(toResolve.contains(key)) {
-      toResolve -= key
-    }
-    else {
-      key match {
-        case Memory.KeyPattern(memoryName, portName, fieldName) =>
-          if(fieldName == "data") {
-            log(s"resolving: rhs memory data reference, dispatching implicit dependencies")
-            circuitState.getMemoryDependencies(memoryName, portName).foreach { dependentKey =>
-              if(toResolve.contains(dependentKey)) {
-                resolveDependency(dependentKey)
-              }
-            }
-          }
-          else {
-            log("resolving memory key")
-          }
-        case _ =>
-          throw new InterruptedException(s"Error: attempt to resolve dependency for unknown key $key")
+    resolveDepth += 1
+
+    val value = Timer(key) {
+      if (circuitState.isInput(key)) {
+        circuitState.getValue(key).get
+      }
+      else if (dependencyGraph.nameToExpression.contains(key)) {
+        val expression = dependencyGraph.nameToExpression(key)
+        evaluate(expression, Some(key))
+      }
+      else if (dependencyGraph.memoryKeys.contains(key)) {
+        dependencyGraph.memoryKeys(key).getValue(key)
+      }
+      else {
+        throw new InterpreterException(s"error: don't know what to do with key $key")
+        //      ConcreteUInt(0, 1)
       }
     }
 
-//    toResolve -= key
-
-    log(s"resolveDependency:start: $key")
-    resolveDepth += 1
-
-    val value = if(circuitState.isInput(key)) {
-      circuitState.getValue(key).get
-    }
-    else {
-      val expression = dependencyGraph.nameToExpression(key)
-      evaluate(expression)
+    if(useTopologicalSortedKeys && ! keyOrderInitialized) {
+      orderedKeysToResolve += key
     }
     circuitState.setValue(key, value)
 
     resolveDepth -= 1
-    log(s"resolveDependency:done: $key <= $value")
 
     value
   }
 
-  def resolveDependencies(specificDependencies: Seq[String]): Unit = {
-    toResolve = {
-      if (specificDependencies.isEmpty) mutable.HashSet(dependencyGraph.keys.toSeq: _*)
-      else mutable.HashSet(specificDependencies: _*)
+  def resolveDependencies(specificDependencies: Iterable[String]): Unit = {
+    val toResolve: Iterable[String] = {
+      if(useTopologicalSortedKeys && keyOrderInitialized) {
+        orderedKeysToResolve
+      } else {
+        defaultKeysToResolve
+      }
     }
 
-    val memKeys = toResolve.filter { circuitState.isMemory }
-    toResolve --= memKeys
+    exceptionCaught = false
+    evaluationStack.clear()
 
-    while (memKeys.nonEmpty) {
-      val key = memKeys.head
+    for(key <- toResolve) {
       resolveDependency(key)
-      memKeys -= key
     }
 
-    while (toResolve.nonEmpty) {
-      val key = toResolve.head
-      resolveDependency(key)
+    if(useTopologicalSortedKeys && ! keyOrderInitialized) {
+      println(s"Key order ${orderedKeysToResolve.mkString("\n")}")
+      keyOrderInitialized = true
     }
   }
 
@@ -426,8 +441,10 @@ class LoFirrtlExpressionEvaluator(dependencyGraph: DependencyGraph, circuitState
     for(registerDef <- dependencyGraph.registers) {
       val resetCondition = evaluate(registerDef.reset)
       if(resetCondition.value > 0 ) {
-        val resetValue = evaluate(registerDef.init).forceWidth(typeToWidth(dependencyGraph.nameToType(registerDef.name)))
-        println(s"Register ${registerDef.name} reset to $resetValue")
+        val resetValue = {
+          evaluate(registerDef.init).forceWidth(typeToWidth(dependencyGraph.nameToType(registerDef.name)))
+        }
+        // println(s"Register ${registerDef.name} reset to $resetValue")
         circuitState.nextRegisters(registerDef.name) = resetValue
       }
     }
@@ -435,7 +452,7 @@ class LoFirrtlExpressionEvaluator(dependencyGraph: DependencyGraph, circuitState
 
   def checkStops(): Option[Int] = {
     for(stopStatement <- dependencyGraph.stops) {
-      if(evaluate(stopStatement.en).value > 0) {
+      if(evaluate(stopStatement.en, Some("stop")).value > 0) {
         if(stopStatement.ret == 0) {
           println(s"Success:${stopStatement.info}")
           return Some(0)

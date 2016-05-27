@@ -1,29 +1,4 @@
-/*
-Copyright (c) 2014 - 2016 The Regents of the University of
-California (Regents). All Rights Reserved.  Redistribution and use in
-source and binary forms, with or without modification, are permitted
-provided that the following conditions are met:
-   * Redistributions of source code must retain the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer.
-   * Redistributions in binary form must reproduce the above
-     copyright notice, this list of conditions and the following
-     two paragraphs of disclaimer in the documentation and/or other materials
-     provided with the distribution.
-   * Neither the name of the Regents nor the names of its contributors
-     may be used to endorse or promote products derived from this
-     software without specific prior written permission.
-IN NO EVENT SHALL REGENTS BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT,
-SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS,
-ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF
-REGENTS HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-REGENTS SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE. THE SOFTWARE AND ACCOMPANYING DOCUMENTATION, IF
-ANY, PROVIDED HEREUNDER IS PROVIDED "AS IS". REGENTS HAS NO OBLIGATION
-TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
-MODIFICATIONS.
-*/
+// See LICENSE for license details.
 package firrtl_interpreter
 
 import firrtl.Utils._
@@ -35,6 +10,49 @@ import org.scalatest.{FlatSpec, Matchers}
   * Created by chick on 4/25/16.
   */
 class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
+  behavior of "Mux"
+
+  it should "throw exception if condition is not (0|1).U<1> , return true and false branch correctly" in {
+
+    val input =
+      """circuit Test :
+        |  module Test :
+        |    input clk : Clock
+        |    input a : UInt<1>
+        |    output c : UInt<2>
+        |    reg w : UInt<1>, clk
+        |    w <= a
+        |    c <= w
+      """.stripMargin
+
+    val interpreter = FirrtlTerp(input)
+    val evaluator = new LoFirrtlExpressionEvaluator(interpreter.dependencyGraph, interpreter.circuitState)
+
+    val (trueBranch, trueResult)   = (UIntValue(1, IntWidth(1)), ConcreteUInt(1, 1))
+    val (falseBranch, falseResult) = (UIntValue(0, IntWidth(1)), ConcreteUInt(0, 1))
+
+    var condition: Expression = UIntValue(0, IntWidth(1))
+    var expression = Mux(condition, trueBranch, falseBranch, UIntType(IntWidth(1)))
+    var result = evaluator.evaluate(expression)
+    result should be (falseResult)
+
+    condition = UIntValue(1, IntWidth(1))
+    expression = Mux(condition, trueBranch, falseBranch, UIntType(IntWidth(1)))
+    result = evaluator.evaluate(expression)
+    result should be (trueResult)
+
+    condition = SIntValue(1, IntWidth(1))
+    expression = Mux(condition, trueBranch, falseBranch, UIntType(IntWidth(1)))
+    intercept[InterpreterException] {
+      evaluator.evaluate(expression)
+    }
+    condition = UIntValue(1, IntWidth(2))
+    expression = Mux(condition, trueBranch, falseBranch, UIntType(IntWidth(1)))
+    intercept[InterpreterException] {
+      evaluator.evaluate(expression)
+    }
+  }
+
   behavior of "Primitive ops"
 
   val input =
@@ -54,7 +72,7 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
 
   val baseWidth = 4
 
-  def makeSignedBigInt = {
+  private def makeSignedBigInt = {
     BigInt(baseWidth, random) * (if(random.nextBoolean()) 1 else -1)
   }
   they should "return types correctly" in {
@@ -141,9 +159,9 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
 
   behavior of "SHIFT_RIGHT_OP"
 
-  it should "throw assertions when parameter is zero" in {
+  it should "throw assertions when parameter is less than zero" in {
     intercept[AssertionError] {
-      evaluator.bitOps(SHIFT_RIGHT_OP, Seq(UIntValue(1, IntWidth(3))), Seq(0), UIntType(IntWidth(3)))
+      evaluator.bitOps(SHIFT_RIGHT_OP, Seq(UIntValue(1, IntWidth(3))), Seq(-1), UIntType(IntWidth(3)))
     }
     intercept[AssertionError] {
       evaluator.bitOps(SHIFT_RIGHT_OP, Seq(UIntValue(1, IntWidth(3))), Seq(4), UIntType(IntWidth(3)))
@@ -380,4 +398,16 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
       }
     }
   }
+
+  behavior of "combinational loops"
+
+  it should "throw exception when found" in {
+    //    val input = io.Source.fromFile("src/test/resources/rocket.fir").mkString
+    val input = io.Source.fromFile("src/test/resources/HasLoop.fir").mkString
+
+    intercept[InterpreterException] {
+      FirrtlTerp(input)
+    }
+  }
+
 }
