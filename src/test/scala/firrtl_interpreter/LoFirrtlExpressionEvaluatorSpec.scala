@@ -10,6 +10,49 @@ import org.scalatest.{FlatSpec, Matchers}
   * Created by chick on 4/25/16.
   */
 class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
+  behavior of "Mux"
+
+  it should "throw exception if condition is not (0|1).U<1> , return true and false branch correctly" in {
+
+    val input =
+      """circuit Test :
+        |  module Test :
+        |    input clk : Clock
+        |    input a : UInt<1>
+        |    output c : UInt<2>
+        |    reg w : UInt<1>, clk
+        |    w <= a
+        |    c <= w
+      """.stripMargin
+
+    val interpreter = FirrtlTerp(input)
+    val evaluator = new LoFirrtlExpressionEvaluator(interpreter.dependencyGraph, interpreter.circuitState)
+
+    val (trueBranch, trueResult)   = (UIntValue(1, IntWidth(1)), ConcreteUInt(1, 1))
+    val (falseBranch, falseResult) = (UIntValue(0, IntWidth(1)), ConcreteUInt(0, 1))
+
+    var condition: Expression = UIntValue(0, IntWidth(1))
+    var expression = Mux(condition, trueBranch, falseBranch, UIntType(IntWidth(1)))
+    var result = evaluator.evaluate(expression)
+    result should be (falseResult)
+
+    condition = UIntValue(1, IntWidth(1))
+    expression = Mux(condition, trueBranch, falseBranch, UIntType(IntWidth(1)))
+    result = evaluator.evaluate(expression)
+    result should be (trueResult)
+
+    condition = SIntValue(1, IntWidth(1))
+    expression = Mux(condition, trueBranch, falseBranch, UIntType(IntWidth(1)))
+    intercept[InterpreterException] {
+      evaluator.evaluate(expression)
+    }
+    condition = UIntValue(1, IntWidth(2))
+    expression = Mux(condition, trueBranch, falseBranch, UIntType(IntWidth(1)))
+    intercept[InterpreterException] {
+      evaluator.evaluate(expression)
+    }
+  }
+
   behavior of "Primitive ops"
 
   val input =
@@ -29,7 +72,7 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
 
   val baseWidth = 4
 
-  def makeSignedBigInt = {
+  private def makeSignedBigInt = {
     BigInt(baseWidth, random) * (if(random.nextBoolean()) 1 else -1)
   }
   they should "return types correctly" in {

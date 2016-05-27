@@ -266,15 +266,20 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     val result = try {
       expression match {
         case Mux(condition, trueExpression, falseExpression, tpe) =>
-          val v = if (evaluate(condition).value > 0) {
-            if(evaluateAll) { evaluate(falseExpression)}
-            evaluate(trueExpression)
+          evaluate(condition) match {
+            case ConcreteUInt(value, 1) =>
+              val v = if (evaluate(condition).value > 0) {
+                if(evaluateAll) { evaluate(falseExpression)}
+                evaluate(trueExpression)
+              }
+              else {
+                if(evaluateAll) { evaluate(trueExpression)}
+                evaluate(falseExpression)
+              }
+              v.forceWidth(tpe)
+            case v =>
+              throw InterpreterException(s"mux($condition) must be (0|1).U<1> was $v")
           }
-          else {
-            if(evaluateAll) { evaluate(trueExpression)}
-            evaluate(falseExpression)
-          }
-          v.forceWidth(tpe)
         case WRef(name, tpe, kind, gender) => getValue(name).forceWidth(tpe)
         case ws: WSubField =>
           val name = ws.serialize

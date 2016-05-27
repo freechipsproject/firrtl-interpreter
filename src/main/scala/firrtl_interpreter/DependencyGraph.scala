@@ -91,7 +91,7 @@ object DependencyGraph extends SimpleLogger {
         showNode("DefRegister", name, s"clock <- ${resetExpression.serialize}", renameExpression(resetExpression).serialize)
         showNode("DefRegister", name, s"clock <- ${initValueExpression.serialize}", renameExpression(initValueExpression).serialize)
         val renamedDefRegister = DefRegister(
-          info, name, tpe,
+          info, expand(name), tpe,
           renameExpression(clockExpression),
           renameExpression(resetExpression),
           renameExpression(initValueExpression)
