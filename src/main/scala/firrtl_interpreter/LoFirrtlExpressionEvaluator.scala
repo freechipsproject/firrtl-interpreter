@@ -25,12 +25,6 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
 
   var allowCombinationalLoops = false
 
-  case class StackItem(lhsOpt: Option[String], expression: Expression) {
-    override def toString: String = {
-      s"${dependencyGraph.addKind(lhsOpt.getOrElse("     "))} -> ${expression.serialize}"
-    }
-  }
-
   val evaluationStack = new ExpressionExecutionStack(this)
 
   var defaultKeysToResolve = {
@@ -251,7 +245,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
   def evaluate(expression: Expression, leftHandSideOption: Option[String] = None): Concrete = {
     log(
       leftHandSideOption match {
-        case Some(key) => s"evaluate     ${leftHandSideOption.getOrElse("")} <= ${expression.serialize}"
+        case Some(key) => s"evaluate     ${leftHandSideOption.getOrElse("")} <= ${expression.serialize} ${dependencyGraph.getInfo(key)}"
         case _         => s"evaluate     ${expression.serialize}"
       }
     )
@@ -260,6 +254,13 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     if(! evaluationStack.push(leftHandSideOption, expression)) {
       if(allowCombinationalLoops) {
         return ConcreteUInt(1, 1)
+      }
+    }
+
+    def sourceInfo: String = {
+      leftHandSideOption match {
+        case Some(key) => dependencyGraph.getInfo(key)
+        case _ => ""
       }
     }
 
@@ -278,7 +279,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
               }
               v.forceWidth(tpe)
             case v =>
-              throw InterpreterException(s"mux($condition) must be (0|1).U<1> was $v")
+              throw InterpreterException(s"mux($condition) must be (0|1).U<1> was $v $sourceInfo")
           }
         case WRef(name, tpe, kind, gender) => getValue(name).forceWidth(tpe)
         case ws: WSubField =>
@@ -347,7 +348,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
             case TAIL_OP => bitOps(op, args, const, tpe)
 
             case _ =>
-              throw new InterruptedException(s"PrimOP $op in $expression not yet supported")
+              throw new InterruptedException(s"PrimOP $op in $expression not yet supported $sourceInfo")
           }
           v.forceWidth(tpe)
         case c: UIntValue => Concrete(c).forceWidth(c.tpe)
@@ -357,14 +358,14 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     catch {
       case ie: Exception =>
         if(! exceptionCaught) {
-          println(s"Exception during evaluation: ${ie.getMessage}")
+          println(s"Exception during evaluation: ${ie.getMessage} $sourceInfo")
           showStack()
           exceptionCaught = true
         }
         throw ie
       case ie: AssertionError =>
         if(! exceptionCaught) {
-          println(s"Assertion during evaluation: ${ie.getMessage}")
+          println(s"Assertion during evaluation: ${ie.getMessage} $sourceInfo")
           showStack()
           exceptionCaught = true
         }
