@@ -16,7 +16,7 @@ object DependencyGraph extends SimpleLogger {
 
   /**
     * finds the specified module name in the circuit
- *
+    *
     * @param moduleName name to find
     * @param circuit circuit being analyzed
     * @return the circuit, exception occurs in not found
@@ -78,6 +78,7 @@ object DependencyGraph extends SimpleLogger {
         val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
         log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
         processModule(newPrefix, subModule, dependencyGraph)
+        dependencyGraph.addSourceInfo(newPrefix, info)
         s
       case DefNode(info, name, expression) =>
         log(s"declaration:DefNode:$name:${expression.serialize} ${renameExpression(expression).serialize}")
@@ -85,6 +86,7 @@ object DependencyGraph extends SimpleLogger {
         dependencyGraph.nodes += expandedName
         dependencyGraph.recordName(expandedName)
         dependencyGraph(expandedName) = renameExpression(expression)
+        dependencyGraph.addSourceInfo(expandedName, info)
         s
       case DefWire(info, name, tpe) =>
         log(s"declaration:DefWire:$name")
@@ -92,6 +94,7 @@ object DependencyGraph extends SimpleLogger {
         dependencyGraph.wires += expandedName
         dependencyGraph.recordName(expandedName)
         dependencyGraph.recordType(expandedName, tpe)
+        dependencyGraph.addSourceInfo(expandedName, info)
         s
       case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
         log(s"declaration:DefRegister:$name clock <- ${clockExpression.serialize} ${renameExpression(clockExpression).serialize}")
@@ -108,11 +111,14 @@ object DependencyGraph extends SimpleLogger {
         dependencyGraph.recordName(expandedName)
         dependencyGraph.recordType(expandedName, tpe)
         dependencyGraph.registers += renamedDefRegister
+        dependencyGraph.addSourceInfo(expandedName, info)
         s
       case defMemory: DefMemory =>
-        log(s"declaration:DefMemory:${defMemory.name}")
-        val newDefMemory = defMemory.copy(name = expand(defMemory.name))
+        val expandedName = expand(defMemory.name)
+        log(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
+        val newDefMemory = defMemory.copy(name = expandedName)
         dependencyGraph.addMemory(newDefMemory)
+        dependencyGraph.addSourceInfo(expandedName, defMemory.info)
         s
       case IsInvalid(info, expression) =>
         IsInvalid(info, renameExpression(expression))
@@ -205,7 +211,7 @@ object DependencyGraph extends SimpleLogger {
   * It also maintains lists or sets of ports, registers, memories, stop and printf statements.
   * The above information is created by the companion object which does the actual work
   * of traversing the circuit and discovering the various components and expressions
- *
+  *
   * @param circuit the AST being analyzed
   * @param module top level module in the AST, used elsewhere to find top level ports
   */
@@ -220,7 +226,7 @@ class DependencyGraph(val circuit: Circuit, val module: Module) {
   val memoryOutputKeys = new mutable.HashMap[String, Seq[String]]
   val stops            = new ArrayBuffer[Stop]
   val prints           = new ArrayBuffer[Print]
-  val sourceInfo       = new mutable.HashMap[String, Info]
+  val sourceInfo       = new mutable.HashMap[String, String]
 
   val inputPorts       = new mutable.HashSet[String]
   val outputPorts      = new mutable.HashSet[String]
@@ -253,8 +259,19 @@ class DependencyGraph(val circuit: Circuit, val module: Module) {
     newMemory
   }
 
+  def addSourceInfo(name: String, info: Info): Unit = {
+    info match {
+      case f: FileInfo => sourceInfo(name) = f.toString
+      case _ => // I don't know what to do with other annotations
+    }
+  }
+
   def hasInput(name: String): Boolean = inputPorts.contains(name)
   def hasOutput(name: String): Boolean = outputPorts.contains(name)
+
+  def getInfo(name: String): String = {
+    sourceInfo.getOrElse(name, "").toString
+  }
 
   def addKind(key: String): String = {
     if(registerNames.contains(key)) {

@@ -5,10 +5,16 @@ package firrtl_interpreter
 import org.scalatest.{Matchers, FlatSpec}
 
 class SourceInfoSpec extends FlatSpec with Matchers {
-  val input = io.Source.fromFile("src/test/resources/FullAdder.ir").mkString
+  behavior of "source information"
 
-  val f = FirrtlTerp(input)
+  it should "be visible when logging and errors occur" in {
+    val input = io.Source.fromFile("src/test/resources/FullAdder.ir").mkString
 
-  f.dependencyGraph.validNames.contains("a_xor_b") should be (true)
+    val f = FirrtlTerp(input)
+
+    f.evaluator.setVerbose(true)
+    f.cycle()
+    f.dependencyGraph.sourceInfo("a_and_b") should fullyMatch regex ".*FullAdder.scala 19:22.*"
+  }
 
 }
