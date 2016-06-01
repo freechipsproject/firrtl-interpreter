@@ -245,8 +245,10 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
   def evaluate(expression: Expression, leftHandSideOption: Option[String] = None): Concrete = {
     log(
       leftHandSideOption match {
-        case Some(key) => s"evaluate     ${leftHandSideOption.getOrElse("")} <= ${expression.serialize} ${dependencyGraph.getInfo(key)}"
-        case _         => s"evaluate     ${expression.serialize}"
+        case Some(key) =>
+          s"evaluate     ${leftHandSideOption.getOrElse("")} <= ${expression.serialize} ${dependencyGraph.getInfo(key)}"
+        case _         =>
+          s"evaluate     ${expression.serialize}"
       }
     )
     indent()

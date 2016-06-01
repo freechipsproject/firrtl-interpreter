@@ -2,6 +2,7 @@
 
 package vcd
 
+import java.io.PrintWriter
 import java.text.{SimpleDateFormat, DateFormat}
 
 import collection._
@@ -41,6 +42,17 @@ object VCD {
   }
 }
 
+/**
+  * Accumlates changes to wires in a running circuit.  If a wire is changed that it doesn't know about it
+  * will add it to the list.  Only actual changed values will be seen in final output.  This version only supports
+  * a single top level scope because right now that is what the firrtl-interpreter supports.  It probably is not too
+  * too hard to add, all wires are initialized to 'x' in this version.
+  * @param date date file was created
+  * @param version this software version, but I suppose this could be a DUT version
+  * @param comment could be a comment
+  * @param timeScale seems to be more text (I like to work in picoseconds)
+  * @param scope Not really used here except as the name of the top level module
+  */
 case class VCD(
            date: String,
            version: String,
@@ -73,7 +85,7 @@ case class VCD(
     incrementId()
   }
 
-  def wireChanged(wireName: String, value: BigInt): Unit = {
+  def wireChanged(wireName: String, value: BigInt, width: Int = 1): Unit = {
 
     def updateInfo(): Unit = {
       val wire = wires(wireName)
@@ -83,9 +95,12 @@ case class VCD(
       changeSet += change
     }
 
+    if(! wires.contains(wireName)) {
+      addWire(wireName, width: Int)
+    }
     lastValues.get(wireName) match {
       case Some(lastValue) =>
-        if(lastValue.newValue != value) {
+        if(lastValue.value != value) {
           updateInfo()
         }
       case _ =>
@@ -149,6 +164,13 @@ case class VCD(
       serializeStartup + "\n" +
       serializeChanges
   }
+
+  def write(fileName: String): Unit = {
+    new PrintWriter(fileName) {
+      write(serialize)
+      close()
+    }
+  }
 }
 
 case class Wire(name: String, id: String, width: Int) {
@@ -157,20 +179,26 @@ case class Wire(name: String, id: String, width: Int) {
   }
 }
 
-case class Change(wire: Wire, newValue: BigInt) {
+/**
+  * holds the information about
+ *
+  * @param wire wire who's status is being monitored
+  * @param value the value this wire now has
+  */
+case class Change(wire: Wire, value: BigInt) {
   def serialize: String = {
     if(wire.width == 1) {
-      s"$newValue${wire.id}"
+      s"$value${wire.id}"
     }
     else {
       "b" +
-        (wire.width - 1 to 0 by -1).map { index => if(newValue.testBit(index)) "1" else "0" }.mkString("") +
+        (wire.width - 1 to 0 by -1).map { index => if (value.testBit(index)) "1" else "0" }.mkString("") +
         s" ${wire.id}"
     }
   }
   def serializeUnitialized: String = {
     if(wire.width == 1) {
-      s"$newValue${wire.id}"
+      s"$value${wire.id}"
     }
     else {
       "b" +

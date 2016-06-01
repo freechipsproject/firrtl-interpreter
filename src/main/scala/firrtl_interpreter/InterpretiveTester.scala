@@ -13,10 +13,13 @@ package firrtl_interpreter
   *
   * @param input a firrtl program contained in a string
   */
-class InterpretiveTester(input: String) {
+class InterpretiveTester(input: String, useVCD: Boolean = false) {
   var expectationsMet = 0
 
   val interpreter = FirrtlTerp(input)
+  if(useVCD) {
+    interpreter.circuitState.makeVCDLogger(interpreter.dependencyGraph)
+  }
 
   def setVerbose(value: Boolean = true): Unit = {
     interpreter.setVerbose(value)
