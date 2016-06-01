@@ -7,12 +7,21 @@ import firrtl._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
+/**
+  * contains the constructor for a dependency graph.  The code for traversing a circuit
+  * and discovering the components and the expressions lives here
+  */
 object DependencyGraph extends SimpleLogger {
   val MaxColumnWidth = 100 // keeps displays of expressions readable
-  var statements = 0
-  var nodes = 0
 
-  def findTopLevelModule(moduleName: String, circuit: Circuit): Module = {
+  /**
+    * finds the specified module name in the circuit
+ *
+    * @param moduleName name to find
+    * @param circuit circuit being analyzed
+    * @return the circuit, exception occurs in not found
+    */
+  def findModule(moduleName: String, circuit: Circuit): Module = {
     circuit.modules.find(module => module.name == moduleName) match {
       case Some(module) =>
         module
@@ -26,7 +35,7 @@ object DependencyGraph extends SimpleLogger {
     def expand(name: String): String = if(modulePrefix.isEmpty) name else modulePrefix + "." + name
 
     def renameExpression(expression: Expression): Expression = {
-      nodes += 1
+      dependencyGraph.numberOfNodes += 1
       val result = expression match {
         case Mux(condition, trueExpression, falseExpression, tpe) =>
           Mux(
@@ -51,11 +60,7 @@ object DependencyGraph extends SimpleLogger {
       result
     }
 
-    def showNode(kind: String, name: String, expression: String, renamedExpression: String = ""): Unit = {
-      log(s"declaration:$kind:$name $expression $renamedExpression")
-    }
-
-    statements += 1
+    dependencyGraph.numberOfStatements += 1
     s match {
       case begin: Begin =>
         begin.stmts.map { case subStatement =>
@@ -69,41 +74,43 @@ object DependencyGraph extends SimpleLogger {
         }
         con
       case WDefInstance(info, instanceName, moduleName, tpe) =>
-        val subModule = findTopLevelModule(moduleName, dependencyGraph.circuit)
+        val subModule = findModule(moduleName, dependencyGraph.circuit)
         val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
-        showNode("WDefInstance", instanceName, moduleName, s"prefix now $newPrefix")
+        log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
         processModule(newPrefix, subModule, dependencyGraph)
         s
-      case DefNode(_, name, expression) =>
-        showNode("DefNode", name, expression.serialize, renameExpression(expression).serialize)
-        dependencyGraph.nodes += expand(name)
-        dependencyGraph.recordName(expand(name))
-        dependencyGraph(expand(name)) = renameExpression(expression)
+      case DefNode(info, name, expression) =>
+        log(s"declaration:DefNode:$name:${expression.serialize} ${renameExpression(expression).serialize}")
+        val expandedName = expand(name)
+        dependencyGraph.nodes += expandedName
+        dependencyGraph.recordName(expandedName)
+        dependencyGraph(expandedName) = renameExpression(expression)
         s
       case DefWire(info, name, tpe) =>
-        showNode("DefWire", name, "")
-        dependencyGraph.wires += expand(name)
-        dependencyGraph.recordName(expand(name))
-        dependencyGraph.recordType(expand(name), tpe)
+        log(s"declaration:DefWire:$name")
+        val expandedName = expand(name)
+        dependencyGraph.wires += expandedName
+        dependencyGraph.recordName(expandedName)
+        dependencyGraph.recordType(expandedName, tpe)
         s
       case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
-        showNode("DefRegister", name, s"clock <- ${clockExpression.serialize}", renameExpression(clockExpression).serialize)
-        showNode("DefRegister", name, s"clock <- ${resetExpression.serialize}", renameExpression(resetExpression).serialize)
-        showNode("DefRegister", name, s"clock <- ${initValueExpression.serialize}", renameExpression(initValueExpression).serialize)
+        log(s"declaration:DefRegister:$name clock <- ${clockExpression.serialize} ${renameExpression(clockExpression).serialize}")
+        log(s"declaration:DefRegister:$name reset <- ${resetExpression.serialize} ${renameExpression(resetExpression).serialize}")
+        log(s"declaration:DefRegister:$name init  <- ${initValueExpression.serialize} ${renameExpression(initValueExpression).serialize}")
         val renamedDefRegister = DefRegister(
           info, expand(name), tpe,
           renameExpression(clockExpression),
           renameExpression(resetExpression),
           renameExpression(initValueExpression)
         )
-        dependencyGraph.registerNames += expand(name)
-        dependencyGraph.recordName(expand(name))
-        dependencyGraph.recordType(expand(name), tpe)
+        val expandedName = expand(name)
+        dependencyGraph.registerNames += expandedName
+        dependencyGraph.recordName(expandedName)
+        dependencyGraph.recordType(expandedName, tpe)
         dependencyGraph.registers += renamedDefRegister
         s
       case defMemory: DefMemory =>
-        showNode("DefMemory", defMemory.name, "")
-        //TODO: the name of the memory needs to be expanded, if memories are still present in firrtl
+        log(s"declaration:DefMemory:${defMemory.name}")
         val newDefMemory = defMemory.copy(name = expand(defMemory.name))
         dependencyGraph.addMemory(newDefMemory)
         s
@@ -159,13 +166,13 @@ object DependencyGraph extends SimpleLogger {
   }
 
   def apply(circuit: Circuit): DependencyGraph = {
-    val module = findTopLevelModule(circuit.main, circuit)
-    nodes = 0
-    statements = 0
-
+    val module = findModule(circuit.main, circuit)
     val dependencyGraph = new DependencyGraph(circuit, module)
 
-//    setVerbose(true)
+    dependencyGraph.numberOfNodes = 0
+    dependencyGraph.numberOfStatements = 0
+
+    //    setVerbose(true)
 
     processModule("", module, dependencyGraph)
 
@@ -192,6 +199,16 @@ object DependencyGraph extends SimpleLogger {
   }
 }
 
+/**
+  * A (probably overly complex) map of the names to expressions that occur in @circuit
+  * This is used by the expression evaluator to follow dependencys
+  * It also maintains lists or sets of ports, registers, memories, stop and printf statements.
+  * The above information is created by the companion object which does the actual work
+  * of traversing the circuit and discovering the various components and expressions
+ *
+  * @param circuit the AST being analyzed
+  * @param module top level module in the AST, used elsewhere to find top level ports
+  */
 class DependencyGraph(val circuit: Circuit, val module: Module) {
   val nameToExpression = new scala.collection.mutable.HashMap[String, Expression]
   val validNames       = new mutable.HashSet[String]
@@ -203,12 +220,16 @@ class DependencyGraph(val circuit: Circuit, val module: Module) {
   val memoryOutputKeys = new mutable.HashMap[String, Seq[String]]
   val stops            = new ArrayBuffer[Stop]
   val prints           = new ArrayBuffer[Print]
+  val sourceInfo       = new mutable.HashMap[String, Info]
 
   val inputPorts       = new mutable.HashSet[String]
   val outputPorts      = new mutable.HashSet[String]
   val nodes            = new mutable.HashSet[String]
   val wires            = new mutable.HashSet[String]
   val inlinedPorts     = new mutable.HashSet[String]
+
+  var numberOfStatements = 0
+  var numberOfNodes = 0
 
   def update(key: String, e: Expression): Unit = nameToExpression(key) = e
   def apply(key: String): Option[Expression] = {

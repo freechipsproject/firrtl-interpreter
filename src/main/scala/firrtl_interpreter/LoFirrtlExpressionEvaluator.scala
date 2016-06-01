@@ -25,12 +25,6 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
 
   var allowCombinationalLoops = false
 
-  case class StackItem(lhsOpt: Option[String], expression: Expression) {
-    override def toString: String = {
-      s"${dependencyGraph.addKind(lhsOpt.getOrElse("     "))} -> ${expression.serialize}"
-    }
-  }
-
   val evaluationStack = new ExpressionExecutionStack(this)
 
   var defaultKeysToResolve = {

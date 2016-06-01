@@ -61,8 +61,9 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
       interpreter.evaluator.useTopologicalSortedKeys = replConfig.sortKeys
       console.println(s"Flags: $showFlags")
       console.println(
-        s"dependency graph ${interpreter.dependencyGraph.validNames.size} elements " +
-          s"${DependencyGraph.statements} statements ${DependencyGraph.nodes} nodes"
+        s"dependency graph ${interpreter.dependencyGraph.validNames.size} " +
+          s"elements ${interpreter.dependencyGraph.numberOfStatements} " +
+          s"statements ${interpreter.dependencyGraph.numberOfNodes} nodes"
       )
     }
     buildCompletions()
