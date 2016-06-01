@@ -7,24 +7,6 @@ import java.text.{SimpleDateFormat, DateFormat}
 import collection._
 import java.util.{Date, TimeZone, Calendar}
 
-class VCDFactory {
-  def apply(moduleName: String, timeScale: String = "1ps", comment: String = ""): VCD = {
-
-    val tz = TimeZone.getTimeZone("UTC")
-    val df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmZ")
-    df.setTimeZone(tz)
-    val nowAsISO = df.format(new Date())
-
-    new VCD(
-      nowAsISO,
-      VCD.Version,
-      comment,
-      timeScale,
-      moduleName
-    )
-  }
-}
-
 object VCD {
   val Version = "0.1"
 
@@ -41,6 +23,22 @@ object VCD {
 
   val idChars = (33 to 126).map { asciiValue => asciiValue.toChar.toString }
   val numberOfIdChars = idChars.length
+
+  def apply(moduleName: String, timeScale: String = "1ps", comment: String = ""): VCD = {
+
+    val tz = TimeZone.getTimeZone("UTC")
+    val df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmZ")
+    df.setTimeZone(tz)
+    val nowAsISO = df.format(new Date())
+
+    new VCD(
+      nowAsISO,
+      VCD.Version,
+      comment,
+      timeScale,
+      moduleName
+    )
+  }
 }
 
 case class VCD(
