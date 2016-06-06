@@ -25,3 +25,5 @@ libraryDependencies ++= Seq(
 //javaOptions in run ++= Seq(
     //"-Xms2G", "-Xmx4G", "-XX:MaxPermSize=1024M", "-XX:+UseConcMarkSweepGC")
 
+parallelExecution in Test := false
+
