@@ -65,9 +65,9 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
           s"elements ${interpreter.dependencyGraph.numberOfStatements} " +
           s"statements ${interpreter.dependencyGraph.numberOfNodes} nodes"
       )
+      interpreter.evaluator.timer.enabled = true
     }
     buildCompletions()
-    Timer.clear()
   }
 
   def loadScript(fileName: String): Unit = {
@@ -164,19 +164,26 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
         def usage: (String, String) = ("run [linesToRun|all|reset]", "run loaded script")
         override def completer: Option[ArgumentCompleter] = {
           Some(new ArgumentCompleter(
-            new StringsCompleter({"run"})
+            new StringsCompleter({"run"}),
+            new StringsCompleter(jlist(Seq("all", "reset", "list")))
           ))
         }
         def run(args: Array[String]): Unit = {
           currentScript match {
             case Some(script) =>
-              getOneArg("run [linesToRun|all|reset]", argOption = Some("all")) match {
+              getOneArg("run [linesToRun|all|reset|list]", argOption = Some("all")) match {
                 case Some("all")   =>
                   console.println("run all")
                   if(script.atEnd) { script.reset() }
                   else { script.runRemaining() }
                 case Some("reset") => script.reset()
                   console.println("run reset")
+                case Some("list") =>
+                  console.println(
+                    script.lines.zipWithIndex.map { case (line, index) =>
+                      f"$index%3d $line"
+                    }.mkString("\n")
+                  )
                 case Some(intPattern(intString)) =>
                   console.println(s"run $intString")
                   val linesToRun = intString.toInt
@@ -191,6 +198,30 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
           }
         }
       },
+      new Command("vcd") {
+        def usage: (String, String) = ("vcd fileName|[done]", "vcd loaded script")
+        override def completer: Option[ArgumentCompleter] = {
+          Some(new ArgumentCompleter(
+            new StringsCompleter({"vcd"}),
+            new FileNameCompleter
+          ))
+        }
+        def run(args: Array[String]): Unit = {
+          currentScript match {
+            case Some(script) =>
+              getOneArg("vcd [fileName|done]", argOption = Some("out.vcd")) match {
+                case Some("done")   =>
+                  interpreter.disableVCD()
+                case Some(fileName) =>
+                  interpreter.makeVCDLogger(fileName)
+                case _ =>
+                  interpreter.disableVCD()
+              }
+            case _ =>
+              error(s"No current script")
+          }
+        }
+      },
       new Command("poke") {
         def usage: (String, String) = ("poke inputPortName value", "set an input port to the given integer value")
         override def completer: Option[ArgumentCompleter] = {
@@ -198,14 +229,11 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
             None
           }
           else {
-            val inputPorts = ArrayBuffer.empty[String]
-            inputPorts ++= interpreter.dependencyGraph.inputPorts.toSeq
-            val list: java.util.List[String] = inputPorts.asJava
             Some(new ArgumentCompleter(
               new StringsCompleter({
                 "poke"
               }),
-              new StringsCompleter(list)
+              new StringsCompleter(jlist(interpreter.dependencyGraph.inlinedPorts.toSeq))
             ))
           }
         }
@@ -231,14 +259,11 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
             None
           }
           else {
-            val inputPorts = ArrayBuffer.empty[String]
-            inputPorts ++= interpreter.circuitState.validNames.toSeq
-            val list: java.util.List[String] = inputPorts.asJava
             Some(new ArgumentCompleter(
               new StringsCompleter({
                 "peek"
               }),
-              new StringsCompleter(list)
+              new StringsCompleter(jlist(interpreter.circuitState.validNames.toSeq))
             ))
           }
         }
@@ -302,9 +327,9 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
             case Some(numberOfStepsString) =>
               try {
                 val numberOfSteps = numberOfStepsString.toInt
-                Timer("steps") {
+                interpreter.timer("steps") {
                   for (stepNumber <- 0 until numberOfSteps) {
-                    Timer("step") {
+                    interpreter.timer("step") {
                       interpreter.cycle(showState = false)
                       interpreter.evaluateCircuit()
                     }
@@ -312,7 +337,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
                 }
                 if(! scriptRunning) {
                   console.println(interpreter.circuitState.prettyString())
-                  console.println(s"step $numberOfSteps in ${Timer.prettyLastTime("steps")}")
+                  console.println(s"step $numberOfSteps in ${interpreter.timer.prettyLastTime("steps")}")
                 }
               }
               catch {
@@ -371,25 +396,22 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
             None
           }
           else {
-            val validVerbose = ArrayBuffer.empty[String]
-            validVerbose ++= Seq("clear", "bin")
-            val list: java.util.List[String] = validVerbose.asJava
             Some(new ArgumentCompleter(
               new StringsCompleter({ "timing"}),
-              new StringsCompleter(list)
+              new StringsCompleter(jlist(Seq("clear", "bin")))
             ))
           }
         }
         // scalastyle:off cyclomatic.complexity
         def run(args: Array[String]): Unit = {
           getOneArg("", Some("")) match {
-            case Some("clear") => Timer.clear()
+            case Some("clear") => interpreter.timer.clear()
             case Some("bin") =>
               val names = interpreter.dependencyGraph.validNames -- interpreter.dependencyGraph.inputPorts
 
               val countPerName = new scala.collection.mutable.HashMap[Long, Long]
               names.foreach { name =>
-                Timer.timingLog.get(name).foreach { t =>
+                interpreter.timer.timingLog.get(name).foreach { t =>
                   if(! countPerName.contains(t.events)) {
                     countPerName(t.events) = 1
                   }
@@ -405,7 +427,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
               val names = interpreter.dependencyGraph.validNames -- interpreter.dependencyGraph.inputPorts
 
               val sortedNames = names.toSeq.sortWith { case (a, b) =>
-                (Timer.timingLog.get(a), Timer.timingLog.get(b)) match {
+                (interpreter.timer.timingLog.get(a), interpreter.timer.timingLog.get(b)) match {
                   case (Some(t1), Some(t2)) =>
                     if(t1.events == t2.events) {
                       a < b
@@ -419,8 +441,9 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
                 }
               }
               for (name <- sortedNames) {
-                console.println(s"$name:${Timer.entryFor(name)}")
+                console.println(f"$name%-20s ${interpreter.timer.prettyEntryForTag(name)}")
               }
+              console.println(f"${"Total"}%-20s ${interpreter.timer.prettyEntry(interpreter.timer.totalEvent)}")
           }
         }
       },
@@ -432,12 +455,9 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
             None
           }
           else {
-            val validVerbose = ArrayBuffer.empty[String]
-            validVerbose ++= Seq("true", "false", "toggle")
-            val list: java.util.List[String] = validVerbose.asJava
             Some(new ArgumentCompleter(
               new StringsCompleter({ "verbose"}),
-              new StringsCompleter(list)
+              new StringsCompleter(jlist(Seq("true", "false", "toggle")))
             ))
           }
         }
@@ -459,12 +479,9 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
             None
           }
           else {
-            val validVerbose = ArrayBuffer.empty[String]
-            validVerbose ++= Seq("true", "false", "toggle")
-            val list: java.util.List[String] = validVerbose.asJava
             Some(new ArgumentCompleter(
               new StringsCompleter({ "eval-all"}),
-              new StringsCompleter(list)
+              new StringsCompleter(jlist(Seq("true", "false", "toggle")))
             ))
           }
         }
@@ -486,12 +503,9 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
             None
           }
           else {
-            val validVerbose = ArrayBuffer.empty[String]
-            validVerbose ++= Seq("true", "false", "toggle")
-            val list: java.util.List[String] = validVerbose.asJava
             Some(new ArgumentCompleter(
               new StringsCompleter({ "allow-cycles"}),
-              new StringsCompleter(list)
+              new StringsCompleter(jlist(Seq("true", "false", "toggle")))
             ))
           }
         }
@@ -514,12 +528,9 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
             None
           }
           else {
-            val validVerbose = ArrayBuffer.empty[String]
-            validVerbose ++= Seq("true", "false", "toggle")
-            val list: java.util.List[String] = validVerbose.asJava
             Some(new ArgumentCompleter(
               new StringsCompleter({ "ordered-exec"}),
-              new StringsCompleter(list)
+              new StringsCompleter(jlist(Seq("true", "false", "toggle")))
             ))
           }
         }
@@ -531,7 +542,15 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
             case Some("false")  => interpreter.evaluator.useTopologicalSortedKeys = false
             case _ =>
           }
-          console.println(s"evaluator ordered-exec is now ${interpreter.evaluator.evaluateAll}")
+          if(interpreter.evaluator.useTopologicalSortedKeys) {
+            interpreter.setValueWithBigInt("reset", 1)
+            interpreter.evaluator.evaluateAll = true
+            interpreter.cycle(showState = false)
+            interpreter.evaluateCircuit()
+            interpreter.setValueWithBigInt("reset", 0)
+            interpreter.evaluator.evaluateAll = true
+          }
+          console.println(s"evaluator ordered-exec is now ${interpreter.evaluator.useTopologicalSortedKeys}")
         }
       },
       new Command("help") {
@@ -646,6 +665,12 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
   def showFlags: String = {
     s"allow-cycles: ${interpreter.evaluator.allowCombinationalLoops} " +
     s"ordered-exec: ${interpreter.evaluator.useTopologicalSortedKeys}"
+  }
+
+  def jlist(list: Seq[String]): java.util.List[String]= {
+    val array = ArrayBuffer.empty[String]
+    array ++= list
+    array.asJava
   }
 }
 

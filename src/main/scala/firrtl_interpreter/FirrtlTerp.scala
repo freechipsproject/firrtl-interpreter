@@ -45,10 +45,21 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
   var circuitState = CircuitState(dependencyGraph)
   println("Circuit state created")
 
+  def makeVCDLogger(fileName: String): Unit = {
+    circuitState.makeVCDLogger(dependencyGraph, fileName)
+  }
+  def disableVCD(): Unit = {
+    circuitState.disableVCD()
+  }
+  def writeVCD(): Unit = {
+    circuitState.writeVCD()
+  }
+
   val evaluator = new LoFirrtlExpressionEvaluator(
     dependencyGraph = dependencyGraph,
     circuitState = circuitState
   )
+  val timer = evaluator.timer
   println("evaluator created")
 
   def getValue(name: String): Concrete = {

@@ -43,6 +43,9 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
   var keyOrderInitialized = false
   val orderedKeysToResolve = new ArrayBuffer[String]()
 
+  val timer = new Timer
+  timer.enabled = false
+
   /**
     * get the value from the current circuit state, if it is dependent on something else
     * we haven't computed yet. resolve this new dependency first then pull it's value from the
@@ -245,14 +248,17 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
   def evaluate(expression: Expression, leftHandSideOption: Option[String] = None): Concrete = {
     log(
       leftHandSideOption match {
-        case Some(key) => s"evaluate     ${leftHandSideOption.getOrElse("")} <= ${expression.serialize} ${dependencyGraph.getInfo(key)}"
-        case _         => s"evaluate     ${expression.serialize}"
+        case Some(key) =>
+          s"evaluate     ${leftHandSideOption.getOrElse("")} <= ${expression.serialize} ${dependencyGraph.getInfo(key)}"
+        case _         =>
+          s"evaluate     ${expression.serialize}"
       }
     )
     indent()
 
     if(! evaluationStack.push(leftHandSideOption, expression)) {
       if(allowCombinationalLoops) {
+        log(s"Combinational loop detected, second evaluation of ${leftHandSideOption.getOrElse("")}, returning 1.U")
         return ConcreteUInt(1, 1)
       }
     }
@@ -269,7 +275,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
         case Mux(condition, trueExpression, falseExpression, tpe) =>
           evaluate(condition) match {
             case ConcreteUInt(value, 1) =>
-              val v = if (evaluate(condition).value > 0) {
+              val v = if (value > 0) {
                 if(evaluateAll) { evaluate(falseExpression)}
                 evaluate(trueExpression)
               }
@@ -374,7 +380,14 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
 
     evaluationStack.pop()
     dedent()
-    log(s"evaluator:returns:$result")
+    log(
+      leftHandSideOption match {
+        case Some(key) =>
+          s"evaluated    ${leftHandSideOption.getOrElse("")} <= $result"
+        case _         =>
+          s"evaluated     $result"
+      }
+    )
 
     result
   }
@@ -389,7 +402,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
   private def resolveDependency(key: String): Concrete = {
     resolveDepth += 1
 
-    val value = Timer(key) {
+    val value = timer(key) {
       if (circuitState.isInput(key)) {
         circuitState.getValue(key).get
       }

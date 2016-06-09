@@ -3,6 +3,7 @@
 package firrtl_interpreter
 
 import firrtl._
+import vcd.VCD
 
 import scala.collection.mutable
 
@@ -59,6 +60,24 @@ case class CircuitState(
   var stateCounter = 0
   var isStale      = true
 
+  var vcdLoggerOption = Option.empty[VCD]
+  var vcdOutputFileName = ""
+  def makeVCDLogger(dependencyGraph: DependencyGraph, fileName: String = "out.vcd"): Unit = {
+    val vcd = VCD(dependencyGraph.circuit.main)
+    vcdLoggerOption = Some(vcd)
+    vcdOutputFileName = fileName
+  }
+  def writeVCD(): Unit = {
+    vcdLoggerOption.get.write(vcdOutputFileName)
+  }
+  def disableVCD(): Unit = {
+    vcdLoggerOption.foreach { vcd =>
+      vcd.write(vcdOutputFileName)
+    }
+    vcdLoggerOption = None
+    vcdOutputFileName = ""
+  }
+
   /**
     * in order to compute dependencies, ephemera must be clear and their
     * associated values cleared
@@ -72,10 +91,15 @@ case class CircuitState(
     */
   def cycle(): Unit = {
     assert(!isStale, s"Cycle cannot be called when stale, refresh should occur at a higher level")
-    registers.keys.foreach { key => registers(key) = nextRegisters(key) }
+    registers.keys.foreach { key =>
+      registers(key) = nextRegisters(key)
+    }
     nextRegisters.clear()
     ephemera.clear()
     cycleMemories()
+    vcdLoggerOption.foreach { vcd =>
+      vcd.incrementTime()
+    }
     nameToConcreteValue = mutable.HashMap((inputPorts ++ outputPorts ++ registers).toSeq:_*)
     isStale = true
     stateCounter += 1
@@ -84,6 +108,10 @@ case class CircuitState(
     memories.values.foreach { memory => memory.cycle() }
   }
   def setValue(key: String, concreteValue: Concrete): Concrete = {
+    vcdLoggerOption.foreach { vcd =>
+      vcd.wireChanged(key, concreteValue.value, concreteValue.width)
+    }
+
     if(isInput(key)) {
       inputPorts(key) = concreteValue
       nameToConcreteValue(key) = concreteValue
