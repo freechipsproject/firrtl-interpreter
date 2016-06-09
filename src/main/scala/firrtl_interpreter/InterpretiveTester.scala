@@ -12,14 +12,20 @@ package firrtl_interpreter
   * so that io.a.b must be referenced as io_a_b
   *
   * @param input a firrtl program contained in a string
+  * @param vcdOutputFileName name of file to put vcd output in, empty string turns this off
   */
-class InterpretiveTester(input: String, useVCD: Boolean = false) {
+class InterpretiveTester(val input: String, val vcdOutputFileName: String = "") {
   var expectationsMet = 0
 
   val interpreter = FirrtlTerp(input)
-  if(useVCD) {
+  if(vcdOutputFileName.nonEmpty) {
     interpreter.circuitState.makeVCDLogger(interpreter.dependencyGraph)
   }
+
+  def writeVCD(): Unit = {
+    interpreter.circuitState.vcdLoggerOption.get.write(vcdOutputFileName)
+  }
+
 
   def setVerbose(value: Boolean = true): Unit = {
     interpreter.setVerbose(value)
