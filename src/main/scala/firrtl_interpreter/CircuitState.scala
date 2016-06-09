@@ -61,9 +61,21 @@ case class CircuitState(
   var isStale      = true
 
   var vcdLoggerOption = Option.empty[VCD]
-  def makeVCDLogger(dependencyGraph: DependencyGraph): Unit = {
+  var vcdOutputFileName = ""
+  def makeVCDLogger(dependencyGraph: DependencyGraph, fileName: String = "out.vcd"): Unit = {
     val vcd = VCD(dependencyGraph.circuit.main)
     vcdLoggerOption = Some(vcd)
+    vcdOutputFileName = fileName
+  }
+  def writeVCD(): Unit = {
+    vcdLoggerOption.get.write(vcdOutputFileName)
+  }
+  def disableVCD(): Unit = {
+    vcdLoggerOption.foreach { vcd =>
+      vcd.write(vcdOutputFileName)
+    }
+    vcdLoggerOption = None
+    vcdOutputFileName = ""
   }
 
   /**

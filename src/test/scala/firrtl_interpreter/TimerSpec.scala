@@ -33,13 +33,14 @@ class TimerSpec extends FlatSpec with Matchers {
 
   it should "count times" in {
     val tag = "test1"
-    Timer.clear()
-    Timer(tag) {
+    val timer = new Timer
+    timer.clear()
+    timer(tag) {
       Thread.sleep(3000)
     }
-//    Timer.timingLog.size should be (1)
-//    Timer.timingLog(tag).events should be (1)
-    Timer.timingLog(tag).nanoseconds should be > 2000000000L
-    println(Timer.report())
+    timer.timingLog.size should be (1)
+    timer.timingLog(tag).events should be (1)
+    timer.timingLog(tag).nanoseconds should be > 2000000000L
+    println(timer.report())
   }
 }

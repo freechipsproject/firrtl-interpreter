@@ -14,18 +14,16 @@ package firrtl_interpreter
   * @param input a firrtl program contained in a string
   * @param vcdOutputFileName name of file to put vcd output in, empty string turns this off
   */
-class InterpretiveTester(val input: String, val vcdOutputFileName: String = "") {
+class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
   var expectationsMet = 0
 
   val interpreter = FirrtlTerp(input)
   if(vcdOutputFileName.nonEmpty) {
-    interpreter.circuitState.makeVCDLogger(interpreter.dependencyGraph)
+    interpreter.makeVCDLogger(vcdOutputFileName)
   }
-
   def writeVCD(): Unit = {
-    interpreter.circuitState.vcdLoggerOption.get.write(vcdOutputFileName)
+    interpreter.writeVCD()
   }
-
 
   def setVerbose(value: Boolean = true): Unit = {
     interpreter.setVerbose(value)
