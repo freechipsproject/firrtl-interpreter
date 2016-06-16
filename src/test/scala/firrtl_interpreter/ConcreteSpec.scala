@@ -4,6 +4,8 @@ package firrtl_interpreter
 import firrtl_interpreter.TestUtils._
 import org.scalatest.{FlatSpec, Matchers}
 
+// scalastyle:off magic.number
+
 /**
   * Created by chick on 4/27/16.
   */
@@ -47,10 +49,10 @@ class ConcreteSpec extends FlatSpec with Matchers {
     (s1 + i2).isInstanceOf[ConcreteSInt] should be (true)
     (s1 + s2).isInstanceOf[ConcreteSInt] should be (true)
 
-    (i1 + i2).width should be (i1.width.max(i2.width)+1)
-    (i1 + s2).width should be (i1.width.max(s2.width)+1)
-    (s1 + i2).width should be (s1.width.max(i2.width)+1)
-    (s1 + s2).width should be (s1.width.max(s2.width)+1)
+    (i1 + i2).width should be (i1.width.max(i2.width) + 1)
+    (i1 + s2).width should be (i1.width.max(s2.width) + 1)
+    (s1 + i2).width should be (s1.width.max(i2.width) + 1)
+    (s1 + s2).width should be (s1.width.max(s2.width) + 1)
   }
 
   it should "return obvious additions under large range of numbers" in {
@@ -76,20 +78,118 @@ class ConcreteSpec extends FlatSpec with Matchers {
     (s1 - i2).isInstanceOf[ConcreteSInt] should be (true)
     (s1 - s2).isInstanceOf[ConcreteSInt] should be (true)
 
-    (i1 - i2).width should be (i1.width.max(i2.width)+1)
-    (i1 - s2).width should be (i1.width.max(s2.width)+1)
-    (s1 - i2).width should be (s1.width.max(i2.width)+1)
-    (s1 - s2).width should be (s1.width.max(s2.width)+1)
+    (i1 - i2).width should be (i1.width.max(i2.width) + 1)
+    (i1 - s2).width should be ((i1.width + 2).max(s2.width + 1))
+    val s1i2Predicted = if(s1.width == 1) i2.width + 1 else (s1.width + 1).max(i2.width + 2)
+    if((s1 - i2).width != s1i2Predicted) {
+      println(s"ERROR: $s1 - $i2 = ${s1 - i2} exp $s1i2Predicted")
+    }
+    (s1 - i2).width should be (s1i2Predicted)
+    (s1 - s2).width should be (s1.width.max(s2.width) + 1)
   }
 
   it should "return obvious subtractions under large range of numbers" in {
     for (trials <- 0 to 10000) {
       val (cu1, cu2) = (randC, randC)
+//      print(s"concrete subtraction $cu1 $cu2 ")
       val sum = cu1 - cu2
+
+//      println(s"sum is $sum")
 
       sum.value should be (cu1.value - cu2.value)
     }
   }
+
+  it should "get lengths right for all width combinations SInt - UInt" in {
+    for {
+      sIntWidth <- IntWidthTestValuesGenerator(1, 16)
+      uIntWidth <- IntWidthTestValuesGenerator(1, 16)
+    } {
+      var maxBitsRequire = 0
+      var example = ""
+      val predictedMaxWidth = if(sIntWidth == 1) uIntWidth + 1 else (sIntWidth + 1).max(uIntWidth + 2)
+
+      for {
+        sIntValue <- BigIntTestValuesGenerator(extremaOfSIntOfWidth(sIntWidth))
+        uIntValue <- BigIntTestValuesGenerator(extremaOfUIntOfWidth(uIntWidth))
+      } {
+        val (sInt, uInt) = (ConcreteSInt(sIntValue, sIntWidth), ConcreteUInt(uIntValue, uIntWidth))
+        val sIntResult = (sInt - uInt).value
+
+        val bitsRequired = requiredBitsForSInt(sIntResult)
+
+        if(bitsRequired > maxBitsRequire) {
+          maxBitsRequire = bitsRequired
+          example = s"$sIntValue.S<$sIntWidth> - $uIntValue.U<$uIntWidth> => $sIntResult.S<$bitsRequired>"
+        }
+        // println(f"$sIntWidth%3d $uIntWidth%3d $bitsRequired%3d   " +
+        //   f"S.<$sIntWidth> - U<$uIntWidth> requires $maxBitsRequire, " +
+        //   f"Example: $example  ===  predicted $predictedMaxWidth")
+      }
+
+      // if(maxBitsRequire != predictedMaxWidth) println("-" * 80)
+      // println(
+      //   f"$sIntWidth%3d $uIntWidth%3d $maxBitsRequire%3d   " +
+      //     f"S.<$sIntWidth> - U<$uIntWidth> requires $maxBitsRequire, " +
+      //     f"Example: $example  ===  predicted $predictedMaxWidth")
+      // if(maxBitsRequire != predictedMaxWidth) println("-" * 80)
+
+      maxBitsRequire should be (predictedMaxWidth)
+    }
+  }
+
+  it should "get lengths right for all width combinations UInt - SInt" in {
+    for {
+      sIntWidth <- IntWidthTestValuesGenerator(1, 16)
+      uIntWidth <- IntWidthTestValuesGenerator(1, 16)
+    } {
+      var maxBitsRequire = 0
+      var example = ""
+      val predictedMaxWidth = (sIntWidth + 1).max(uIntWidth + 2)
+
+      for {
+        sIntValue <- BigIntTestValuesGenerator(extremaOfSIntOfWidth(sIntWidth))
+        uIntValue <- BigIntTestValuesGenerator(extremaOfUIntOfWidth(uIntWidth))
+      } {
+        val (sInt, uInt) = (ConcreteSInt(sIntValue, sIntWidth), ConcreteUInt(uIntValue, uIntWidth))
+        val sIntResult = (uInt - sInt).value
+
+        val bitsRequired = requiredBitsForSInt(sIntResult)
+
+        if(bitsRequired > maxBitsRequire) {
+          maxBitsRequire = bitsRequired
+          example = s"$sIntValue.S<$sIntWidth> - $uIntValue.U<$uIntWidth> => $sIntResult.S<$bitsRequired>"
+        }
+        //println(f"$sIntWidth%3d $uIntWidth%3d $bitsRequired%3d   " +
+        //   f"S.<$sIntWidth> - U<$uIntWidth> requires $maxBitsRequire, " +
+        //   f"Example: $example  ===  predicted $predictedMaxWidth")
+      }
+
+      // if(maxBitsRequire != predictedMaxWidth) println("-" * 80)
+      // println(f"$sIntWidth%3d $uIntWidth%3d $maxBitsRequire%3d   " +
+      //   f"S.<$sIntWidth> - U<$uIntWidth> requires $maxBitsRequire, " +
+      //   f"Example: $example  ===  predicted $predictedMaxWidth")
+      // if(maxBitsRequire != predictedMaxWidth) println("-" * 80)
+
+      maxBitsRequire should be (predictedMaxWidth)
+    }
+  }
+
+
+  it should "get lengths right for all combinations UInt - SInt" in {
+    for {
+      i <- 0 to 7
+      j <- -4 to 3
+    } {
+      val (n1, n2) = (ConcreteUInt(i, 3), ConcreteSInt(j, 3))
+
+//      print(s"sub3 $n1 $n2 ")
+      val n3 = n1 - n2
+//      println(s"result $n3")
+      n3.width should be (5)
+    }
+  }
+
 
   behavior of "concrete multiplication"
 
@@ -127,9 +227,9 @@ class ConcreteSpec extends FlatSpec with Matchers {
     (s1 / s2).isInstanceOf[ConcreteSInt] should be (true)
 
     (i1 / i2).width should be (i1.width)
-    (i1 / s2).width should be (i1.width+1)
+    (i1 / s2).width should be (i1.width + 1)
     (s1 / i2).width should be (s1.width)
-    (s1 / s2).width should be (s1.width+1)
+    (s1 / s2).width should be (s1.width + 1)
   }
 
   it should "return obvious divisions under large range of numbers" in {
@@ -158,7 +258,7 @@ class ConcreteSpec extends FlatSpec with Matchers {
 
     (i1 % i2).width should be (i1.width.min(i2.width))
     (i1 % s2).width should be (i1.width.min(s2.width))
-    (s1 % i2).width should be (s1.width.min(i2.width+1))
+    (s1 % i2).width should be (s1.width.min(i2.width + 1))
     (s1 % s2).width should be (s1.width.min(s2.width))
   }
 
@@ -183,7 +283,7 @@ class ConcreteSpec extends FlatSpec with Matchers {
     for(width <- IntWidthTestValuesGenerator(-MaxWidth, MaxWidth)) {
       if (width < -1 || width > 1) {
         val bitString1 = (0 until width.abs-1).map(x => (x % 2).toString).mkString
-        val bitString2 = (0 until width.abs-1).map(x => ((x+1) % 2).toString).mkString
+        val bitString2 = (0 until width.abs-1).map(x => ((x + 1) % 2).toString).mkString
 
         for(sign <- Array(-1, 1)) {
           val bigInt = sign*BigInt(bitString1, 2)
@@ -295,10 +395,10 @@ class ConcreteSpec extends FlatSpec with Matchers {
       val shiftedNum = num << shift
 
       val target = ConcreteUInt(num, width)
-      val shiftArg = ConcreteUInt(shift, requiredBits(shift))
+      val shiftArg = ConcreteUInt(shift, requiredBitsForUInt(shift))
 
-      requiredBits(num) should be (width)
-      requiredBits(shiftedNum) should be (width + shift)
+      requiredBitsForUInt(num) should be (width)
+      requiredBitsForUInt(shiftedNum) should be (width + shift)
 
       val result = target << shiftArg
       // println(s"width $width => num $num arg $shift, target $target result $result")
@@ -346,6 +446,9 @@ class ConcreteSpec extends FlatSpec with Matchers {
   }
   def randS: ConcreteSInt = {
     val randomWidth = random.nextInt(maxWidth)
-    ConcreteSInt(BigInt(randomWidth, random) * (if(random.nextBoolean()) 1 else -1), randomWidth+1)
+    val (sign, width) = {
+      if(random.nextBoolean()) (1, randomWidth + 1) else (-1, randomWidth + 2)
+    }
+    ConcreteSInt(BigInt(randomWidth, random) * sign, width)
   }
 }
