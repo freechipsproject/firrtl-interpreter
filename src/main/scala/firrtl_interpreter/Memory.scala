@@ -38,7 +38,7 @@ class Memory(
   import Memory._
 
   val dataWidth    = typeToWidth(dataType)
-  val addressWidth = requiredBits(depth)
+  val addressWidth = requiredBitsForUInt(depth)
   val bigDepth     = BigInt(depth)
   var moduloIndex  = true
 

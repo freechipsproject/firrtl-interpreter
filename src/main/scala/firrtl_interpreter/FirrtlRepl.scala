@@ -168,6 +168,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
             new StringsCompleter(jlist(Seq("all", "reset", "list")))
           ))
         }
+        // scalastyle:off cyclomatic.complexity
         def run(args: Array[String]): Unit = {
           currentScript match {
             case Some(script) =>
@@ -197,6 +198,8 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
               error(s"No current script")
           }
         }
+        // scalastyle:on cyclomatic.complexity
+
       },
       new Command("vcd") {
         def usage: (String, String) = ("vcd fileName|[done]", "vcd loaded script")

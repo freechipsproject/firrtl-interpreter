@@ -175,6 +175,11 @@ object IntWidthTestValuesGenerator {
 }
 
 object BigIntTestValuesGenerator {
+  def apply(extrema: (BigInt, BigInt)): BigIntTestValuesGenerator = {
+    val gen = new BigIntTestValuesGenerator(extrema._1, extrema._2)
+
+    gen
+  }
   def apply(minValue: BigInt, maxValue: BigInt): BigIntTestValuesGenerator = {
     val gen = new BigIntTestValuesGenerator(minValue, maxValue)
 
