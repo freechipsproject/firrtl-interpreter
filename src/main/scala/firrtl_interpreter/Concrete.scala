@@ -1,7 +1,7 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
-import firrtl._
+import firrtl.ir._
 
 // scalastyle:off number.of.methods
 trait Concrete {
@@ -195,10 +195,10 @@ trait Concrete {
   }
 //  def bits(hi: BigInt, lo: BigInt): ConcreteUInt = bits(hi.toInt, lo.toInt)
   def bits(hi: BigInt, lo: BigInt): Concrete = {
-  assert(lo >= Big0, s"Error:BIT_SELECT_OP($this, hi=$hi, lo=$lo) lo must be >= 0")
-  assert(lo <= width, s"Error:BIT_SELECT_OP($this, hi=$hi, lo=$lo) lo must be < ${this.width}")
-  assert(hi >= lo,   s"Error:BIT_SELECT_OP($this, hi=$hi, lo=$lo) hi must be >= $lo")
-  assert(hi <= width, s"Error:BIT_SELECT_OP($this, hi=$hi, lo=$lo) hi must be < ${this.width}")
+  assert(lo >= Big0, s"Error:Bits($this, hi=$hi, lo=$lo) lo must be >= 0")
+  assert(lo <= width, s"Error:Bits($this, hi=$hi, lo=$lo) lo must be < ${this.width}")
+  assert(hi >= lo,   s"Error:Bits($this, hi=$hi, lo=$lo) hi must be >= $lo")
+  assert(hi <= width, s"Error:Bits($this, hi=$hi, lo=$lo) hi must be < ${this.width}")
     val (high, low) = (hi.toInt, lo.toInt)
     this match {
       case ConcreteUInt(v, _) => ConcreteUInt(getBits(high, low), high - low + 1)
@@ -206,14 +206,14 @@ trait Concrete {
     }
   }
   def head(n: BigInt): Concrete = {
-    assert(n > 0, s"Error:HEAD_OP($this, n=$n) n must be >= 0")
-    assert(n <= width, s"Error:HEAD_OP($this, n=$n) n must be <= ${this.width}")
+    assert(n > 0, s"Error:Head($this, n=$n) n must be >= 0")
+    assert(n <= width, s"Error:Head($this, n=$n) n must be <= ${this.width}")
     bits(width-1, width - n)
   }
   def tail(n: BigInt): ConcreteUInt = tail(n.toInt)
   def tail(n: Int): ConcreteUInt = {
-    assert(n >= 0, s"Error:TAIL_OP($this, n=$n) n must be >= 0")
-    assert(n < width, s"Error:TAIL_OP($this, n=$n) n must be < ${this.width}")
+    assert(n >= 0, s"Error:Tail($this, n=$n) n must be >= 0")
+    assert(n < width, s"Error:Tail($this, n=$n) n must be < ${this.width}")
 //    if(n == 0) {
 //      ConcreteUInt(value, width)
 //    }
@@ -266,19 +266,19 @@ trait Concrete {
   def poisoned: Boolean = false
 }
 object Concrete {
-  def apply(u: UIntValue): ConcreteUInt = {
+  def apply(u: UIntLiteral): ConcreteUInt = {
     ConcreteUInt(u.value, u.width.asInstanceOf[IntWidth].width.toInt)
   }
-  def apply(u: SIntValue): ConcreteSInt = {
+  def apply(u: SIntLiteral): ConcreteSInt = {
     ConcreteSInt(u.value, u.width.asInstanceOf[IntWidth].width.toInt)
   }
   def apply(tpe: Type, value: BigInt = Big0): Concrete = {
     tpe match {
       case UIntType(IntWidth(w))     => ConcreteUInt(value, w.toInt)
-//      case UIntValue(v, IntWidth(w)) => ConcreteUInt(v, w.toInt)
+//      case UIntLiteral(v, IntWidth(w)) => ConcreteUInt(v, w.toInt)
       case SIntType(IntWidth(w))     => ConcreteSInt(value, w.toInt)
-//      case SIntValue(v, IntWidth(w)) => ConcreteSInt(v, w.toInt)
-      case ClockType()               => ConcreteClock(value)
+//      case SIntLiteral(v, IntWidth(w)) => ConcreteSInt(v, w.toInt)
+      case ClockType                 => ConcreteClock(value)
     }
   }
   def randomUInt(width: Int): ConcreteUInt  = ConcreteUInt(randomBigInt(width), width)

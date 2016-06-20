@@ -1,11 +1,11 @@
+// See LICENSE for license details.
+
 package firrtl_interpreter
 
-import firrtl._
+import firrtl.ir._
 import org.scalatest.{FlatSpec, ShouldMatchers}
 
-/**
-  * Created by chick on 4/21/16.
-  */
+// scalastyle:off magic.number
 class TypeInstanceFactorySpec extends FlatSpec with ShouldMatchers {
   behavior of "TypeInstanceFactory"
 
@@ -28,7 +28,7 @@ class TypeInstanceFactorySpec extends FlatSpec with ShouldMatchers {
       TypeInstanceFactory(VectorType(UIntType(IntWidth(10)), 10))
     }
     intercept[InterpreterException] {
-      TypeInstanceFactory(UnknownType())
+      TypeInstanceFactory(UnknownType)
     }
   }
 }

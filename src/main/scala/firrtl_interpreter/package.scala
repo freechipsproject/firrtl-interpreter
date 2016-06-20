@@ -3,7 +3,7 @@
 //scalastyle:off package.object.name
 package object firrtl_interpreter {
 
-  import firrtl._
+  import firrtl.ir._
 
   val InterpreterMaxSupportedWidth = 100
 
@@ -24,7 +24,7 @@ package object firrtl_interpreter {
   def typeToWidth(tpe: Type): Int = tpe match {
     case UIntType(w)  => widthToInt(w)
     case SIntType(w)  => widthToInt(w)
-    case _: ClockType => 1
+    case ClockType    => 1
   }
   def ceilingLog2(x: Int): Int = scala.math.ceil(scala.math.log(x) / scala.math.log(2)).toInt
 

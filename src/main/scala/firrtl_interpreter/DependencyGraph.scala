@@ -3,6 +3,7 @@
 package firrtl_interpreter
 
 import firrtl._
+import firrtl.ir._
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -21,17 +22,19 @@ object DependencyGraph extends SimpleLogger {
     * @param circuit circuit being analyzed
     * @return the circuit, exception occurs in not found
     */
-  def findModule(moduleName: String, circuit: Circuit): Module = {
+  def findModule(moduleName: String, circuit: Circuit): DefModule = {
     circuit.modules.find(module => module.name == moduleName) match {
-      case Some(module) =>
+      case Some(module: Module) =>
         module
+      case Some(externalModule: DefModule) =>
+        externalModule
       case _ =>
         throw InterpreterException(s"Could not find top level module in $moduleName")
     }
   }
 
   // scalastyle:off
-  def processDependencyStatements(modulePrefix: String, s: Stmt, dependencyGraph: DependencyGraph): Stmt = {
+  def processDependencyStatements(modulePrefix: String, s: Statement, dependencyGraph: DependencyGraph): Statement = {
     def expand(name: String): String = if(modulePrefix.isEmpty) name else modulePrefix + "." + name
 
     def renameExpression(expression: Expression): Expression = {
@@ -52,8 +55,8 @@ object DependencyGraph extends SimpleLogger {
         case ValidIf(condition, value, tpe) => ValidIf(renameExpression(condition), renameExpression(value), tpe)
         case DoPrim(op, args, const, tpe) =>
           DoPrim(op, args.map {case subExpression => renameExpression(subExpression)}, const, tpe)
-        case c: UIntValue => c
-        case c: SIntValue => c
+        case c: UIntLiteral => c
+        case c: SIntLiteral => c
         case _ =>
           throw new Exception(s"renameExpression:error: unhandled expression $expression")
       }
@@ -69,8 +72,8 @@ object DependencyGraph extends SimpleLogger {
         begin
       case con: Connect =>
         con.loc match {
-          case WRef(name, _, _, _) => dependencyGraph(expand(name)) = renameExpression(con.exp)
-          case (_: WSubField | _: WSubIndex) => dependencyGraph(expand(con.loc.serialize)) = renameExpression(con.exp)
+          case WRef(name, _, _, _) => dependencyGraph(expand(name)) = renameExpression(con.expr)
+          case (_: WSubField | _: WSubIndex) => dependencyGraph(expand(con.loc.serialize)) = renameExpression(con.expr)
         }
         con
       case WDefInstance(info, instanceName, moduleName, tpe) =>
@@ -133,7 +136,7 @@ object DependencyGraph extends SimpleLogger {
           renameExpression(enableExpression)
         ))
         s
-      case e: Empty =>
+      case EmptyStmt =>
         s
       case conditionally: Conditionally =>
         // log(s"got a conditionally $conditionally")
@@ -145,17 +148,17 @@ object DependencyGraph extends SimpleLogger {
   }
   // scalastyle:on
 
-  def processModule(modulePrefix: String, module: Module, dependencyGraph: DependencyGraph): Unit = {
+  def processModule(modulePrefix: String, module: DefModule, dependencyGraph: DependencyGraph): Unit = {
     module match {
-      case i: InModule =>
+      case i: Module =>
         for(port <- i.ports) {
           if(modulePrefix.isEmpty) {
             dependencyGraph.nameToType(port.name) = port.tpe
-            if (port.direction == INPUT) {
+            if (port.direction == Input) {
               dependencyGraph.inputPorts += port.name
               dependencyGraph.recordName(port.name)
             }
-            else if (port.direction == OUTPUT) {
+            else if (port.direction == Output) {
               dependencyGraph.outputPorts += port.name
               dependencyGraph.recordName(port.name)
             }
@@ -167,12 +170,20 @@ object DependencyGraph extends SimpleLogger {
           }
         }
         processDependencyStatements(modulePrefix, i.body, dependencyGraph)
-      case e: ExModule => // Do nothing
+      case e: ExtModule => // Do nothing
     }
   }
 
+  // scalastyle:off cyclomatic.complexity
   def apply(circuit: Circuit): DependencyGraph = {
-    val module = findModule(circuit.main, circuit)
+    val module = findModule(circuit.main, circuit) match {
+      case regularModule: Module => regularModule
+      case externalModule: ExtModule =>
+        throw InterpreterException(s"Top level module must be a regular module $externalModule")
+      case x =>
+        throw InterpreterException(s"Top level module is not the right kind of module $x")
+    }
+
     val dependencyGraph = new DependencyGraph(circuit, module)
 
     dependencyGraph.numberOfNodes = 0
@@ -185,9 +196,9 @@ object DependencyGraph extends SimpleLogger {
     for(name <- dependencyGraph.validNames) {
       if(! dependencyGraph.nameToExpression.contains(name)) {
         val defaultValue = dependencyGraph.nameToType(name) match {
-          case UIntType(width) => UIntValue(0, width)
-          case SIntType(width) => SIntValue(0, width)
-          case ClockType()     => UIntValue(0, IntWidth(1))
+          case UIntType(width) => UIntLiteral(0, width)
+          case SIntType(width) => SIntLiteral(0, width)
+          case ClockType       => UIntLiteral(0, IntWidth(1))
           case _ =>
             throw new Exception(s"error can't find default value for $name.type = ${dependencyGraph.nameToType(name)}")
         }
@@ -203,11 +214,12 @@ object DependencyGraph extends SimpleLogger {
     println(s"End of dependency graph")
     dependencyGraph
   }
+  // scalastyle:on cyclomatic.complexity
 }
 
 /**
   * A (probably overly complex) map of the names to expressions that occur in @circuit
-  * This is used by the expression evaluator to follow dependencys
+  * This is used by the expression evaluator to follow dependencies
   * It also maintains lists or sets of ports, registers, memories, stop and printf statements.
   * The above information is created by the companion object which does the actual work
   * of traversing the circuit and discovering the various components and expressions
@@ -270,7 +282,7 @@ class DependencyGraph(val circuit: Circuit, val module: Module) {
   def hasOutput(name: String): Boolean = outputPorts.contains(name)
 
   def getInfo(name: String): String = {
-    sourceInfo.getOrElse(name, "").toString
+    sourceInfo.getOrElse(name, "")
   }
 
   def addKind(key: String): String = {

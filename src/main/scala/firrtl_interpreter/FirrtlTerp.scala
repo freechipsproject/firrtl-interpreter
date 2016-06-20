@@ -2,7 +2,7 @@
 
 package firrtl_interpreter
 
-import firrtl._
+import firrtl.ir._
 
 // TODO: Add poison concept/multi-state
 // TODO: try inlining pass

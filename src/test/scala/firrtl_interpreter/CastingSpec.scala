@@ -2,10 +2,12 @@
 
 package firrtl_interpreter
 
-import firrtl._
+import firrtl.PrimOps.{AsUInt, AsSInt}
+import firrtl.ir._
 
 import org.scalatest.{Matchers, FlatSpec}
 
+// scalastyle:off magic.number
 class CastingSpec extends FlatSpec with Matchers {
   behavior of "requiredBitsForSInt"
 
@@ -53,12 +55,12 @@ class CastingSpec extends FlatSpec with Matchers {
     val evaluator = new LoFirrtlExpressionEvaluator(interpreter.dependencyGraph, interpreter.circuitState)
 
     val u = ConcreteUInt(4, 3)
-    val target = UIntValue(4, IntWidth(3))
-    val s = evaluator.castingOp(AS_SINT_OP, Seq(target), SIntType(IntWidth(3)))
+    val target = UIntLiteral(4, IntWidth(3))
+    val s = evaluator.castingOp(AsSInt, Seq(target), SIntType(IntWidth(3)))
     println(s"Casted s $s")
     s.isInstanceOf[ConcreteSInt] should be (true)
 
-    val ss = evaluator.castingOp(AS_UINT_OP, Seq(SIntValue(s.value, IntWidth(s.width))), UIntType(IntWidth(3)))
+    val ss = evaluator.castingOp(AsUInt, Seq(SIntLiteral(s.value, IntWidth(s.width))), UIntType(IntWidth(3)))
     ss.value should be (u.value)
 
     var testCount = 0
@@ -66,10 +68,10 @@ class CastingSpec extends FlatSpec with Matchers {
       var b1 = Big0
       val top = BigInt("1"*i, 2)
       for(b1 <- BigIntTestValuesGenerator(0, top)) {
-        val uiv1 = UIntValue(b1, IntWidth(i))
-        val scv1 = evaluator.castingOp(AS_SINT_OP, Seq(uiv1), SIntType(IntWidth(i)))
-        val siv1 = SIntValue(scv1.value, IntWidth(scv1.width))
-        val ucv2 = evaluator.castingOp(AS_UINT_OP, Seq(siv1), UIntType(IntWidth(i)))
+        val uiv1 = UIntLiteral(b1, IntWidth(i))
+        val scv1 = evaluator.castingOp(AsSInt, Seq(uiv1), SIntType(IntWidth(i)))
+        val siv1 = SIntLiteral(scv1.value, IntWidth(scv1.width))
+        val ucv2 = evaluator.castingOp(AsUInt, Seq(siv1), UIntType(IntWidth(i)))
 
         if(b1.testBit(i-1)) {
           scv1.value should be < Big0
