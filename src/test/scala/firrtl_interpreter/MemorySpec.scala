@@ -1,10 +1,10 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
-import firrtl.{DefMemory, IntWidth, NoInfo, UIntType}
+import firrtl.ir.{DefMemory, IntWidth, NoInfo, UIntType}
 import org.scalatest.{FlatSpec, Matchers}
 
-
+// scalastyle:off magic.number
 class MemorySpec extends FlatSpec with Matchers {
 
   behavior of "Memory instances"
@@ -155,7 +155,7 @@ class MemorySpec extends FlatSpec with Matchers {
 //      println(memory)
       memory.getValue(key + ".data").value should be(i * 3)
 
-      println(s"got value $i ${memory.getValue(key+".data").value}")
+      println(s"got value $i ${memory.getValue(key + ".data").value}")
     }
   }
 
@@ -247,7 +247,8 @@ class MemorySpec extends FlatSpec with Matchers {
 
     println(s"testing write delay of $writeDelay ${"="*80}")
     val memory = Memory(DefMemory(
-      NoInfo, "memory1", UIntType(IntWidth(dataWidth)), depth, writeDelay, 1, Seq("read1", "read2"), Seq("write1"), Seq()
+      NoInfo, "memory1", UIntType(IntWidth(dataWidth)),
+      depth, writeDelay, 1, Seq("read1", "read2"), Seq("write1"), Seq()
     ))
 
     val key = "memory1.write1"

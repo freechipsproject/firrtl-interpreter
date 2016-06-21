@@ -2,7 +2,7 @@
 
 package firrtl_interpreter
 
-import firrtl.Expression
+import firrtl.ir.Expression
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer

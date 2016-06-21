@@ -4,6 +4,7 @@ package firrtl_interpreter
 
 import org.scalatest.{Matchers, FlatSpec}
 
+// scalastyle:off magic.number
 class ConcreteSIntSpec extends FlatSpec with Matchers {
   behavior of "constructor"
 

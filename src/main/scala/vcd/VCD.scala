@@ -43,10 +43,11 @@ object VCD {
 }
 
 /**
-  * Accumlates changes to wires in a running circuit.  If a wire is changed that it doesn't know about it
+  * Accumulates changes to wires in a running circuit.  If a wire is changed that it doesn't know about it
   * will add it to the list.  Only actual changed values will be seen in final output.  This version only supports
   * a single top level scope because right now that is what the firrtl-interpreter supports.  It probably is not too
   * too hard to add, all wires are initialized to 'x' in this version.
+ *
   * @param date date file was created
   * @param version this software version, but I suppose this could be a DUT version
   * @param comment could be a comment
@@ -133,7 +134,7 @@ case class VCD(
   def serializeStartup: String = {
     wires.values.map { wire =>
       val dummyChange = Change(wire, 0)
-      dummyChange.serializeUnitialized
+      dummyChange.serializeUninitialized
     }.mkString("\n")
   }
 
@@ -196,7 +197,7 @@ case class Change(wire: Wire, value: BigInt) {
         s" ${wire.id}"
     }
   }
-  def serializeUnitialized: String = {
+  def serializeUninitialized: String = {
     if(wire.width == 1) {
       s"$value${wire.id}"
     }

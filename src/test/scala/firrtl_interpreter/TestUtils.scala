@@ -1,6 +1,7 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
+// scalastyle:off magic.number
 object TestUtils {
   val MaxWidth = InterpreterMaxSupportedWidth
   val Big2 = BigInt(2)
@@ -14,13 +15,21 @@ object TestUtils {
     * @return A BigInt
     */
   def allOnes(width: Int): BigInt = {
-    if(width == 0) Big0
-    else BigInt("1" * width.abs, 2) * (if(width >= 0) Big1 else -Big1)
+    if(width == 0) {
+      Big0
+    }
+    else {
+      BigInt("1" * width.abs, 2) * (if(width >= 0) Big1 else -Big1)
+    }
   }
 
   def powerOfTwoFrom(width: Int): BigInt = {
-    if(width == 0) Big0
-    else (Big1 << (width.abs - 1)) * (if(width < 0) -Big1 else Big1)
+    if(width == 0) {
+      Big0
+    }
+    else {
+      (Big1 << (width.abs - 1)) * (if(width < 0) -Big1 else Big1)
+    }
   }
 
   def powerOfTwoLessThanOrEqualTo(x: Int): Int = {
@@ -55,6 +64,7 @@ object TestUtils {
 
 import firrtl_interpreter.TestUtils._
 
+// scalastyle:off magic.number
 /**
   * Is an iterator for a list of values limited to those within (-1,0,+1) of a power of two, including the
   * min and max and one to the inside of those values
@@ -77,37 +87,38 @@ class IntWidthTestValuesGenerator(minValue: Int = 0, maxValue: Int = TestUtils.M
 
   def hasNext(): Boolean = ! done
 
+  // scalastyle:off cyclomatic.complexity
   def next: Int = {
     val returnValue = nextValue
 
     def incrementPower(): Unit = {
       nextPower = {
-        if(nextPower > 0) nextPower << 1
-        else if(nextPower == -1 || nextPower == 0) 1
-        else nextPower >> 1
+        if(nextPower > 0) { nextPower << 1 }
+        else if(nextPower == -1 || nextPower == 0) { 1 }
+        else { nextPower >> 1 }
       }
     }
 
     def updatePowerAndNextValue(): Unit = {
-      while(nextPower+1 <= nextValue) {
+      while(nextPower + 1 <= nextValue) {
         incrementPower()
       }
-      nextValue = (nextPower - 1).min(maxValue-1).max(returnValue+1)
+      nextValue = (nextPower - 1).min(maxValue - 1).max(returnValue + 1)
     }
 
-    if(-5 <= nextValue && nextValue <= 4) nextValue += 1
-    else if(nextValue == maxValue-1)      nextValue += 1
+    if(-5 <= nextValue && nextValue <= 4) { nextValue += 1 }
+    else if(nextValue == maxValue - 1)    { nextValue += 1 }
     else if(nextValue == 5) {
       nextPower = 4
       updatePowerAndNextValue()
     }
-    else if(nextValue == nextPower - 1) nextValue += 1
-    else if(nextValue == nextPower)     nextValue += 1
-    else if(nextValue == nextPower + 1) updatePowerAndNextValue()
-    else if(nextValue == minValue + 1)  updatePowerAndNextValue()
-    else if(nextValue == minValue)      nextValue = minValue + 1
-    else if(nextValue > nextPower+1)    updatePowerAndNextValue()
-    else nextValue += 1
+    else if(nextValue == nextPower - 1) { nextValue += 1 }
+    else if(nextValue == nextPower)     { nextValue += 1 }
+    else if(nextValue == nextPower + 1) { updatePowerAndNextValue() }
+    else if(nextValue == minValue + 1)  { updatePowerAndNextValue() }
+    else if(nextValue == minValue)      { nextValue = minValue + 1 }
+    else if(nextValue > nextPower + 1)  { updatePowerAndNextValue() }
+    else { nextValue += 1 }
     done = returnValue >= maxValue || nextValue > maxValue
 
     returnValue
@@ -134,32 +145,32 @@ class BigIntTestValuesGenerator(minValue: BigInt = 0, maxValue: BigInt = MaxWidt
 
     def incrementPower(): Unit = {
       nextPower = {
-        if(nextPower > 0) nextPower << 1
-        else if(nextPower == -Big1 || nextPower == Big0) 1
-        else nextPower >> 1
+        if(nextPower > 0) { nextPower << 1 }
+        else if(nextPower == -Big1 || nextPower == Big0) { 1 }
+        else { nextPower >> 1 }
       }
     }
 
     def updatePowerAndNextValue(): Unit = {
-      while(nextPower+1 <= nextValue) {
+      while(nextPower + 1 <= nextValue) {
         incrementPower()
       }
-      nextValue = (nextPower - 1).min(maxValue).max(returnValue+1)
+      nextValue = (nextPower - 1).min(maxValue).max(returnValue + 1)
     }
 
-    if(-Big5 <= nextValue && nextValue <= Big4) nextValue += 1
-    else if(nextValue == maxValue-1)      nextValue += 1
+    if(-Big5 <= nextValue && nextValue <= Big4) { nextValue += 1 }
+    else if(nextValue == maxValue - 1)          { nextValue += 1 }
     else if(nextValue == Big5) {
       nextPower = Big4
       updatePowerAndNextValue()
     }
-    else if(nextValue == nextPower - 1) nextValue += 1
-    else if(nextValue == nextPower)     nextValue += 1
-    else if(nextValue == nextPower + 1) updatePowerAndNextValue()
-    else if(nextValue == minValue + 1)  updatePowerAndNextValue()
-    else if(nextValue == minValue)      nextValue = minValue + 1
-    else if(nextValue > nextPower+1)    updatePowerAndNextValue()
-    else nextValue += 1
+    else if(nextValue == nextPower - 1) { nextValue += 1 }
+    else if(nextValue == nextPower)     { nextValue += 1 }
+    else if(nextValue == nextPower + 1) { updatePowerAndNextValue() }
+    else if(nextValue == minValue + 1)  { updatePowerAndNextValue() }
+    else if(nextValue == minValue)      { nextValue = minValue + 1 }
+    else if(nextValue > nextPower + 1)  { updatePowerAndNextValue() }
+    else { nextValue += 1 }
 
     done = returnValue >= maxValue || nextValue > maxValue
 

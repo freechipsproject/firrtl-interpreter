@@ -2,7 +2,7 @@
 
 package firrtl_interpreter
 
-import firrtl._
+import firrtl.ir._
 
 /**
   * Created by chick on 4/21/16.
@@ -13,7 +13,7 @@ object TypeInstanceFactory {
     typ match {
       case u: UIntType => ConcreteUInt(initialValue, widthToInt(u.width))
       case s: SIntType => ConcreteSInt(initialValue, widthToInt(s.width))
-      case c: ClockType => ConcreteUInt(if(initialValue > 0) 1 else 0, 1)
+      case ClockType   => ConcreteUInt(if(initialValue > 0) 1 else 0, 1)
       case _ => throw new InterpreterException(s"Unsupported LoFIRRTL type for interpreter $typ")
     }
   }

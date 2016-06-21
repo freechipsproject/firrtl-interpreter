@@ -4,12 +4,9 @@ package firrtl_interpreter
 
 import java.io.{StringWriter, Writer}
 
-import firrtl.{LowFirrtlCompiler, Circuit}
-import firrtl.passes._
+import firrtl.LowFirrtlCompiler
+import firrtl.ir.Circuit
 
-/**
-  * Created by chick on 4/21/16.
-  */
 object ToLoFirrtl {
   def lower(c: Circuit): Circuit = {
     val compiler = new LowFirrtlCompiler

@@ -3,9 +3,8 @@ package firrtl_interpreter
 
 import org.scalatest.{FlatSpec, Matchers}
 
-/**
-  * Created by chick on 4/29/16.
-  */
+// scalastyle:off magic.number
+
 class GCDTester extends FlatSpec with Matchers {
   behavior of "GCD"
 

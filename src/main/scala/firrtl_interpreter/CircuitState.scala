@@ -2,15 +2,15 @@
 
 package firrtl_interpreter
 
-import firrtl._
+import firrtl.ir._
 import vcd.VCD
 
 import scala.collection.mutable
 
 object CircuitState {
   def apply(dependencyGraph: DependencyGraph): CircuitState = {
-    val inputPortToValue  = makePortToConcreteValueMap(dependencyGraph, INPUT)
-    val outputPortToValue = makePortToConcreteValueMap(dependencyGraph, OUTPUT)
+    val inputPortToValue  = makePortToConcreteValueMap(dependencyGraph, Input)
+    val outputPortToValue = makePortToConcreteValueMap(dependencyGraph, Output)
     val registerToValue   = makeRegisterToConcreteValueMap(dependencyGraph)
 
     val circuitState = new CircuitState(

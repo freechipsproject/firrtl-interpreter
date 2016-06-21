@@ -3,6 +3,8 @@
 package firrtl_interpreter
 
 import firrtl._
+import firrtl.ir._
+import firrtl.PrimOps._
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -124,14 +126,14 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     shiftedNumber
   }
 
-  def makeUIntValue(value: BigInt, intWidth: IntWidth): UIntValue = {
+  def makeUIntValue(value: BigInt, intWidth: IntWidth): UIntLiteral = {
     val maskedValue = mask(value, intWidth.width)
-    UIntValue(maskedValue, intWidth)
+    UIntLiteral(maskedValue, intWidth)
   }
 
-  def makeSIntValue(value: BigInt, intWidth: IntWidth): SIntValue = {
+  def makeSIntValue(value: BigInt, intWidth: IntWidth): SIntLiteral = {
     val maskedValue = mask(value, intWidth.width)
-    SIntValue(maskedValue, intWidth)
+    SIntLiteral(maskedValue, intWidth)
   }
 
   def getWidth(tpe: Type): IntWidth = {
@@ -146,11 +148,11 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     val arg1 = evaluate(args.head)
     val arg2 = evaluate(args.tail.head)
     opCode match {
-      case ADD_OP => arg1 + arg2
-      case SUB_OP => arg1 - arg2
-      case MUL_OP => arg1 * arg2
-      case DIV_OP => arg1 / arg2
-      case REM_OP => arg1 % arg2
+      case Add => arg1 + arg2
+      case Sub => arg1 - arg2
+      case Mul => arg1 * arg2
+      case Div => arg1 / arg2
+      case Rem => arg1 % arg2
     }
   }
 
@@ -165,12 +167,12 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     val arg1 = evaluate(args.head)
     val arg2 = evaluate(args.tail.head)
     opCode match {
-      case EQUAL_OP      => arg1 == arg2
-      case NEQUAL_OP     => arg1 != arg2
-      case LESS_OP       => arg1 <  arg2
-      case LESS_EQ_OP    => arg1 <= arg2
-      case GREATER_OP    => arg1 >  arg2
-      case GREATER_EQ_OP => arg1 >= arg2
+      case Eq      => arg1 == arg2
+      case Neq     => arg1 != arg2
+      case Lt       => arg1 <  arg2
+      case Leq    => arg1 <= arg2
+      case Gt    => arg1 >  arg2
+      case Geq => arg1 >= arg2
     }
   }
 
@@ -185,9 +187,9 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     val e = evaluate(args.head)
 
     opCode match {
-      case AS_UINT_OP  => e.asUInt
-      case AS_SINT_OP  => e.asSInt
-      case AS_CLOCK_OP => e.asClock
+      case AsUInt  => e.asUInt
+      case AsSInt  => e.asSInt
+      case AsClock => e.asClock
     }
   }
 
@@ -196,10 +198,10 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     val n = parameters.head
 
     opCode match {
-      case SHIFT_LEFT_OP => e << n
-      case SHIFT_RIGHT_OP => e >> n
-      case HEAD_OP => e.head(n)
-      case TAIL_OP => e.tail(n)
+      case Shl => e << n
+      case Shr => e >> n
+      case Head => e.head(n)
+      case Tail => e.tail(n)
     }
   }
   def dynamicBitOps(opCode: PrimOp, args: Seq[Expression], parameters: Seq[BigInt], tpe: Type): Concrete = {
@@ -207,30 +209,30 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     val n = evaluate(args.tail.head)
 
     opCode match {
-      case DYN_SHIFT_LEFT_OP => e << n
-      case DYN_SHIFT_RIGHT_OP => e >> n
+      case Dshl => e << n
+      case Dshr => e >> n
     }
   }
   def oneArgOps(opCode: PrimOp, args: Seq[Expression], parameters: Seq[BigInt], tpe: Type): Concrete = {
     val e = evaluate(args.head)
 
     opCode match {
-      case CONVERT_OP         => e.cvt
-      case NEG_OP             => e.neg
-      case NOT_OP             => e.not
-      case AND_REDUCE_OP      => e.andReduce
-      case OR_REDUCE_OP       => e.orReduce
-      case XOR_REDUCE_OP      => e.xorReduce
+      case Cvt         => e.cvt
+      case Neg             => e.neg
+      case Not             => e.not
+      case Andr      => e.andReduce
+      case Orr       => e.orReduce
+      case Xorr      => e.xorReduce
     }
   }
   def binaryBitWise(opCode: PrimOp, args: Seq[Expression], tpe: Type): Concrete = {
     val arg1 = evaluate(args.head)
     val arg2 = evaluate(args.tail.head)
     opCode match {
-      case AND_OP    => arg1 & arg2
-      case OR_OP     => arg1 | arg2
-      case XOR_OP    => arg1 ^ arg2
-      case CONCAT_OP => arg1.cat(arg2)
+      case And    => arg1 & arg2
+      case Or     => arg1 | arg2
+      case Xor    => arg1 ^ arg2
+      case Cat => arg1.cat(arg2)
     }
   }
   /**
@@ -304,61 +306,61 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
             tpe match {
               case UIntType(IntWidth(w)) => Concrete.randomUInt(w.toInt)
               case SIntType(IntWidth(w)) => Concrete.randomSInt(w.toInt)
-              case ClockType()           => Concrete.randomClock()
+              case ClockType             => Concrete.randomClock()
             }
           }
         case DoPrim(op, args, const, tpe) =>
           val v = op match {
-            case ADD_OP => mathPrimitive(op, args, tpe)
-            case SUB_OP => mathPrimitive(op, args, tpe)
-            case MUL_OP => mathPrimitive(op, args, tpe)
-            case DIV_OP => mathPrimitive(op, args, tpe)
-            case REM_OP => mathPrimitive(op, args, tpe)
+            case Add => mathPrimitive(op, args, tpe)
+            case Sub => mathPrimitive(op, args, tpe)
+            case Mul => mathPrimitive(op, args, tpe)
+            case Div => mathPrimitive(op, args, tpe)
+            case Rem => mathPrimitive(op, args, tpe)
 
-            case EQUAL_OP => comparisonOp(op, args, tpe)
-            case NEQUAL_OP => comparisonOp(op, args, tpe)
-            case LESS_OP => comparisonOp(op, args, tpe)
-            case LESS_EQ_OP => comparisonOp(op, args, tpe)
-            case GREATER_OP => comparisonOp(op, args, tpe)
-            case GREATER_EQ_OP => comparisonOp(op, args, tpe)
+            case Eq => comparisonOp(op, args, tpe)
+            case Neq => comparisonOp(op, args, tpe)
+            case Lt => comparisonOp(op, args, tpe)
+            case Leq => comparisonOp(op, args, tpe)
+            case Gt => comparisonOp(op, args, tpe)
+            case Geq => comparisonOp(op, args, tpe)
 
-            case PAD_OP => paddingOp(op, args, const, tpe)
+            case Pad => paddingOp(op, args, const, tpe)
 
-            case AS_UINT_OP => castingOp(op, args, tpe)
-            case AS_SINT_OP => castingOp(op, args, tpe)
-            case AS_CLOCK_OP => castingOp(op, args, tpe)
+            case AsUInt => castingOp(op, args, tpe)
+            case AsSInt => castingOp(op, args, tpe)
+            case AsClock => castingOp(op, args, tpe)
 
-            case SHIFT_LEFT_OP => bitOps(op, args, const, tpe)
-            case SHIFT_RIGHT_OP => bitOps(op, args, const, tpe)
+            case Shl => bitOps(op, args, const, tpe)
+            case Shr => bitOps(op, args, const, tpe)
 
-            case DYN_SHIFT_LEFT_OP => dynamicBitOps(op, args, const, tpe)
-            case DYN_SHIFT_RIGHT_OP => dynamicBitOps(op, args, const, tpe)
+            case Dshl => dynamicBitOps(op, args, const, tpe)
+            case Dshr => dynamicBitOps(op, args, const, tpe)
 
-            case CONVERT_OP => oneArgOps(op, args, const, tpe)
-            case NEG_OP => oneArgOps(op, args, const, tpe)
-            case NOT_OP => oneArgOps(op, args, const, tpe)
+            case Cvt => oneArgOps(op, args, const, tpe)
+            case Neg => oneArgOps(op, args, const, tpe)
+            case Not => oneArgOps(op, args, const, tpe)
 
-            case AND_OP => binaryBitWise(op, args, tpe)
-            case OR_OP => binaryBitWise(op, args, tpe)
-            case XOR_OP => binaryBitWise(op, args, tpe)
+            case And => binaryBitWise(op, args, tpe)
+            case Or => binaryBitWise(op, args, tpe)
+            case Xor => binaryBitWise(op, args, tpe)
 
-            case AND_REDUCE_OP => oneArgOps(op, args, const, tpe)
-            case OR_REDUCE_OP => oneArgOps(op, args, const, tpe)
-            case XOR_REDUCE_OP => oneArgOps(op, args, const, tpe)
+            case Andr => oneArgOps(op, args, const, tpe)
+            case Orr => oneArgOps(op, args, const, tpe)
+            case Xorr => oneArgOps(op, args, const, tpe)
 
-            case CONCAT_OP => binaryBitWise(op, args, tpe)
+            case Cat => binaryBitWise(op, args, tpe)
 
-            case BITS_SELECT_OP => bitSelectOp(op, args, const, tpe)
+            case Bits => bitSelectOp(op, args, const, tpe)
 
-            case HEAD_OP => bitOps(op, args, const, tpe)
-            case TAIL_OP => bitOps(op, args, const, tpe)
+            case Head => bitOps(op, args, const, tpe)
+            case Tail => bitOps(op, args, const, tpe)
 
             case _ =>
               throw new InterruptedException(s"PrimOP $op in $expression not yet supported $sourceInfo")
           }
           v.forceWidth(tpe)
-        case c: UIntValue => Concrete(c).forceWidth(c.tpe)
-        case c: SIntValue => Concrete(c).forceWidth(c.tpe)
+        case c: UIntLiteral => Concrete(c).forceWidth(c.tpe)
+        case c: SIntLiteral => Concrete(c).forceWidth(c.tpe)
       }
     }
     catch {

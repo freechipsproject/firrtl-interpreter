@@ -1,18 +1,19 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
-import firrtl._
+import firrtl.ir._
 import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.mutable
 
+// scalastyle:off magic.number
 class CircuitStateSpec extends FlatSpec with Matchers {
   behavior of "CircuitState"
 
   val u1Type = UIntType(IntWidth(1))
   val u1Instance = TypeInstanceFactory(u1Type)
-  val port0 = Port(NoInfo, "port0", INPUT, u1Type)
-  val port1 = Port(NoInfo, "port1", OUTPUT, u1Type)
+  val port0 = Port(NoInfo, "port0", Input, u1Type)
+  val port1 = Port(NoInfo, "port1", Output, u1Type)
   val c = new CircuitState(
     inputPorts  = mutable.Map(port0.name -> u1Instance),
     outputPorts = mutable.Map(port1.name -> u1Instance),

@@ -4,9 +4,10 @@ package vcd
 
 import org.scalatest.{Matchers, FlatSpec}
 
+// scalastyle:off magic.number
 class VCDSpec extends FlatSpec with Matchers {
   private def getVcd = {
-    VCD("test_circut")
+    VCD("test_circuit")
   }
 
   behavior of "vcd"
