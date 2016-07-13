@@ -3,6 +3,7 @@ package firrtl_interpreter
 
 import org.scalatest.{FlatSpec, Matchers}
 
+// scalastyle:off magic.number
 class RegisterSpec extends FlatSpec with Matchers {
   behavior of "register reset"
 
@@ -66,7 +67,7 @@ class RegisterSpec extends FlatSpec with Matchers {
 
     val interpreter = FirrtlTerp(input)
 
-    def makeValue(value: BigInt) = ConcreteUInt(value, 16)
+    def makeValue(value: BigInt): Concrete = ConcreteUInt(value, 16)
 
     // interpreter.setVerbose(true)
     interpreter.setValue("reset1", makeValue(1))

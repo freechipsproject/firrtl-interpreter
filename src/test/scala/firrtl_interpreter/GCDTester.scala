@@ -3,9 +3,8 @@ package firrtl_interpreter
 
 import org.scalatest.{FlatSpec, Matchers}
 
-/**
-  * Created by chick on 4/29/16.
-  */
+// scalastyle:off magic.number
+
 class GCDTester extends FlatSpec with Matchers {
   behavior of "GCD"
 
@@ -41,7 +40,7 @@ class GCDTester extends FlatSpec with Matchers {
 
 
   it should "run with InterpretedTester" in {
-    new InterpretiveTester(gcdFirrtl) {
+    new InterpretiveTester(gcdFirrtl, vcdOutputFileName = "gcd.vcd") {
       // interpreter.setVerbose()
       step(1)
       poke("io_a", 34)
@@ -57,6 +56,7 @@ class GCDTester extends FlatSpec with Matchers {
       }
       expect("io_z", 17)
 
+      writeVCD()
     }
   }
 }

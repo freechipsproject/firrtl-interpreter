@@ -1,7 +1,7 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
-import firrtl._
+import firrtl.ir._
 
 // scalastyle:off number.of.methods
 trait Concrete {
@@ -20,8 +20,12 @@ trait Concrete {
   def -(that: Concrete): Concrete = {
     (this, that) match {
       case (ConcreteUInt(v1, w1), ConcreteUInt(v2, w2)) => ConcreteSInt(v1 - v2, w1.max(w2) + 1)
-      case (ConcreteUInt(v1, w1), ConcreteSInt(v2, w2)) => ConcreteSInt(v1 - v2, w1.max(w2) + 1)
-      case (ConcreteSInt(v1, w1), ConcreteUInt(v2, w2)) => ConcreteSInt(v1 - v2, w1.max(w2) + 1)
+      case (ConcreteUInt(v1, w1), ConcreteSInt(v2, w2)) =>
+        val newWidth = (w1 + 2).max(w2 + 1)
+        ConcreteSInt(v1 - v2, newWidth)
+      case (ConcreteSInt(v1, w1), ConcreteUInt(v2, w2)) =>
+        val newWidth = if(w1 == 1) w2 + 1 else (w1 + 1).max(w2 + 2)
+        ConcreteSInt(v1 - v2, newWidth)
       case (ConcreteSInt(v1, w1), ConcreteSInt(v2, w2)) => ConcreteSInt(v1 - v2, w1.max(w2) + 1)
     }
   }
@@ -70,7 +74,9 @@ trait Concrete {
   def <=(that: Concrete): ConcreteUInt = ConcreteUInt(boolToBigInt(this.value <= that.value), 1)
   def >(that: Concrete):  ConcreteUInt = ConcreteUInt(boolToBigInt(this.value > that.value), 1)
   def >=(that: Concrete): ConcreteUInt = ConcreteUInt(boolToBigInt(this.value >= that.value), 1)
+  // scalastyle:off method.name
   def ==(that: Concrete): ConcreteUInt = ConcreteUInt(boolToBigInt(this.value == that.value), 1)
+  // scalastyle:on method.name
   def !=(that: Concrete): ConcreteUInt = ConcreteUInt(boolToBigInt(this.value != that.value), 1)
   // Padding
   def pad(n: BigInt): Concrete = pad(n.toInt)
@@ -86,7 +92,27 @@ trait Concrete {
     }
   }
   def asSInt: ConcreteSInt = {
-    ConcreteSInt(if(this.value == Big1 && this.width == 1) -1 else this.value, this.width)
+    this match {
+      case ConcreteSInt(previousValue, previousWidth) =>
+        ConcreteSInt(previousValue, previousWidth)
+      case ConcreteUInt(previousValue, previousWidth) =>
+        val newValue = {
+          if(previousValue == Big1 && previousWidth == 1) {
+            BigInt(-1)
+          }
+          else {
+            var signCrossover = BigInt(1) << (previousWidth - 1)
+            if(previousValue >= signCrossover) {
+              signCrossover <<= 1
+              previousValue - signCrossover
+            }
+            else {
+              previousValue
+            }
+          }
+        }
+        ConcreteSInt(newValue, this.width)
+    }
   }
   def asClock: ConcreteClock = ConcreteClock(boolToBigInt((this.value & BigInt(1)) > BigInt(0)))
   // Shifting
@@ -169,10 +195,10 @@ trait Concrete {
   }
 //  def bits(hi: BigInt, lo: BigInt): ConcreteUInt = bits(hi.toInt, lo.toInt)
   def bits(hi: BigInt, lo: BigInt): Concrete = {
-  assert(lo >= Big0, s"Error:BIT_SELECT_OP($this, hi=$hi, lo=$lo) lo must be >= 0")
-  assert(lo <= width, s"Error:BIT_SELECT_OP($this, hi=$hi, lo=$lo) lo must be < ${this.width}")
-  assert(hi >= lo,   s"Error:BIT_SELECT_OP($this, hi=$hi, lo=$lo) hi must be >= $lo")
-  assert(hi <= width, s"Error:BIT_SELECT_OP($this, hi=$hi, lo=$lo) hi must be < ${this.width}")
+  assert(lo >= Big0, s"Error:Bits($this, hi=$hi, lo=$lo) lo must be >= 0")
+  assert(lo <= width, s"Error:Bits($this, hi=$hi, lo=$lo) lo must be < ${this.width}")
+  assert(hi >= lo,   s"Error:Bits($this, hi=$hi, lo=$lo) hi must be >= $lo")
+  assert(hi <= width, s"Error:Bits($this, hi=$hi, lo=$lo) hi must be < ${this.width}")
     val (high, low) = (hi.toInt, lo.toInt)
     this match {
       case ConcreteUInt(v, _) => ConcreteUInt(getBits(high, low), high - low + 1)
@@ -180,14 +206,14 @@ trait Concrete {
     }
   }
   def head(n: BigInt): Concrete = {
-    assert(n > 0, s"Error:HEAD_OP($this, n=$n) n must be >= 0")
-    assert(n <= width, s"Error:HEAD_OP($this, n=$n) n must be <= ${this.width}")
+    assert(n > 0, s"Error:Head($this, n=$n) n must be >= 0")
+    assert(n <= width, s"Error:Head($this, n=$n) n must be <= ${this.width}")
     bits(width-1, width - n)
   }
   def tail(n: BigInt): ConcreteUInt = tail(n.toInt)
   def tail(n: Int): ConcreteUInt = {
-    assert(n >= 0, s"Error:TAIL_OP($this, n=$n) n must be >= 0")
-    assert(n < width, s"Error:TAIL_OP($this, n=$n) n must be < ${this.width}")
+    assert(n >= 0, s"Error:Tail($this, n=$n) n must be >= 0")
+    assert(n < width, s"Error:Tail($this, n=$n) n must be < ${this.width}")
 //    if(n == 0) {
 //      ConcreteUInt(value, width)
 //    }
@@ -234,25 +260,25 @@ trait Concrete {
       case ConcreteUInt(v, w) =>
         s"UInt<$width>${"0"*(width-bitString.length)}$bitString"
       case ConcreteSInt(v, w) =>
-        s"UInt<$width>${if(v<0)"-" else "+"}${"0"*((width-1)-bitString.length)}$bitString"
+        s"SInt<$width>${if(v<0)"1" else "0"}${"0"*((width-1)-bitString.length)}$bitString"
     }
   }
   def poisoned: Boolean = false
 }
 object Concrete {
-  def apply(u: UIntValue): ConcreteUInt = {
+  def apply(u: UIntLiteral): ConcreteUInt = {
     ConcreteUInt(u.value, u.width.asInstanceOf[IntWidth].width.toInt)
   }
-  def apply(u: SIntValue): ConcreteSInt = {
+  def apply(u: SIntLiteral): ConcreteSInt = {
     ConcreteSInt(u.value, u.width.asInstanceOf[IntWidth].width.toInt)
   }
   def apply(tpe: Type, value: BigInt = Big0): Concrete = {
     tpe match {
       case UIntType(IntWidth(w))     => ConcreteUInt(value, w.toInt)
-//      case UIntValue(v, IntWidth(w)) => ConcreteUInt(v, w.toInt)
+//      case UIntLiteral(v, IntWidth(w)) => ConcreteUInt(v, w.toInt)
       case SIntType(IntWidth(w))     => ConcreteSInt(value, w.toInt)
-//      case SIntValue(v, IntWidth(w)) => ConcreteSInt(v, w.toInt)
-      case ClockType()               => ConcreteClock(value)
+//      case SIntLiteral(v, IntWidth(w)) => ConcreteSInt(v, w.toInt)
+      case ClockType                 => ConcreteClock(value)
     }
   }
   def randomUInt(width: Int): ConcreteUInt  = ConcreteUInt(randomBigInt(width), width)
@@ -270,10 +296,10 @@ case class ConcreteUInt(val value: BigInt, val width: Int) extends Concrete {
   if(width < 0) {
     throw new InterpreterException(s"error: ConcreteUInt($value, $width) bad width $width must be > 0")
   }
-  val bitsRequired = requiredBits(value)
+  val bitsRequired = requiredBitsForUInt(value)
   if((width > 0) && (bitsRequired > width)) {
     throw new InterpreterException(
-      s"error: ConcreteUInt($value, $width) bad width $width needs ${requiredBits(value.toInt)}"
+      s"error: ConcreteUInt($value, $width) bad width $width needs ${requiredBitsForUInt(value.toInt)}"
     )
   }
   def forceWidth(newWidth:Int): ConcreteUInt = {
@@ -298,10 +324,10 @@ case class ConcreteSInt(val value: BigInt, val width: Int) extends Concrete {
     }
   }
   else {
-    val bitsRequired = requiredBits(value)
+    val bitsRequired = requiredBitsForSInt(value)
     if ((width > 0) && (bitsRequired > width)) {
       throw new InterpreterException(
-        s"error: ConcreteSInt($value, $width) bad width $width needs ${requiredBits(value.toInt)}"
+        s"error: ConcreteSInt($value, $width) bad width $width needs ${requiredBitsForSInt(value)}"
       )
     }
   }
@@ -310,7 +336,7 @@ case class ConcreteSInt(val value: BigInt, val width: Int) extends Concrete {
     if(newWidth == width) this else ConcreteSInt(this.value, newWidth)
   }
   def forceWidth(tpe: Type): ConcreteSInt = forceWidth(typeToWidth(tpe))
-  override def toString: String = s"$value.U<$width>"
+  override def toString: String = s"$value.S<$width>"
 }
 case class ConcreteClock(val value: BigInt) extends Concrete {
   val width = 1

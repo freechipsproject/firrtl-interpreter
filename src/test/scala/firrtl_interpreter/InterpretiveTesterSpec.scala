@@ -4,7 +4,7 @@ package firrtl_interpreter
 
 import org.scalatest.{FlatSpec, Matchers}
 
-class InterperetiveTesterSpec extends FlatSpec with Matchers {
+class InterpretiveTesterSpec extends FlatSpec with Matchers {
   behavior of "cycle mechanism"
 
   it should "mark circuit as stale after poke" in {

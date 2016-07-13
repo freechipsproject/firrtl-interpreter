@@ -1,7 +1,7 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
-import firrtl.{DefMemory, Info, Type}
+import firrtl.ir._
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -38,7 +38,7 @@ class Memory(
   import Memory._
 
   val dataWidth    = typeToWidth(dataType)
-  val addressWidth = requiredBits(depth)
+  val addressWidth = requiredBitsForUInt(depth)
   val bigDepth     = BigInt(depth)
   var moduloIndex  = true
 
@@ -380,10 +380,10 @@ object Memory {
     new Memory(
       defMemory.info,
       defMemory.name,
-      defMemory.data_type,
+      defMemory.dataType,
       defMemory.depth,
-      defMemory.write_latency,
-      defMemory.read_latency,
+      defMemory.writeLatency,
+      defMemory.readLatency,
       defMemory.readers,
       defMemory.writers,
       defMemory.readwriters,

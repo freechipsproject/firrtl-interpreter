@@ -14,8 +14,13 @@ resolvers ++= Seq(
   Resolver.sonatypeRepo("public")
 )
 
+// Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
+val defaultVersions = Map("firrtl" -> "0.2-BETA-SNAPSHOT")
+
+libraryDependencies ++= (Seq("firrtl").map {
+  dep: String => "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", defaultVersions(dep)) })
+
 libraryDependencies ++= Seq(
-  "edu.berkeley.cs" %% "firrtl" % "0.2-BETA-SNAPSHOT",
   "org.scalatest" % "scalatest_2.11" % "2.2.4",
   "org.scalacheck" %% "scalacheck" % "1.12.4",
   "org.scala-lang.modules" % "scala-jline" % "2.12.1",
@@ -66,3 +71,6 @@ publishTo <<= version { v: String =>
 scalacOptions in (Compile, doc) <++= (baseDirectory, version) map { (bd, v) =>
   Seq("-diagrams", "-diagrams-max-classes", "25", "-sourcepath", bd.getAbsolutePath, "-doc-source-url", "https://github.com/ucb-bar/chisel-testers/tree/master/€{FILE_PATH}.scala")
 }
+
+parallelExecution in Test := false
+

@@ -46,7 +46,7 @@ class LifeCellSpec extends FlatSpec with Matchers {
         |    io.is_alive <= is_alive
         |      """.stripMargin
 
-    new InterpretiveTester(input) {
+    new InterpretiveTester(input, vcdOutputFileName = "life_cell.vcd") {
       // setVerbose()
 
       def setAlive(alive: Boolean): Unit = {
@@ -59,6 +59,7 @@ class LifeCellSpec extends FlatSpec with Matchers {
         poke("io_set_dead",  0)
       }
 
+      // scalastyle:off parameter.number
       def setNeighborsIgnoreCenter(
                          ntl: Int, ntc: Int, ntr: Int,
                          nml: Int, nmc: Int, nmr: Int,
@@ -75,6 +76,7 @@ class LifeCellSpec extends FlatSpec with Matchers {
         poke("io_bot_center", nbc)
         poke("io_bot_right", nbr)
       }
+      // scalastyle:on parameter.number
 
       setAlive(true)
       // dead cell with no neighbors stays dead
@@ -180,10 +182,8 @@ class LifeCellSpec extends FlatSpec with Matchers {
       step(1)
       expect("io_is_alive", 0)
 
+      interpreter.circuitState.vcdLoggerOption.get.write("life.vcd")
       report()
     }
-
-
   }
-
 }

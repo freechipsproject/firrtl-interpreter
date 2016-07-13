@@ -2,13 +2,13 @@
 package firrtl_interpreter
 
 import firrtl.Utils._
-import firrtl._
+import firrtl.ir._
+import firrtl.PrimOps._
 import firrtl_interpreter.TestUtils._
 import org.scalatest.{FlatSpec, Matchers}
 
-/**
-  * Created by chick on 4/25/16.
-  */
+// scalastyle:off magic.number
+
 class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
   behavior of "Mux"
 
@@ -28,25 +28,25 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
     val interpreter = FirrtlTerp(input)
     val evaluator = new LoFirrtlExpressionEvaluator(interpreter.dependencyGraph, interpreter.circuitState)
 
-    val (trueBranch, trueResult)   = (UIntValue(1, IntWidth(1)), ConcreteUInt(1, 1))
-    val (falseBranch, falseResult) = (UIntValue(0, IntWidth(1)), ConcreteUInt(0, 1))
+    val (trueBranch, trueResult)   = (UIntLiteral(1, IntWidth(1)), ConcreteUInt(1, 1))
+    val (falseBranch, falseResult) = (UIntLiteral(0, IntWidth(1)), ConcreteUInt(0, 1))
 
-    var condition: Expression = UIntValue(0, IntWidth(1))
+    var condition: Expression = UIntLiteral(0, IntWidth(1))
     var expression = Mux(condition, trueBranch, falseBranch, UIntType(IntWidth(1)))
     var result = evaluator.evaluate(expression)
     result should be (falseResult)
 
-    condition = UIntValue(1, IntWidth(1))
+    condition = UIntLiteral(1, IntWidth(1))
     expression = Mux(condition, trueBranch, falseBranch, UIntType(IntWidth(1)))
     result = evaluator.evaluate(expression)
     result should be (trueResult)
 
-    condition = SIntValue(1, IntWidth(1))
+    condition = SIntLiteral(1, IntWidth(1))
     expression = Mux(condition, trueBranch, falseBranch, UIntType(IntWidth(1)))
     intercept[InterpreterException] {
       evaluator.evaluate(expression)
     }
-    condition = UIntValue(1, IntWidth(2))
+    condition = UIntLiteral(1, IntWidth(2))
     expression = Mux(condition, trueBranch, falseBranch, UIntType(IntWidth(1)))
     intercept[InterpreterException] {
       evaluator.evaluate(expression)
@@ -72,9 +72,6 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
 
   val baseWidth = 4
 
-  private def makeSignedBigInt = {
-    BigInt(baseWidth, random) * (if(random.nextBoolean()) 1 else -1)
-  }
   they should "return types correctly" in {
     val w1 = IntWidth(4)
     val w2 = IntWidth(4)
@@ -83,10 +80,10 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
     val outWidth = IntWidth(4)
     val outWidthType = UIntType(outWidth)
 
-    evaluator.mathPrimitive(MUL_OP, Seq(i1, i1), outWidthType ).isInstanceOf[ConcreteUInt] should be (true)
-    evaluator.mathPrimitive(MUL_OP, Seq(i1, s1), outWidthType ).isInstanceOf[ConcreteSInt] should be (true)
-    evaluator.mathPrimitive(MUL_OP, Seq(s1, i1), outWidthType ).isInstanceOf[ConcreteSInt] should be (true)
-    evaluator.mathPrimitive(MUL_OP, Seq(s1, s1), outWidthType ).isInstanceOf[ConcreteSInt] should be (true)
+    evaluator.mathPrimitive(Mul, Seq(i1, i1), outWidthType ).isInstanceOf[ConcreteUInt] should be (true)
+    evaluator.mathPrimitive(Mul, Seq(i1, s1), outWidthType ).isInstanceOf[ConcreteSInt] should be (true)
+    evaluator.mathPrimitive(Mul, Seq(s1, i1), outWidthType ).isInstanceOf[ConcreteSInt] should be (true)
+    evaluator.mathPrimitive(Mul, Seq(s1, s1), outWidthType ).isInstanceOf[ConcreteSInt] should be (true)
 
   }
   they should "evaluate multiply UIntValues correctly" in {
@@ -98,7 +95,7 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
       val outWidth = IntWidth(BigInt(baseWidth, random))
       val outWidthType = UIntType(outWidth)
 
-      val out = evaluator.mathPrimitive(MUL_OP, Seq(i1, i2), outWidthType )
+      val out = evaluator.mathPrimitive(Mul, Seq(i1, i2), outWidthType )
 
       println(s"$i1 * $i2 => $out $outWidth")
       out.value should be (i1.value * i2.value)
@@ -107,31 +104,35 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
   they should "evaluate multiply SIntValues correctly" in {
 
     for(i <- 0 to 10) {
-      val w1 = IntWidth(BigInt(baseWidth, random))
-      val w2 = IntWidth(BigInt(baseWidth, random))
-      val i1 = evaluator.makeUIntValue(makeSignedBigInt, w1)
-      val i2 = evaluator.makeUIntValue(makeSignedBigInt, w2)
+      val w1 = IntWidth(BigInt(baseWidth, random).abs + 1)
+      val w2 = IntWidth(BigInt(baseWidth, random).abs + 1)
+
+      val i1 = evaluator.makeSIntValue(BigInt(w1.width.toInt - 1, random), w1)
+      val i2 = evaluator.makeSIntValue(BigInt(w2.width.toInt - 1, random), w2)
+
       val outWidth = IntWidth(BigInt(baseWidth, random))
       val outWidthType = UIntType(outWidth)
 
-      val out = evaluator.mathPrimitive(MUL_OP, Seq(i1, i2), outWidthType )
+      println(f"sintvalue ${i1.value}%x * sintvalue ${i2.value}%x $i1 $i2")
 
-//      println(s"$i1 * $i2 => $out")
+      val out = evaluator.mathPrimitive(Mul, Seq(i1, i2), outWidthType )
+
+      println(s"$i1 * $i2 => $out")
       out.value should be (i1.value * i2.value)
     }
   }
 
-  behavior of "requiredBits"
+  behavior of "requiredBitsForUInt"
 
   it should "return the right amount" in {
-    requiredBits(BigInt("1"*29, 2)) should be (29)
+    requiredBitsForUInt(BigInt("1"*29, 2)) should be (29)
     for( width <- 1 to 100) {
       val num = Big1 << (width - 1)
-      val computed = requiredBits(num)
+      val computed = requiredBitsForUInt(num)
       computed should be (width)
 
       val maxNum = BigInt("1"*width, 2)
-      val maxComputed = requiredBits(maxNum)
+      val maxComputed = requiredBitsForUInt(maxNum)
 //      println(s"width $width computed $maxComputed num $maxNum")
       maxComputed should be (width)
     }
@@ -150,36 +151,37 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
       for (samples <- 0 to 10) {
         val number = BigInt(maskSize + 10, random)
         val masked = evaluator.mask(number, maskSize)
-//        println(s"mask $maskSize sample number $samples number $number power $power masked $masked calc ${number % power} ")
+        // println(s"mask $maskSize sample number $samples number $number " +
+        //  s"power $power masked $masked calc ${number % power} ")
         masked should be(number % power)
       }
       if(maskSize > 0 ) power <<= 1
     }
   }
 
-  behavior of "SHIFT_RIGHT_OP"
+  behavior of "Shr"
 
   it should "throw assertions when parameter is less than zero" in {
     intercept[AssertionError] {
-      evaluator.bitOps(SHIFT_RIGHT_OP, Seq(UIntValue(1, IntWidth(3))), Seq(-1), UIntType(IntWidth(3)))
+      evaluator.bitOps(Shr, Seq(UIntLiteral(1, IntWidth(3))), Seq(-1), UIntType(IntWidth(3)))
     }
     intercept[AssertionError] {
-      evaluator.bitOps(SHIFT_RIGHT_OP, Seq(UIntValue(1, IntWidth(3))), Seq(4), UIntType(IntWidth(3)))
+      evaluator.bitOps(Shr, Seq(UIntLiteral(1, IntWidth(3))), Seq(4), UIntType(IntWidth(3)))
     }
     intercept[AssertionError] {
-      evaluator.bitOps(SHIFT_RIGHT_OP, Seq(UIntValue(1, IntWidth(33))), Seq(34), UIntType(IntWidth(3)))
+      evaluator.bitOps(Shr, Seq(UIntLiteral(1, IntWidth(33))), Seq(34), UIntType(IntWidth(3)))
     }
   }
   it should "shift bits n bits to the right" in {
     def testShiftOp(width: Int, shift: Int): Unit = {
       val num = BigInt("1"*width, 2)
       val shiftedNum = num << shift
-      val target = UIntValue(shiftedNum, IntWidth(width + shift))
-      requiredBits(num) should be (width)
-      requiredBits(shiftedNum) should be (width + shift)
+      val target = UIntLiteral(shiftedNum, IntWidth(width + shift))
+      requiredBitsForUInt(num) should be (width)
+      requiredBitsForUInt(shiftedNum) should be (width + shift)
 
 //      println(s"width $width => num $num arg $shift, target $target result NA")
-      val result = evaluator.bitOps(SHIFT_RIGHT_OP, Seq(target), Seq(shift), UIntType(IntWidth(width)))
+      val result = evaluator.bitOps(Shr, Seq(target), Seq(shift), UIntType(IntWidth(width)))
 //      println(s"width $width => num $num arg $shift, target $target result $result")
       result.value should be (num)
     }
@@ -191,77 +193,77 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
       }
       for(arg <- 1 until i) {
         val num = BigInt("1"*i, 2)
-        val target = SIntValue(evaluator.shiftLeft(num, arg), IntWidth(i + arg + 1))
+        val target = SIntLiteral(evaluator.shiftLeft(num, arg), IntWidth(i + arg + 1))
 
-        val result = evaluator.bitOps(SHIFT_RIGHT_OP, Seq(target), Seq(arg), SIntType(IntWidth(i+1)))
+        val result = evaluator.bitOps(Shr, Seq(target), Seq(arg), SIntType(IntWidth(i + 1)))
         //        println(s"num $num arg $arg, target $target result $result")
         result.value should be (num)
       }
       for(arg <- 1 until i) {
         val num = -BigInt("1"*i, 2)
-        val target = SIntValue(evaluator.shiftLeft(num, arg), IntWidth(i + arg + 1))
+        val target = SIntLiteral(evaluator.shiftLeft(num, arg), IntWidth(i + arg + 1))
 
-        val result = evaluator.bitOps(SHIFT_RIGHT_OP, Seq(target), Seq(arg), SIntType(IntWidth(i+1)))
+        val result = evaluator.bitOps(Shr, Seq(target), Seq(arg), SIntType(IntWidth(i + 1)))
         //        println(s"num $num arg $arg, target $target result $result")
         result.value should be (num)
       }
     }
   }
 
-  behavior of "SHIFT_LEFT_OP"
+  behavior of "Shl"
 
   it should "throw assertions when parameter is  > zero" in {
     intercept[AssertionError] {
-      evaluator.bitOps(SHIFT_LEFT_OP, Seq(UIntValue(1, IntWidth(3))), Seq(-1), UIntType(IntWidth(3)))
+      evaluator.bitOps(Shl, Seq(UIntLiteral(1, IntWidth(3))), Seq(-1), UIntType(IntWidth(3)))
     }
   }
   it should "shift bits n bits to the left" in {
     for(i <- 3 to 100) {
       for(arg <- 1 until 50) {
         val num = BigInt("1"*i, 2)
-        val target = UIntValue(num, IntWidth(i))
+        val target = UIntLiteral(num, IntWidth(i))
         val testTarget = evaluator.shiftLeft(num, arg)
 
-        val result = evaluator.bitOps(SHIFT_LEFT_OP, Seq(target), Seq(arg), UIntType(IntWidth(i+arg)))
-        //        println(s"num $num arg $arg, target $target result $result")
+        val result = evaluator.bitOps(Shl, Seq(target), Seq(arg), UIntType(IntWidth(i + arg)))
+        // println(s"num $num arg $arg, target $target result $result")
         result.value should be (testTarget)
-        result.width should be (i+arg)
+        result.width should be (i + arg)
       }
       for(arg <- 1 until 50) {
-        val num = BigInt("1"*i, 2)
-        val target = SIntValue(num, IntWidth(i))
+        val num = BigInt("1" * i, 2)
+        val target = SIntLiteral(num, IntWidth(i + 1))
         val testTarget = evaluator.shiftLeft(num, arg)
 
-        val result = evaluator.bitOps(SHIFT_LEFT_OP, Seq(target), Seq(arg), SIntType(IntWidth(i+arg)))
-        //        println(s"num $num arg $arg, target $target result $result")
+        val result = evaluator.bitOps(Shl, Seq(target), Seq(arg), SIntType(IntWidth(i + arg)))
+        // println(f"num $num%x arg $arg, target $target result ${result.value}%x.S<${result.width}>")
         result.value should be (testTarget)
-        result.width should be (i+arg)
+        result.width should be (i + arg + 1)
       }
     }
   }
 
-  behavior of "DYN_SHIFT_LEFT_OP"
+  behavior of "Dshl"
 
   it should "throw assertions when parameter is > zero" in {
     intercept[InterpreterException] {
-      evaluator.dynamicBitOps(DYN_SHIFT_LEFT_OP,
-        Seq(UIntValue(1, IntWidth(3)), SIntValue(-1, IntWidth(2))), Seq(), UIntType(IntWidth(3)))
+      evaluator.dynamicBitOps(Dshl,
+        Seq(UIntLiteral(1, IntWidth(3)), SIntLiteral(-1, IntWidth(2))), Seq(), UIntType(IntWidth(3)))
     }
     intercept[InterpreterException] {
-      evaluator.dynamicBitOps(DYN_SHIFT_LEFT_OP,
-        Seq(UIntValue(1, IntWidth(3)), SIntValue(1, IntWidth(2))), Seq(), UIntType(IntWidth(3)))
+      evaluator.dynamicBitOps(Dshl,
+        Seq(UIntLiteral(1, IntWidth(3)), SIntLiteral(1, IntWidth(2))), Seq(), UIntType(IntWidth(3)))
     }
   }
   it should "shift bits n bits to the left" in {
     def testShiftOp(width: Int, shift: Int): Unit = {
       val num = BigInt("1"*width, 2)
       val shiftedNum = num << shift
-      val target = UIntValue(shiftedNum, IntWidth(width + shift))
-      requiredBits(num) should be (width)
-      requiredBits(shiftedNum) should be (width + shift)
+      val target = UIntLiteral(shiftedNum, IntWidth(width + shift))
+      requiredBitsForUInt(num) should be (width)
+      requiredBitsForUInt(shiftedNum) should be (width + shift)
 
 //      println(s"width $width => num $num arg $shift, target $target result NA")
-      val result = evaluator.bitOps(SHIFT_RIGHT_OP, Seq(target), Seq(shift), UIntType(IntWidth(width)))
+      val result = evaluator.bitOps(Shr, Seq(target), Seq(shift), UIntType(IntWidth(width)))
 //      println(s"width $width => num $num arg $shift, target $target result $result")
       result.value should be (num)
     }
@@ -273,17 +275,17 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
       }
       for(arg <- 1 until i) {
         val num = BigInt("1"*i, 2)
-        val target = SIntValue(evaluator.shiftLeft(num, arg), IntWidth(i + arg + 1))
+        val target = SIntLiteral(evaluator.shiftLeft(num, arg), IntWidth(i + arg + 1))
 
-        val result = evaluator.bitOps(SHIFT_RIGHT_OP, Seq(target), Seq(arg), SIntType(IntWidth(i+1)))
+        val result = evaluator.bitOps(Shr, Seq(target), Seq(arg), SIntType(IntWidth(i + 1)))
         //        println(s"num $num arg $arg, target $target result $result")
         result.value should be (num)
       }
       for(arg <- 1 until i) {
         val num = -BigInt("1"*i, 2)
-        val target = SIntValue(evaluator.shiftLeft(num, arg), IntWidth(i + arg + 1))
+        val target = SIntLiteral(evaluator.shiftLeft(num, arg), IntWidth(i + arg + 1))
 
-        val result = evaluator.bitOps(SHIFT_RIGHT_OP, Seq(target), Seq(arg), SIntType(IntWidth(i+1)))
+        val result = evaluator.bitOps(Shr, Seq(target), Seq(arg), SIntType(IntWidth(i + 1)))
         //        println(s"num $num arg $arg, target $target result $result")
         result.value should be (num)
       }
@@ -291,39 +293,41 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
     for(i <- 3 to 100) {
       for(arg <- 1 until 50) {
         val num = BigInt("1"*i, 2)
-        val target = UIntValue(num, IntWidth(i))
+        val target = UIntLiteral(num, IntWidth(i))
         val testTarget = evaluator.shiftLeft(num, arg)
         val shiftValue = evaluator.makeUIntValue(arg, IntWidth(req_num_bits(arg)))
 
-        val result = evaluator.dynamicBitOps(DYN_SHIFT_LEFT_OP, Seq(target, shiftValue), Seq(), UIntType(IntWidth(i+arg)))
+        val result = evaluator.dynamicBitOps(Dshl, Seq(target, shiftValue),
+          Seq(), UIntType(IntWidth(i + arg)))
         //        println(s"num $num arg $arg, target $target result $result")
         result.value should be (testTarget)
-        result.width should be (i+arg)
+        result.width should be (i + arg)
       }
       for(arg <- 1 until 50) {
         val num = BigInt("1"*i, 2)
-        val target = SIntValue(num, IntWidth(i))
+        val target = SIntLiteral(num, IntWidth(i + 1))
         val testTarget = evaluator.shiftLeft(num, arg)
         val shiftValue = evaluator.makeUIntValue(arg, IntWidth(req_num_bits(arg)))
 
-        val result = evaluator.dynamicBitOps(DYN_SHIFT_LEFT_OP, Seq(target, shiftValue), Seq(), SIntType(IntWidth(i+arg)))
+        val result = evaluator.dynamicBitOps(Dshl, Seq(target, shiftValue),
+          Seq(), SIntType(IntWidth(i + arg)))
         //        println(s"num $num arg $arg, target $target result $result")
         result.value should be (testTarget)
-        result.width should be (i+arg)
+        result.width should be (i + arg + 1)
       }
     }
   }
 
-  behavior of "DYN_SHIFT_RIGHT_OP"
+  behavior of "Dshr"
 
   it should "throw assertions when parameter is zero" in {
     intercept[InterpreterException] {
-      evaluator.dynamicBitOps(DYN_SHIFT_RIGHT_OP,
-        Seq(UIntValue(1, IntWidth(3)), UIntValue(4, IntWidth(2))), Seq(), UIntType(IntWidth(3)))
+      evaluator.dynamicBitOps(Dshr,
+        Seq(UIntLiteral(1, IntWidth(3)), UIntLiteral(4, IntWidth(2))), Seq(), UIntType(IntWidth(3)))
     }
     intercept[InterpreterException] {
-      evaluator.dynamicBitOps(DYN_SHIFT_RIGHT_OP,
-        Seq(UIntValue(1, IntWidth(3)), SIntValue(1, IntWidth(2))), Seq(), UIntType(IntWidth(3)))
+      evaluator.dynamicBitOps(Dshr,
+        Seq(UIntLiteral(1, IntWidth(3)), SIntLiteral(1, IntWidth(2))), Seq(), UIntType(IntWidth(3)))
     }
   }
   it should "shift bits n bits to the right" in {
@@ -331,13 +335,14 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
       val num = BigInt("1"*width, 2)
       val shiftedNum = num >> shift
 
-      val target = UIntValue(num, IntWidth(width))
-      val shiftUInt = UIntValue(shift, IntWidth(requiredBits(shift)))
+      val target = UIntLiteral(num, IntWidth(width))
+      val shiftUInt = UIntLiteral(shift, IntWidth(requiredBitsForUInt(shift)))
 
-      requiredBits(num) should be (width)
-      requiredBits(shiftedNum) should be (width - shift)
+      requiredBitsForUInt(num) should be (width)
+      requiredBitsForUInt(shiftedNum) should be (width - shift)
 
-      val result = evaluator.dynamicBitOps(DYN_SHIFT_RIGHT_OP, Seq(target, shiftUInt), Seq(), UIntType(IntWidth(width)))
+      val result = evaluator.dynamicBitOps(Dshr, Seq(target, shiftUInt),
+        Seq(), UIntType(IntWidth(width)))
 //      println(s"width $width => num $num arg $shift, target $target result $result")
       result.value should be (shiftedNum)
     }
@@ -349,27 +354,27 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
     }
   }
 
-  behavior of "HEAD_OP"
+  behavior of "Head"
 
   it should "throw assertions when parameter is zero or not less than width of target" in {
     intercept[AssertionError] {
-      evaluator.bitOps(HEAD_OP, Seq(UIntValue(1, IntWidth(3))), Seq(0), UIntType(IntWidth(3)))
+      evaluator.bitOps(Head, Seq(UIntLiteral(1, IntWidth(3))), Seq(0), UIntType(IntWidth(3)))
     }
     intercept[AssertionError] {
-      evaluator.bitOps(HEAD_OP, Seq(UIntValue(1, IntWidth(3))), Seq(4), UIntType(IntWidth(3)))
+      evaluator.bitOps(Head, Seq(UIntLiteral(1, IntWidth(3))), Seq(4), UIntType(IntWidth(3)))
     }
     intercept[AssertionError] {
-      evaluator.bitOps(HEAD_OP, Seq(UIntValue(1, IntWidth(33))), Seq(34), UIntType(IntWidth(3)))
+      evaluator.bitOps(Head, Seq(UIntLiteral(1, IntWidth(33))), Seq(34), UIntType(IntWidth(3)))
     }
   }
   it should "shift n bits at top of number over the width - n bits to the right" in {
     for(i <- 1 to 100) {
       for(arg <- 1 until i) {
         val num = BigInt("1"*i, 2)
-        val target = UIntValue(evaluator.shiftLeft(num, arg), IntWidth(i + arg))
+        val target = UIntLiteral(evaluator.shiftLeft(num, arg), IntWidth(i + arg))
 
 //        println(s"i $i num $num arg $arg, target $target result NA")
-        val result = evaluator.bitOps(HEAD_OP, Seq(target), Seq(i), UIntType(IntWidth(i)))
+        val result = evaluator.bitOps(Head, Seq(target), Seq(i), UIntType(IntWidth(i)))
         result.value should be (num)
       }
     }
@@ -379,10 +384,10 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
 
   it should "throw assertions when parameter is zero or not less than width of target" in {
     intercept[AssertionError] {
-      evaluator.bitOps(TAIL_OP, Seq(UIntValue(1, IntWidth(3))), Seq(-1), UIntType(IntWidth(3)))
+      evaluator.bitOps(Tail, Seq(UIntLiteral(1, IntWidth(3))), Seq(-1), UIntType(IntWidth(3)))
     }
     intercept[AssertionError] {
-      evaluator.bitOps(TAIL_OP, Seq(UIntValue(1, IntWidth(33))), Seq(34), UIntType(IntWidth(3)))
+      evaluator.bitOps(Tail, Seq(UIntLiteral(1, IntWidth(33))), Seq(34), UIntType(IntWidth(3)))
     }
   }
   it should "remove top n bits of a number" in {
@@ -391,8 +396,8 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
         val num  = allOnes(i)
         val mask = allOnes(i-arg)
 
-        val target = UIntValue(num, IntWidth(i))
-        val result = evaluator.bitOps(TAIL_OP, Seq(target), Seq(arg), UIntType(IntWidth(i-arg)))
+        val target = UIntLiteral(num, IntWidth(i))
+        val result = evaluator.bitOps(Tail, Seq(target), Seq(arg), UIntType(IntWidth(i-arg)))
 //        println(s"num $num arg $arg, result $result")
         result.value should be (mask)
       }
