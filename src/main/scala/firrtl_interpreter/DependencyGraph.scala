@@ -65,11 +65,11 @@ object DependencyGraph extends SimpleLogger {
 
     dependencyGraph.numberOfStatements += 1
     s match {
-      case begin: Begin =>
-        begin.stmts.map { case subStatement =>
+      case block: Block =>
+        block.stmts.map { case subStatement =>
           processDependencyStatements(modulePrefix, subStatement, dependencyGraph)
         }
-        begin
+        block
       case con: Connect =>
         con.loc match {
           case WRef(name, _, _, _) => dependencyGraph(expand(name)) = renameExpression(con.expr)
