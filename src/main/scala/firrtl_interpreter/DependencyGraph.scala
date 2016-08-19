@@ -148,10 +148,27 @@ object DependencyGraph extends SimpleLogger {
   }
   // scalastyle:on
 
+  def processExternalInstance(extModule: ExtModule,
+                              modulePrefix: String,
+                              instance: BlackBoxImplementation,
+                              dependencyGraph: DependencyGraph): Unit = {
+    def expand(name: String): String = modulePrefix + "." + name
+
+    for(port <- extModule.ports) {
+      if(port.direction == Output) {
+        val outputDependencies = instance.outputDependencies(port.name)
+        if(outputDependencies.nonEmpty) {
+          dependencyGraph(expand(port.name)) = BlackBoxOutput(expand(port.name), instance, outputDependencies, port.tpe)
+        }
+      }
+    }
+  }
+
   def processModule(modulePrefix: String, myModule: DefModule, dependencyGraph: DependencyGraph): Unit = {
     def processPorts(module: DefModule): Unit = {
       for(port <- module.ports) {
         if(modulePrefix.isEmpty) {
+          /* We are processing a  module at the TOP level, which is indicated by it's lack of prefix */
           dependencyGraph.nameToType(port.name) = port.tpe
           if (port.direction == Input) {
             dependencyGraph.inputPorts += port.name
@@ -163,6 +180,7 @@ object DependencyGraph extends SimpleLogger {
           }
         }
         else {
+          /* We are processing a sub-module */
           dependencyGraph.nameToType(modulePrefix + "." + port.name) = port.tpe
           dependencyGraph.recordName(modulePrefix + "." + port.name)
           dependencyGraph.inlinedPorts += modulePrefix + "." + port.name
@@ -173,16 +191,16 @@ object DependencyGraph extends SimpleLogger {
       case module: Module =>
         processPorts(module)
         processDependencyStatements(modulePrefix, module.body, dependencyGraph)
-      case module: ExtModule => // Look to see if we have an implementation for this
-        println(s"got external module ${module.name}")
-        processPorts(module)
+      case extModule: ExtModule => // Look to see if we have an implementation for this
+        println(s"got external module ${extModule.name} instance $modulePrefix")
+        processPorts(extModule)
+        /* use exists while looking for the right factory, short circuits iteration when found */
         dependencyGraph.blackBoxFactories.exists { factory =>
-          if(factory.appliesTo(module.name)) {
-            println(s"I've got a factory for you ${module.name}")
-            true
-          }
-          else {
-            false
+          factory.createInstance(modulePrefix, extModule.name) match {
+            case Some(implementation) =>
+              processExternalInstance(extModule, modulePrefix, implementation, dependencyGraph)
+              true
+            case _ => false
           }
         }
     }
