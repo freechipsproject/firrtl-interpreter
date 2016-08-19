@@ -26,7 +26,7 @@ import firrtl.ir._
   *
   * @param ast the circuit to be simulated
   */
-class FirrtlTerp(ast: Circuit) extends SimpleLogger {
+class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) extends SimpleLogger {
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
   def stopResult: Int  = lastStopResult.get
@@ -45,6 +45,7 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
     evaluator.setVerbose(value)
   }
 
+  val dependencyGraph    = DependencyGraph(loweredAst, this)
   /**
     * Once a stop has occured, the intepreter will not allow pokes until
     * the stop has been cleared
@@ -180,9 +181,11 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
 }
 
 object FirrtlTerp {
-  def apply(input: String, verbose: Boolean = false): FirrtlTerp = {
+  def apply(input: String,
+            verbose: Boolean = false,
+            blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty): FirrtlTerp = {
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
-    val interpreter = new FirrtlTerp(ast)
+    val interpreter = new FirrtlTerp(ast, blackBoxFactories = blackBoxFactories)
     interpreter.setVerbose(verbose)
     interpreter.evaluateCircuit()
     interpreter

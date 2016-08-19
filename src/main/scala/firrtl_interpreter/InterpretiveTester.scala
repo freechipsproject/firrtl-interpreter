@@ -16,6 +16,9 @@ import firrtl.{ExecutionOptionsManager, CommonOptions}
   * @param input              a firrtl program contained in a string
   * @param optionsManager     collection of options for the interpreter
   */
+class InterpretiveTester(input: String,
+                         vcdOutputFileName: String = "",
+                         blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) {
 class InterpretiveTester(
     input: String,
     optionsManager: ExecutionOptionsManager with HasInterpreterOptions =
@@ -32,6 +35,9 @@ class InterpretiveTester(
     optionsManager.setTopNameIfNotSet(interpreter.loweredAst.main)
     optionsManager.makeTargetDir()
     interpreter.makeVCDLogger(interpreterOptions.vcdOutputFileName(optionsManager))
+  val interpreter = FirrtlTerp(input, blackBoxFactories = blackBoxFactories)
+  if(vcdOutputFileName.nonEmpty) {
+    interpreter.makeVCDLogger(vcdOutputFileName)
   }
   def writeVCD(): Unit = {
     interpreter.writeVCD()
