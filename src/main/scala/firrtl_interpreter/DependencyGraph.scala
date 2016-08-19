@@ -148,34 +148,48 @@ object DependencyGraph extends SimpleLogger {
   }
   // scalastyle:on
 
-  def processModule(modulePrefix: String, module: DefModule, dependencyGraph: DependencyGraph): Unit = {
-    module match {
-      case i: Module =>
-        for(port <- i.ports) {
-          if(modulePrefix.isEmpty) {
-            dependencyGraph.nameToType(port.name) = port.tpe
-            if (port.direction == Input) {
-              dependencyGraph.inputPorts += port.name
-              dependencyGraph.recordName(port.name)
-            }
-            else if (port.direction == Output) {
-              dependencyGraph.outputPorts += port.name
-              dependencyGraph.recordName(port.name)
-            }
+  def processModule(modulePrefix: String, myModule: DefModule, dependencyGraph: DependencyGraph): Unit = {
+    def processPorts(module: DefModule): Unit = {
+      for(port <- module.ports) {
+        if(modulePrefix.isEmpty) {
+          dependencyGraph.nameToType(port.name) = port.tpe
+          if (port.direction == Input) {
+            dependencyGraph.inputPorts += port.name
+            dependencyGraph.recordName(port.name)
           }
-          else {
-            dependencyGraph.nameToType(modulePrefix + "." + port.name) = port.tpe
-            dependencyGraph.recordName(modulePrefix + "." + port.name)
-            dependencyGraph.inlinedPorts += modulePrefix + "." + port.name
+          else if (port.direction == Output) {
+            dependencyGraph.outputPorts += port.name
+            dependencyGraph.recordName(port.name)
           }
         }
-        processDependencyStatements(modulePrefix, i.body, dependencyGraph)
-      case e: ExtModule => // Do nothing
+        else {
+          dependencyGraph.nameToType(modulePrefix + "." + port.name) = port.tpe
+          dependencyGraph.recordName(modulePrefix + "." + port.name)
+          dependencyGraph.inlinedPorts += modulePrefix + "." + port.name
+        }
+      }
+    }
+    myModule match {
+      case module: Module =>
+        processPorts(module)
+        processDependencyStatements(modulePrefix, module.body, dependencyGraph)
+      case module: ExtModule => // Look to see if we have an implementation for this
+        println(s"got external module ${module.name}")
+        processPorts(module)
+        dependencyGraph.blackBoxFactories.exists { factory =>
+          if(factory.appliesTo(module.name)) {
+            println(s"I've got a factory for you ${module.name}")
+            true
+          }
+          else {
+            false
+          }
+        }
     }
   }
 
   // scalastyle:off cyclomatic.complexity
-  def apply(circuit: Circuit): DependencyGraph = {
+  def apply(circuit: Circuit, interpreter: FirrtlTerp): DependencyGraph = {
     val module = findModule(circuit.main, circuit) match {
       case regularModule: Module => regularModule
       case externalModule: ExtModule =>
@@ -184,7 +198,7 @@ object DependencyGraph extends SimpleLogger {
         throw InterpreterException(s"Top level module is not the right kind of module $x")
     }
 
-    val dependencyGraph = new DependencyGraph(circuit, module)
+    val dependencyGraph = new DependencyGraph(circuit, module, interpreter.blackBoxFactories)
 
     dependencyGraph.numberOfNodes = 0
     dependencyGraph.numberOfStatements = 0
@@ -227,7 +241,9 @@ object DependencyGraph extends SimpleLogger {
   * @param circuit the AST being analyzed
   * @param module top level module in the AST, used elsewhere to find top level ports
   */
-class DependencyGraph(val circuit: Circuit, val module: Module) {
+class DependencyGraph(val circuit: Circuit,
+                      val module: Module,
+                      val blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) {
   val nameToExpression = new scala.collection.mutable.HashMap[String, Expression]
   val validNames       = new mutable.HashSet[String]
   val nameToType       = new mutable.HashMap[String, Type]

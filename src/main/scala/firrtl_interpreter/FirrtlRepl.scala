@@ -3,6 +3,7 @@ package firrtl_interpreter
 
 import java.io.File
 
+import dsp.real.DspRealFactory
 import scopt.OptionParser
 
 import scala.collection.mutable.ArrayBuffer
@@ -55,7 +56,8 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
       }
     }
     val input = io.Source.fromFile(file).mkString
-    interpreterOpt = Some(FirrtlTerp(input))
+    val blackBoxFactories = if(replConfig.dspSupport) Seq(new DspRealFactory) else Seq.empty
+    interpreterOpt = Some(FirrtlTerp(input, blackBoxFactories = blackBoxFactories))
     interpreterOpt.foreach { _=>
       interpreter.evaluator.allowCombinationalLoops = replConfig.allowCycles
       interpreter.evaluator.useTopologicalSortedKeys = replConfig.sortKeys
@@ -695,6 +697,11 @@ object FirrtlRepl {
 
     opt[String]('s', "script") action { (x, c) =>
       c.copy(scriptName = x)
+    } text { "script file to load" }
+
+    opt[Boolean]('d', "dsp-support") action { (x, c) =>
+      c.copy(dspSupport = x)
+      c
     } text { "script file to load" }
   }
 

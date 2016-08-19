@@ -1,6 +1,8 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
   * Works a lot like the chisel classic tester compiles a firrtl input string
   * and allows poke, peek, expect and step
@@ -14,10 +16,12 @@ package firrtl_interpreter
   * @param input a firrtl program contained in a string
   * @param vcdOutputFileName name of file to put vcd output in, empty string turns this off
   */
-class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
+class InterpretiveTester(input: String,
+                         vcdOutputFileName: String = "",
+                         blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) {
   var expectationsMet = 0
 
-  val interpreter = FirrtlTerp(input)
+  val interpreter = FirrtlTerp(input, blackBoxFactories = blackBoxFactories)
   if(vcdOutputFileName.nonEmpty) {
     interpreter.makeVCDLogger(vcdOutputFileName)
   }
