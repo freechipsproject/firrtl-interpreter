@@ -132,6 +132,10 @@ class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq
 
     circuitState.cycle()
 
+    for (elem <- blackBoxFactories) {
+      elem.cycle()
+    }
+
 //    println(s"FirrtlTerp: cycle complete ${"="*80}\n${sourceState.prettyString()}")
     if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${circuitState.prettyString()}")
 
