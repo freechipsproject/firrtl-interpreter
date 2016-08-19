@@ -20,6 +20,7 @@ class DspRealAdd(val name: String) extends BlackBoxImplementation {
       case _ => Seq.empty
     }
   }
+  def cycle(): Unit = {}
 }
 
 class DspRealFactory extends BlackBoxFactory {

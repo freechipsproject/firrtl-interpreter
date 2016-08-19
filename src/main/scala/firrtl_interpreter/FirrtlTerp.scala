@@ -4,6 +4,8 @@ package firrtl_interpreter
 
 import firrtl.ir._
 
+import scala.collection.mutable.ArrayBuffer
+
 // TODO: Add poison concept/multi-state
 // TODO: try inlining pass
 // TODO: Implement VCD parser and emitter (https://github.com/impedimentToProgress/ProcessVCD.git)?
@@ -148,6 +150,11 @@ class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq
 
     circuitState.cycle()
 
+    for (elem <- blackBoxFactories) {
+      elem.cycle()
+    }
+
+//    println(s"FirrtlTerp: cycle complete ${"="*80}\n${sourceState.prettyString()}")
     log(s"check prints")
     evaluator.checkPrints()
     log(s"check stops")

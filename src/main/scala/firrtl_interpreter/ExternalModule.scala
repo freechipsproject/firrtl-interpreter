@@ -25,9 +25,8 @@ abstract class BlackBoxImplementation {
   def name: String
   def fullName(componentName: String): String = s"$name.$componentName"
   def execute(inputValues: Seq[Concrete]): Concrete
-  def step: Unit = {
+  def cycle(): Unit
 
-  }
   def outputDependencies(outputName: String): Seq[String]
 }
 
@@ -41,7 +40,7 @@ abstract class BlackBoxFactory {
   def createInstance(instanceName: String, blackBoxName: String): Option[BlackBoxImplementation]
   def appliesTo(blackBoxName: String): Boolean
 
-  def step: Unit = {
-    boxes.values.foreach { box => box.step }
+  def cycle(): Unit = {
+    boxes.values.foreach { box => box.cycle() }
   }
 }
