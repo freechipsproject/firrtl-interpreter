@@ -31,7 +31,7 @@ abstract class BlackBoxImplementation {
 }
 
 abstract class BlackBoxFactory {
-  def boxes = new mutable.HashMap[String, BlackBoxImplementation]
+  def boxes: mutable.HashMap[String, BlackBoxImplementation] = new mutable.HashMap[String, BlackBoxImplementation]
 
   def add(blackBox: BlackBoxImplementation): BlackBoxImplementation = {
     boxes(blackBox.name) = blackBox

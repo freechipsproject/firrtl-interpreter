@@ -2,6 +2,7 @@
 
 package firrtl_interpreter
 
+import firrtl_interpreter.real.DspRealFactory
 import firrtl.ir._
 
 import scala.collection.mutable.ArrayBuffer
@@ -188,9 +189,10 @@ class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq
 }
 
 object FirrtlTerp {
+  val blackBoxFactory = new DspRealFactory
   def apply(input: String,
             verbose: Boolean = false,
-            blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty): FirrtlTerp = {
+            blackBoxFactories: Seq[BlackBoxFactory] = Seq(blackBoxFactory)): FirrtlTerp = {
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
     val interpreter = new FirrtlTerp(ast, blackBoxFactories = blackBoxFactories)
     interpreter.setVerbose(verbose)

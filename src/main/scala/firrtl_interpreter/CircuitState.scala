@@ -3,7 +3,7 @@
 package firrtl_interpreter
 
 import firrtl.ir._
-import vcd.VCD
+import firrtl_interpreter.vcd.VCD
 
 import scala.collection.mutable
 
@@ -63,7 +63,7 @@ case class CircuitState(
 
   var vcdLoggerOption = Option.empty[VCD]
   var vcdOutputFileName = ""
-  def makeVCDLogger(dependencyGraph: DependencyGraph, fileName: String = "out.vcd"): Unit = {
+  def makeVCDLogger(dependencyGraph: DependencyGraph, fileName: String = "out.firrtl_interpreter.vcd"): Unit = {
     val vcd = VCD(dependencyGraph.circuit.main)
     vcdLoggerOption = Some(vcd)
     vcdOutputFileName = fileName
