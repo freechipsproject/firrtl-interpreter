@@ -1,6 +1,8 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
+import firrtl_interpreter.real.DspRealFactory
+
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -18,10 +20,13 @@ import scala.collection.mutable.ArrayBuffer
   */
 class InterpretiveTester(input: String,
                          vcdOutputFileName: String = "",
-                         blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) {
+                         var blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) {
   var expectationsMet = 0
 
+  if(blackBoxFactories.isEmpty) blackBoxFactories = Seq(new DspRealFactory)
+
   val interpreter = FirrtlTerp(input, blackBoxFactories = blackBoxFactories)
+  interpreter.setVerbose(true)
   if(vcdOutputFileName.nonEmpty) {
     interpreter.makeVCDLogger(vcdOutputFileName)
   }

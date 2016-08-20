@@ -16,7 +16,7 @@ case class BlackBoxOutput(name: String,
                           tpe: Type
                          ) extends Expression {
   def execute(inputValues: Seq[Concrete]): Concrete = {
-    implementation.execute(inputValues)
+    implementation.execute(inputValues, tpe: Type)
   }
   def serialize: String = s"BlackBoxOutput($name,$tpe)"
 }
@@ -24,7 +24,7 @@ case class BlackBoxOutput(name: String,
 abstract class BlackBoxImplementation {
   def name: String
   def fullName(componentName: String): String = s"$name.$componentName"
-  def execute(inputValues: Seq[Concrete]): Concrete
+  def execute(inputValues: Seq[Concrete], tpe: Type): Concrete
   def cycle(): Unit
 
   def outputDependencies(outputName: String): Seq[String]
