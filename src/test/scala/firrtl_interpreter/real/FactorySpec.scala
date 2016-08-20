@@ -8,7 +8,7 @@ import org.scalatest.{Matchers, FlatSpec}
 import scala.collection.mutable.ArrayBuffer
 
 class FactorySpec extends FlatSpec with Matchers {
-  behavior of "using dsp factory"
+  behavior of "black box real adder"
 
   it should "expand instances as found" in {
 //    val input = io.Source.fromFile("src/test/resources/RealAdder.fir").mkString

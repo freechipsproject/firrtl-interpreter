@@ -2,6 +2,9 @@
 package firrtl_interpreter
 
 import firrtl.{ExecutionOptionsManager, CommonOptions}
+import firrtl_interpreter.real.DspRealFactory
+
+import scala.collection.mutable.ArrayBuffer
 
 /**
   * Works a lot like the chisel classic tester compiles a firrtl input string
@@ -23,7 +26,10 @@ class InterpretiveTester(
     input: String,
     optionsManager: ExecutionOptionsManager with HasInterpreterOptions =
       new ExecutionOptionsManager("firrtl-interpreter") with HasInterpreterOptions) {
+                         var blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) {
   var expectationsMet = 0
+
+  if(blackBoxFactories.isEmpty) blackBoxFactories = Seq(new DspRealFactory)
 
   val interpreter = FirrtlTerp(input)
   val interpreterOptions = optionsManager.interpreterOptions
