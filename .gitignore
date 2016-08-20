@@ -1,61 +1,4 @@
-### XilinxISE template
-# intermediate build files
-*.bgn
-*.bit
-*.bld
-*.cmd_log
-*.drc
-*.ll
-*.lso
-*.msd
-*.msk
-*.ncd
-*.ngc
-*.ngd
-*.ngr
-*.pad
-*.par
-*.pcf
-*.prj
-*.ptwx
-*.rbb
-*.rbd
-*.stx
-*.syr
-*.twr
-*.twx
-*.unroutes
-*.ut
-*.xpi
-*.xst
-*_bitgen.xwbt
-*_envsettings.html
-*_map.map
-*_map.mrp
-*_map.ngm
-*_map.xrpt
-*_ngdbuild.xrpt
-*_pad.csv
-*_pad.txt
-*_par.xrpt
-*_summary.html
-*_summary.xml
-*_usage.xml
-*_xst.xrpt
 
-# project-wide generated files
-*.gise
-par_usage_statistics.html
-usage_statistics_webtalk.html
-webtalk.log
-webtalk_pn.xml
-
-# generated folders
-iseconfig/
-xlnx_auto_0_xdb/
-xst/
-_ngo/
-_xmsgs/
 ### Eclipse template
 *.pydevproject
 .metadata
@@ -178,7 +121,7 @@ tramp
 *.un~
 Session.vim
 .netrwhist
-*~
+
 ### JetBrains template
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio
 
@@ -229,32 +172,13 @@ crashlytics-build.properties
 ### C++ template
 # Compiled Object files
 *.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
 
 # Fortran module files
 *.mod
 
 # Compiled Static libraries
 *.lai
-*.la
-*.a
-*.lib
 
-# Executables
-*.exe
-*.out
-*.app
 ### OSX template
 .DS_Store
 .AppleDouble
@@ -308,22 +232,13 @@ xcuserdata
 *.class
 *.log
 
-# sbt specific
-.cache
-.history
 .lib/
 dist/*
-target/
-lib_managed/
-src_managed/
-project/boot/
 project/plugins/project/
 
 # Scala-IDE specific
 .scala_dependencies
 .worksheet
-### Java template
-*.class
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
@@ -337,4 +252,4 @@ project/plugins/project/
 hs_err_pid*
 
 /src/main/scala/firrtl_interpreter/playground.sc
-/*.vcd
+/*.firrtl_interpreter.vcd

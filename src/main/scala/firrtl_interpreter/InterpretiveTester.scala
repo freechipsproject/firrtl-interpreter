@@ -14,7 +14,7 @@ import scala.collection.mutable.ArrayBuffer
   * so that io.a.b must be referenced as io_a_b
   *
   * @param input a firrtl program contained in a string
-  * @param vcdOutputFileName name of file to put vcd output in, empty string turns this off
+  * @param vcdOutputFileName name of file to put firrtl_interpreter.vcd output in, empty string turns this off
   */
 class InterpretiveTester(input: String,
                          vcdOutputFileName: String = "",

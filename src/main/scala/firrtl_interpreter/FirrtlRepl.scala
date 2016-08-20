@@ -3,7 +3,7 @@ package firrtl_interpreter
 
 import java.io.File
 
-import dsp.real.DspRealFactory
+import firrtl_interpreter.real.DspRealFactory
 import scopt.OptionParser
 
 import scala.collection.mutable.ArrayBuffer
@@ -204,7 +204,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
 
       },
       new Command("vcd") {
-        def usage: (String, String) = ("vcd fileName|[done]", "vcd loaded script")
+        def usage: (String, String) = ("firrtl_interpreter.vcd fileName|[done]", "firrtl_interpreter.vcd loaded script")
         override def completer: Option[ArgumentCompleter] = {
           Some(new ArgumentCompleter(
             new StringsCompleter({"vcd"}),
@@ -214,7 +214,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
         def run(args: Array[String]): Unit = {
           currentScript match {
             case Some(script) =>
-              getOneArg("vcd [fileName|done]", argOption = Some("out.vcd")) match {
+              getOneArg("firrtl_interpreter.vcd [fileName|done]", argOption = Some("out.firrtl_interpreter.vcd")) match {
                 case Some("done")   =>
                   interpreter.disableVCD()
                 case Some(fileName) =>

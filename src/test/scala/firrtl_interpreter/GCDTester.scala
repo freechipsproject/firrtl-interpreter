@@ -40,7 +40,7 @@ class GCDTester extends FlatSpec with Matchers {
 
 
   it should "run with InterpretedTester" in {
-    new InterpretiveTester(gcdFirrtl, vcdOutputFileName = "gcd.vcd") {
+    new InterpretiveTester(gcdFirrtl, vcdOutputFileName = "gcd.firrtl_interpreter.vcd") {
       // interpreter.setVerbose()
       step(1)
       poke("io_a", 34)

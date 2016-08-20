@@ -148,6 +148,15 @@ package object firrtl_interpreter {
     }
   }
 
+  def doubleToBigIntBits(double: Double): BigInt = {
+    BigInt(java.lang.Double.doubleToLongBits(double))
+  }
+
+  def bigIntBitsToDouble(bigInt: BigInt): Double = {
+    java.lang.Double.longBitsToDouble(bigInt.toLong)
+  }
+
+
   trait SimpleLogger {
     var verbose = false
     def setVerbose(value: Boolean = true): Unit = {

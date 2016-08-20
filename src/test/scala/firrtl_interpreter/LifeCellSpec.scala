@@ -46,7 +46,7 @@ class LifeCellSpec extends FlatSpec with Matchers {
         |    io.is_alive <= is_alive
         |      """.stripMargin
 
-    new InterpretiveTester(input, vcdOutputFileName = "life_cell.vcd") {
+    new InterpretiveTester(input, vcdOutputFileName = "life_cell.firrtl_interpreter.vcd") {
       // setVerbose()
 
       def setAlive(alive: Boolean): Unit = {
@@ -182,7 +182,7 @@ class LifeCellSpec extends FlatSpec with Matchers {
       step(1)
       expect("io_is_alive", 0)
 
-      interpreter.circuitState.vcdLoggerOption.get.write("life.vcd")
+      interpreter.circuitState.vcdLoggerOption.get.write("life.firrtl_interpreter.vcd")
       report()
     }
   }

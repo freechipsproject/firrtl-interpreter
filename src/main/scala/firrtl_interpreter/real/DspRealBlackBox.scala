@@ -1,6 +1,6 @@
 // See LICENSE for license details.
 
-package dsp.real
+package firrtl_interpreter.real
 
 import firrtl_interpreter._
 
