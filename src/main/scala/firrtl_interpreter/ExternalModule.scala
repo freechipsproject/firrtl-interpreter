@@ -38,7 +38,6 @@ abstract class BlackBoxFactory {
     blackBox
   }
   def createInstance(instanceName: String, blackBoxName: String): Option[BlackBoxImplementation]
-  def appliesTo(blackBoxName: String): Boolean
 
   def cycle(): Unit = {
     boxes.values.foreach { box => box.cycle() }
