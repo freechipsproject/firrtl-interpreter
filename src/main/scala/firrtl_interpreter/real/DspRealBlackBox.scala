@@ -59,7 +59,6 @@ abstract class DspRealTwoArgumentToBoolean extends BlackBoxImplementation {
   }
 }
 
-
 class DspRealAdd(val name: String) extends DspRealTwoArgumentToDouble {
   def twoOp(double1: Double, double2: Double): Double = double1 + double2
 }
