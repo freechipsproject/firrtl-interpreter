@@ -23,10 +23,6 @@ class FactorySpec extends FlatSpec with Matchers {
     tester.poke("io_a2_node", doubleToBigIntBits(3.25))
     tester.step()
 
-    val result = tester.peek("io_c_node")
-    val doubleResult = bigIntBitsToDouble(result)
-    println(s"output is ${doubleResult}")
-
-    tester.interpreter.dependencyGraph.outputPorts.size should be > 0
+    tester.expect("io_c_node", doubleToBigIntBits(4.75))
   }
 }

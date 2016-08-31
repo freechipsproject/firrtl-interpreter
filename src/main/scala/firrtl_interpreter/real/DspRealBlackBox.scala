@@ -8,7 +8,7 @@ import firrtl_interpreter._
 abstract class DspRealTwoArgumentToDouble extends BlackBoxImplementation {
   /**
     * sub-classes must implement this two argument function
- *
+    *
     * @param double1 first operand
     * @param double2 second operand
     * @return        double operation result
