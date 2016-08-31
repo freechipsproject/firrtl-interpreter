@@ -214,7 +214,8 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
         def run(args: Array[String]): Unit = {
           currentScript match {
             case Some(script) =>
-              getOneArg("firrtl_interpreter.vcd [fileName|done]", argOption = Some("out.firrtl_interpreter.vcd")) match {
+              getOneArg("firrtl_interpreter.vcd [fileName|done]",
+                argOption = Some("out.firrtl_interpreter.vcd")) match {
                 case Some("done")   =>
                   interpreter.disableVCD()
                 case Some(fileName) =>
@@ -246,8 +247,14 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
           getTwoArgs("poke inputPortName value") match {
             case Some((portName, valueString)) =>
               try {
-                val value = valueString.toInt
-                interpreter.setValueWithBigInt(portName, value)
+                if(valueString.startsWith("0x")) {
+                  val hexValue = BigInt(valueString.drop(2), 16)
+                  interpreter.setValueWithBigInt(portName, hexValue)
+                }
+                else {
+                  val value = valueString.toInt
+                  interpreter.setValueWithBigInt(portName, value)
+                }
               }
               catch {
                 case e: Exception =>
