@@ -5,7 +5,7 @@ package firrtl_interpreter.fixedpoint
 import firrtl_interpreter._
 import org.scalatest.{FlatSpec, Matchers}
 
-class FactorySpec extends FlatSpec with Matchers {
+class FixedPointSpec extends FlatSpec with Matchers {
   behavior of "dumb fixed point multiply test"
 
   it should "expand instances as found" in {

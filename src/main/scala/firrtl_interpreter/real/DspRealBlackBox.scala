@@ -32,6 +32,32 @@ abstract class DspRealTwoArgumentToDouble extends BlackBoxImplementation {
   }
 }
 
+abstract class DspRealOneArgumentToDouble extends BlackBoxImplementation {
+  /**
+    * sub-classes must implement this two argument function
+    *
+    * @param double1 first operand
+    * @param double2 second operand
+    * @return        double operation result
+    */
+  def oneOp(double1: Double): Double
+
+  def outputDependencies(outputName: String): Seq[(String)] = {
+    outputName match {
+      case "out" => Seq(fullName("in"))
+      case _ => Seq.empty
+    }
+  }
+  def cycle(): Unit = {}
+  def execute(inputValues: Seq[Concrete], tpe: Type): Concrete = {
+    val arg1 :: _ = inputValues
+    val doubleArg1 = bigIntBitsToDouble(arg1.value)
+    val doubleResult = oneOp(doubleArg1)
+    val result = doubleToBigIntBits(doubleResult)
+    TypeInstanceFactory(tpe, result)
+  }
+}
+
 abstract class DspRealTwoArgumentToBoolean extends BlackBoxImplementation {
   /**
     * sub-classes must implement this two argument function
@@ -99,6 +125,40 @@ class DspRealNotEquals(val name: String) extends DspRealTwoArgumentToBoolean {
   def twoOp(double1: Double, double2: Double): Boolean = double1 != double2
 }
 
+class DspRealIntPart(val name: String) extends DspRealOneArgumentToDouble {
+  def oneOp(double1: Double): Double = double1.toInt.toDouble
+}
+
+class DspRealToInt(val name: String) extends BlackBoxImplementation {
+  def outputDependencies(outputName: String): Seq[(String)] = {
+    outputName match {
+      case "out" => Seq(fullName("in"))
+      case _ => Seq.empty
+    }
+  }
+  def cycle(): Unit = {}
+  def execute(inputValues: Seq[Concrete], tpe: Type): Concrete = {
+    val arg1 :: _ = inputValues
+    val result = arg1.value
+    TypeInstanceFactory(tpe, result)
+  }
+}
+
+class DspRealFromInt(val name: String) extends BlackBoxImplementation {
+  def outputDependencies(outputName: String): Seq[(String)] = {
+    outputName match {
+      case "out" => Seq(fullName("in"))
+      case _ => Seq.empty
+    }
+  }
+  def cycle(): Unit = {}
+  def execute(inputValues: Seq[Concrete], tpe: Type): Concrete = {
+    val arg1 :: _ = inputValues
+    val result = arg1.value
+    TypeInstanceFactory(tpe, result)
+  }
+}
+
 //scalastyle:off cyclomatic.complexity
 class DspRealFactory extends BlackBoxFactory {
   def createInstance(instanceName: String, blackBoxName: String): Option[BlackBoxImplementation] = {
@@ -113,6 +173,9 @@ class DspRealFactory extends BlackBoxFactory {
       case "BBFGreaterThanEquals" => Some(add(new DspRealGreaterThanEquals(instanceName)))
       case "BBFEquals"            => Some(add(new DspRealEquals(instanceName)))
       case "BBFNotEquals"         => Some(add(new DspRealNotEquals(instanceName)))
+      case "BBFFromInt"           => Some(add(new DspRealFromInt(instanceName)))
+      case "BBFToInt"             => Some(add(new DspRealToInt(instanceName)))
+      case "BBFIntPart"           => Some(add(new DspRealIntPart(instanceName)))
       case _                      => None
     }
   }
