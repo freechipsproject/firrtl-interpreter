@@ -37,7 +37,6 @@ abstract class DspRealOneArgumentToDouble extends BlackBoxImplementation {
     * sub-classes must implement this two argument function
     *
     * @param double1 first operand
-    * @param double2 second operand
     * @return        double operation result
     */
   def oneOp(double1: Double): Double

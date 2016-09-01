@@ -12,7 +12,7 @@ class ExternalModule {
 
 case class BlackBoxOutput(name: String,
                           implementation: BlackBoxImplementation,
-                          dependendInputs: Seq[String],
+                          dependentInputs: Seq[String],
                           tpe: Type
                          ) extends Expression {
   def execute(inputValues: Seq[Concrete]): Concrete = {
