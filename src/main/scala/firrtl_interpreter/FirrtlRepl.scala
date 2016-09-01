@@ -686,13 +686,12 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
   }
 }
 
-
 object FirrtlRepl {
   val parser = new OptionParser[ReplConfig]("scopt") {
     head("scopt", "3.x")
     opt[Boolean]('c', "allow-cycles") action { (x, c) =>
       c.copy(allowCycles = x)
-    } text { "allow-cycles will attempt allow circuit to run with a combinational loop" }
+    } text { "allow-cycles will continue execution despite combinational loop" }
 
     opt[Boolean]('o', "ordered-exec") action { (x, c) =>
       c.copy(sortKeys = x)
