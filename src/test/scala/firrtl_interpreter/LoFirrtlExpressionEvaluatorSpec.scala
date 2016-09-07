@@ -407,8 +407,9 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
   behavior of "combinational loops"
 
   it should "throw exception when found" in {
-    //    val input = io.Source.fromFile("src/test/resources/rocket.fir").mkString
-    val input = io.Source.fromFile("src/test/resources/HasLoop.fir").mkString
+    // val steam = getClass.getResourceAsStream("/rocket.fir")
+    val stream = getClass.getResourceAsStream("/HasLoop.fir")
+    val input = io.Source.fromInputStream(stream).mkString
 
     intercept[InterpreterException] {
       FirrtlTerp(input)
