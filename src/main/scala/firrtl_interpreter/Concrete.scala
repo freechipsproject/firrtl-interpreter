@@ -179,11 +179,17 @@ trait Concrete {
       if(v >= 0) flipped = flipped.setBit(width-1) // invert sign and stick at high end
       ConcreteUInt(flipped, width)
   }
-  def &(that: Concrete): ConcreteUInt = ConcreteUInt(this.value & that.value, width.max(that.width))
-  def |(that: Concrete): ConcreteUInt = ConcreteUInt(this.value | that.value, width.max(that.width))
-  def ^(that: Concrete): ConcreteUInt = ConcreteUInt(this.value ^ that.value, width.max(that.width))
+  def &(that: Concrete): ConcreteUInt = {
+    ConcreteUInt(this.asUInt.value & that.asUInt.value, width.max(that.width))
+  }
+  def |(that: Concrete): ConcreteUInt = {
+    ConcreteUInt(this.asUInt.value | that.asUInt.value, width.max(that.width))
+  }
+  def ^(that: Concrete): ConcreteUInt = {
+    ConcreteUInt(this.asUInt.value ^ that.asUInt.value, width.max(that.width))
+  }
   def cat(that: Concrete): ConcreteUInt = {
-    ConcreteUInt((this.value.abs << that.width) + that.value, this.width + that.width)
+    ConcreteUInt((this.asUInt.value << that.width) + that.asUInt.value, this.width + that.width)
   }
   // extraction
   def getBits(hi: Int, lo: Int): BigInt = {
@@ -301,6 +307,9 @@ object Concrete {
 case class ConcreteUInt(val value: BigInt, val width: Int) extends Concrete {
   if(width < 0) {
     throw new InterpreterException(s"error: ConcreteUInt($value, $width) bad width $width must be > 0")
+  }
+  if(value < 0) {
+    throw new InterpreterException(s"error: ConcreteUInt($value, $width) value $value must be > 0")
   }
   val bitsRequired = requiredBitsForUInt(value)
   if((width > 0) && (bitsRequired > width)) {
