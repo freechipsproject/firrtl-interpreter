@@ -1,12 +1,21 @@
 Firrtl-Interpreter
 ==================
 
-The firrtl interpreter is a tool in the [UCB-BAR/chisel](https://github.com/ucb-bar) hardware synthesis toolbox. 
+The firrtl interpreter is an experimental circuit simulator that executes low Firrtl IR.
+It is one of the standard back-ends available as part of the [chisel-testers](https://github.com/ucb-bar/chisel-testers.git) project, 
+and thus one of the tools in the [UCB-BAR/chisel](https://github.com/ucb-bar) hardware synthesis toolbox. 
+This project provides a test harness supporting a peek, poke expect model.  
+It also provides a interactive simulator shell or repl (see frepl.sh) that allows fine grained incremental execution of
+ a circuit. 
+In combination with a scala debugger such as Eclipse or IntelliJ it can be a very power way of analyzing problematic
+behavior.  The interpreter has not yet been optimzed for performance and may be too slow for emulation of very complex
+circuits.
+
 [Chisel3](https://github.com/ucb-bar/chisel3.git) is a high-level functional circuit generator. It produces **Flexible Intermediate
-Representation for RTL** or **FIRRTL**. [Chisel3](https://github.com/ucb-bar/chisel3.git) is a toolkit for lowering FIRRTL to verilog.
+Representation for RTL** or **FIRRTL**.  The [Firrtl](https://github.com/ucb-bar/firrtl.git) project parses and
+transforms firrtl.  It also provides mechanisms for emitting verilog, for processing by downstream toolchains.
 This interpreter parse and execute the LoFirrtl subset of Firrtl. The interpreter is useful for a initial debugging of Chisel circuits
-and is also used for other forms of circuit analysis. In combination with a scala debugger such as Eclipse or IntelliJ it can be 
-a very power way of inspecting the run-time behavior of a circuit
+and is also used for other forms of circuit analysis. 
 
 ## Using the interpreter
 ### Attach it to your project
