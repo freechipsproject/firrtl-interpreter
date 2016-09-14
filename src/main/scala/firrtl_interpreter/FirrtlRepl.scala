@@ -236,7 +236,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
               new StringsCompleter({
                 "poke"
               }),
-              new StringsCompleter(jlist(interpreter.dependencyGraph.inlinedPorts.toSeq))
+              new StringsCompleter(jlist(interpreter.dependencyGraph.inputPorts.toSeq))
             ))
           }
         }

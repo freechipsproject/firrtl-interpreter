@@ -72,5 +72,3 @@ scalacOptions in (Compile, doc) <++= (baseDirectory, version) map { (bd, v) =>
   Seq("-diagrams", "-diagrams-max-classes", "25", "-sourcepath", bd.getAbsolutePath, "-doc-source-url", "https://github.com/ucb-bar/chisel-testers/tree/master/€{FILE_PATH}.scala")
 }
 
-parallelExecution in Test := false
-

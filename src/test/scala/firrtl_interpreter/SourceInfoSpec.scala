@@ -8,7 +8,8 @@ class SourceInfoSpec extends FlatSpec with Matchers {
   behavior of "source information"
 
   it should "be visible when logging and errors occur" in {
-    val input = io.Source.fromFile("src/test/resources/FullAdder.ir").mkString
+    val stream = getClass.getResourceAsStream("/FullAdder.ir")
+    val input = io.Source.fromInputStream(stream).mkString
 
     val f = FirrtlTerp(input)
 

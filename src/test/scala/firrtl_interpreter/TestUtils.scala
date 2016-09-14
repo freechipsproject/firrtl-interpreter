@@ -60,6 +60,16 @@ object TestUtils {
     }
     p
   }
+
+  /**
+    * computes the smallest and largest values that will fit in an SInt
+    * @param width width of SInt
+    * @return tuple(minVale, maxValue)
+    */
+  def extremaOfSIntOfWidth(width: Int): (BigInt, BigInt) = {
+    val nearestPowerOf2 = BigInt("1" + ("0" * (width - 1)), 2)
+    (-nearestPowerOf2, nearestPowerOf2 - 1)
+  }
 }
 
 import firrtl_interpreter.TestUtils._

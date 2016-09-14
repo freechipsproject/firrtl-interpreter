@@ -441,11 +441,13 @@ class ConcreteSpec extends FlatSpec with Matchers {
     if(random.nextBoolean()) randU else randS
   }
   def randU: ConcreteUInt = {
-    val randomWidth = random.nextInt(maxWidth)
+    // Ensure non-zero widths.
+    val randomWidth = math.max(random.nextInt(maxWidth), 1)
     ConcreteUInt(BigInt(randomWidth, random), randomWidth)
   }
   def randS: ConcreteSInt = {
-    val randomWidth = random.nextInt(maxWidth)
+    // Ensure non-zero widths.
+    val randomWidth = math.max(random.nextInt(maxWidth), 1)
     val (sign, width) = {
       if(random.nextBoolean()) (1, randomWidth + 1) else (-1, randomWidth + 2)
     }

@@ -282,7 +282,13 @@ object Concrete {
     }
   }
   def randomUInt(width: Int): ConcreteUInt  = ConcreteUInt(randomBigInt(width), width)
-  def randomSInt(width: Int): ConcreteSInt  = ConcreteSInt(randomBigInt(width), width)
+  def randomSInt(width: Int): ConcreteSInt  = {
+    val (low, high) = extremaOfSIntOfWidth(width)
+    val randomValue = randomBigInt(width)
+    val positiveRandom = randomValue % ((high - low) + 1)
+
+    ConcreteSInt(positiveRandom + low, width)
+  }
   def randomClock():          ConcreteClock = ConcreteClock(randomBigInt(1))
 }
 
