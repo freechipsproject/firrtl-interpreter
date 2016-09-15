@@ -276,7 +276,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
       expression match {
         case Mux(condition, trueExpression, falseExpression, tpe) =>
           evaluate(condition) match {
-            case ConcreteUInt(value, 1) =>
+            case ConcreteUInt(value, 1, _) =>
               val v = if (value > 0) {
                 if(evaluateAll) { evaluate(falseExpression)}
                 evaluate(trueExpression)

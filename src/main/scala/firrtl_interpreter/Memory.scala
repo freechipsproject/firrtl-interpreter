@@ -195,16 +195,16 @@ class Memory(
         data = dataStore(address)
       }
       else {
-        pipeLine(0) = ReadPipeLineElement(if(enable) dataStore(address) else PoisonedUInt(dataWidth))
+        pipeLine(0) = ReadPipeLineElement(if(enable) dataStore(address) else Concrete.poisonedUInt(dataWidth))
       }
     }
     def cycle(): Unit = {
       if(latency > 0) {
         data = pipeLine.remove(0).readPipeLineData
-        pipeLine += ReadPipeLineElement(if(enable) dataStore(address) else PoisonedUInt(dataWidth))
+        pipeLine += ReadPipeLineElement(if(enable) dataStore(address) else Concrete.poisonedUInt(dataWidth))
       }
       else {
-        data = if(enable) dataStore(address) else PoisonedUInt(dataWidth)
+        data = if(enable) dataStore(address) else Concrete.poisonedUInt(dataWidth)
       }
     }
     override def toString: String = {
@@ -314,7 +314,7 @@ class Memory(
           readData = dataStore(address)
         }
         else {
-          readPipeLine(0) = ReadPipeLineElement(if(enable) dataStore(address) else PoisonedUInt(dataWidth))
+          readPipeLine(0) = ReadPipeLineElement(if(enable) dataStore(address) else Concrete.poisonedUInt(dataWidth))
         }
       }
     }
@@ -339,10 +339,10 @@ class Memory(
     def cycle(): Unit = {
       if(readLatency > 0) {
         readData = readPipeLine.remove(0).readPipeLineData
-        readPipeLine += ReadPipeLineElement(if(enable) dataStore(address) else PoisonedUInt(dataWidth))
+        readPipeLine += ReadPipeLineElement(if(enable) dataStore(address) else Concrete.poisonedUInt(dataWidth))
       }
       else {
-        readData = if(enable) dataStore(address) else PoisonedUInt(dataWidth)
+        readData = if(enable) dataStore(address) else Concrete.poisonedUInt(dataWidth)
       }
 
       if(writeLatency > 0) {

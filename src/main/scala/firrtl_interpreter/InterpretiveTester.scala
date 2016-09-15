@@ -50,6 +50,25 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
         throw ie
     }
   }
+  /**
+    * Pokes value to the port referenced by string
+    * Warning: pokes to components other than input ports is currently
+    * not supported but does not cause an error warning
+    * This feature should be supported soon
+    *
+    * @param name the name of a port
+    * @param value a value to put on that port
+    */
+  def poke(name: String, value: Concrete): Unit = {
+    try {
+      interpreter.circuitState.setValue(name, value)
+    }
+    catch {
+      case ie: InterpreterException =>
+        println(s"Error: poke($name, $value)")
+        throw ie
+    }
+  }
 
   /** inspect a value of a named circuit component
     *
@@ -58,10 +77,22 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
     */
   def peek(name: String): BigInt = {
     interpreter.getValue(name) match {
-      case ConcreteUInt(value, _) => value
-      case ConcreteSInt(value, _) => value
+      case ConcreteUInt(value, _, _) => value
+      case ConcreteSInt(value, _, _) => value
       case _ => throw new InterpreterException(s"Error:peek($name) value not found")
-      }
+    }
+  }
+
+  /** inspect a value of a named circuit component
+    *
+    * @param name the name of a circuit component
+    * @return An internal concrete value currently set at name
+    */
+  def peekConcrete(name: String): Concrete = {
+    interpreter.getValue(name) match {
+      case c: Concrete => c
+      case _ => throw new InterpreterException(s"Error:peek($name) value not found")
+    }
   }
 
   /**
@@ -78,8 +109,8 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
       }
     }
     interpreter.getValue(name) match {
-      case ConcreteUInt (value, _) => testValue(value)
-      case ConcreteSInt(value, _)  => testValue(value)
+      case ConcreteUInt (value, _, _) => testValue(value)
+      case ConcreteSInt(value, _, _)  => testValue(value)
       case _ =>
         throw new InterpreterException(s"Error:expect($name, $expectedValue) value not found")
     }
