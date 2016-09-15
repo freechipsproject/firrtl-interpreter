@@ -19,8 +19,8 @@ object TypeInstanceFactory {
   }
   def apply(template: Concrete, value: BigInt): Concrete = {
     template match {
-      case ConcreteUInt(_, width) => ConcreteUInt(value, width)
-      case ConcreteSInt(_, width) => ConcreteSInt(value, width)
+      case ConcreteUInt(_, width, p) => ConcreteUInt(value, width, p)
+      case ConcreteSInt(_, width, p) => ConcreteSInt(value, width, p)
     }
   }
 }
