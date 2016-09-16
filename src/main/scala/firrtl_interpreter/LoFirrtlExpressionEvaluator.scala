@@ -417,7 +417,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
       }
       else {
         throw new InterpreterException(s"error: don't know what to do with key $key")
-        //      ConcreteUInt(0, 1)
+        //      Concrete.poisonedUInt(1)
       }
     }
 
