@@ -1,7 +1,6 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
-import firrtl.Utils._
 import firrtl.ir._
 import firrtl.PrimOps._
 import firrtl_interpreter.TestUtils._
