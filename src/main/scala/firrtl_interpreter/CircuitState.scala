@@ -54,6 +54,7 @@ case class CircuitState(
                     validNames:  mutable.HashSet[String]) {
   val nextRegisters = new mutable.HashMap[String, Concrete]()
   val ephemera      = new mutable.HashMap[String, Concrete]()
+  val rhsOutputs    = new mutable.HashSet[String] // used to see if output has been computed as rhs
 
   var nameToConcreteValue = mutable.HashMap((inputPorts ++ outputPorts ++ registers).toSeq:_*)
 
@@ -85,6 +86,7 @@ case class CircuitState(
   def prepareForDependencyResolution(): Unit = {
     nameToConcreteValue = mutable.HashMap((inputPorts ++ outputPorts ++ registers).toSeq:_*)
     ephemera.clear()
+    rhsOutputs.clear()
   }
   /**
     * prepare this cycle

@@ -63,6 +63,18 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
         resolveDependency(elem)
       }
     }
+
+    /*
+    Check to see if this output found on the rhs of dependency relationship
+    has been computed yet
+     */
+    if(circuitState.isOutput(key)) {
+      if(! circuitState.rhsOutputs.contains(key) &&
+         dependencyGraph.nameToExpression.contains(key)) {
+        resolveDependency(key)
+        circuitState.rhsOutputs += key
+      }
+    }
     circuitState.getValue(key) match {
       case Some(value) => value
       case _ =>

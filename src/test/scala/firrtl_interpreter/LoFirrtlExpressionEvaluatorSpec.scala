@@ -1,7 +1,6 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
-import firrtl.Utils._
 import firrtl.ir._
 import firrtl.PrimOps._
 import firrtl_interpreter.TestUtils._
@@ -255,6 +254,12 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
     }
   }
   it should "shift bits n bits to the left" in {
+    // This was in firrtl/Utils.scala ...
+    def requiredBits(i: BigInt): Int = {
+      val ix = if (i < 0) (-1 * i) - 1 else i
+      ix.bitLength + 1
+    }
+
     def testShiftOp(width: Int, shift: Int): Unit = {
       val num = BigInt("1"*width, 2)
       val shiftedNum = num << shift
@@ -295,7 +300,7 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
         val num = BigInt("1"*i, 2)
         val target = UIntLiteral(num, IntWidth(i))
         val testTarget = evaluator.shiftLeft(num, arg)
-        val shiftValue = evaluator.makeUIntValue(arg, IntWidth(req_num_bits(arg)))
+        val shiftValue = evaluator.makeUIntValue(arg, IntWidth(requiredBits(arg)))
 
         val result = evaluator.dynamicBitOps(Dshl, Seq(target, shiftValue),
           Seq(), UIntType(IntWidth(i + arg)))
@@ -307,7 +312,7 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
         val num = BigInt("1"*i, 2)
         val target = SIntLiteral(num, IntWidth(i + 1))
         val testTarget = evaluator.shiftLeft(num, arg)
-        val shiftValue = evaluator.makeUIntValue(arg, IntWidth(req_num_bits(arg)))
+        val shiftValue = evaluator.makeUIntValue(arg, IntWidth(requiredBits(arg)))
 
         val result = evaluator.dynamicBitOps(Dshl, Seq(target, shiftValue),
           Seq(), SIntType(IntWidth(i + arg)))
