@@ -55,5 +55,8 @@ class StopBehaviorSpec extends FreeSpec with Matchers {
     intercept[StopException] {
       tester.step(1)
     }
+
+    tester.report()
+    tester.reportString should include ("Failed: Stop result 47")
   }
 }
