@@ -47,13 +47,13 @@ trait Concrete {
         if(that.value == BigInt(0)) { Concrete.poisonedUInt(w1) }
         else { ConcreteUInt(v1 / v2, w1) }
       case (ConcreteUInt(v1, w1, p1), ConcreteSInt(v2, w2, p2)) =>
-        if(that.value == BigInt(0)) { Concrete.poisonedSInt(w1) }
+        if(that.value == BigInt(0)) { Concrete.poisonedSInt(w1 + 1) }
         else { ConcreteSInt(v1 / v2, w1 + 1) }
       case (ConcreteSInt(v1, w1, p1), ConcreteUInt(v2, w2, p2)) =>
         if(that.value == BigInt(0)) { Concrete.poisonedSInt(w1) }
         else { ConcreteSInt(v1 / v2, w1) }
       case (ConcreteSInt(v1, w1, p1), ConcreteSInt(v2, w2, p2)) =>
-        if(that.value == BigInt(0)) { Concrete.poisonedSInt(w1) }
+        if(that.value == BigInt(0)) { Concrete.poisonedSInt(w1 + 1) }
         else { ConcreteSInt(v1 / v2, w1 + 1) }
     }
   }

@@ -12,11 +12,11 @@ class TypeInstanceFactorySpec extends FlatSpec with ShouldMatchers {
   it should "concrete types are initialized with value zero" in {
     for(width <- 0 to 100) {
       val ui = TypeInstanceFactory(UIntType(IntWidth(width)))
-      ui.value should be (0)
+      ui.poisoned should be (true)
       ui.width should be (width)
 
       val si = TypeInstanceFactory(SIntType(IntWidth(width)))
-      si.value should be (0)
+      si.poisoned should be (true)
       si.width should be (width)
     }
   }

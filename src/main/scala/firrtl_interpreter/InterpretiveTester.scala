@@ -41,6 +41,8 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
     * @param value a value to put on that port
     */
   def poke(name: String, value: BigInt): Unit = {
+    if(interpreter.checkStopped(s"poke($name, $value)")) return
+
     try {
       interpreter.setValueWithBigInt(name, value)
     }
@@ -60,6 +62,8 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
     * @param value a value to put on that port
     */
   def poke(name: String, value: Concrete): Unit = {
+    if(interpreter.checkStopped(s"poke($name, $value)")) return
+
     try {
       interpreter.circuitState.setValue(name, value)
     }
@@ -76,6 +80,8 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
     * @return A BigInt value currently set at name
     */
   def peek(name: String): BigInt = {
+    if(interpreter.checkStopped(s"peek($name)")) return 0
+
     interpreter.getValue(name) match {
       case ConcreteUInt(value, _, _) => value
       case ConcreteSInt(value, _, _) => value
@@ -89,6 +95,8 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
     * @return An internal concrete value currently set at name
     */
   def peekConcrete(name: String): Concrete = {
+    if(interpreter.checkStopped(s"peekConcrete($name)")) return Concrete.poisonedUInt(1)
+
     interpreter.getValue(name) match {
       case c: Concrete => c
       case _ => throw new InterpreterException(s"Error:peek($name) value not found")
@@ -108,6 +116,8 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
         throw new InterpreterException (s"Error:expect($name, $expectedValue) got $value")
       }
     }
+    if(interpreter.checkStopped(s"expect($name, $expectedValue)")) return
+
     interpreter.getValue(name) match {
       case ConcreteUInt (value, _, _) => testValue(value)
       case ConcreteSInt(value, _, _)  => testValue(value)
@@ -124,22 +134,39 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
     * @param n cycles to perform
     */
   def step(n: Int = 1): Unit = {
+    if(interpreter.checkStopped(s"step($n)")) return
+
     for(_ <- 0 until n) {
       interpreter.cycle()
     }
   }
 
+  def reportString: String = {
+    val endTime = System.nanoTime()
+    val elapsedSeconds = (endTime - startTime).toDouble / 1000000000.0
+    /*
+        This should not every show the Failed message because currently the interpreter
+        throws an InterpreterException on Stop (but maybe that will be made optional at some point)
+        Best to leave this here for now, someone might catch the exception manually and still want to
+        see this report which should include the Failed in that case
+      */
+    def status: String = {
+      interpreter.lastStopResult match {
+        case Some(stopResult) =>
+          s"Failed: Stop result $stopResult:"
+        case _ =>
+          s"Success:"
+      }
+    }
+    s"test ${interpreter.loweredAst.modules.head.name} " +
+      s"$status $expectationsMet tests passed " +
+      s"in ${interpreter.circuitState.stateCounter} cycles " +
+      f"taking $elapsedSeconds%.6f seconds"
+  }
   /**
     * A simplistic report of the number of expects that passed and
     */
   def report(): Unit = {
-    val endTime = System.nanoTime()
-    val elapsedSeconds = (endTime - startTime).toDouble / 1000000000.0
-    println(
-      s"test ${interpreter.loweredAst.modules.head.name} " +
-        s"Success: $expectationsMet tests passed " +
-        s"in ${interpreter.circuitState.stateCounter} cycles " +
-        f"taking $elapsedSeconds%.6f seconds"
-    )
+    println(reportString)
   }
 }

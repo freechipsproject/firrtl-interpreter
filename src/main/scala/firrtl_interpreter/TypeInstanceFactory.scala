@@ -9,7 +9,15 @@ import firrtl.ir._
   */
 
 object TypeInstanceFactory {
-  def apply(typ: Type, initialValue: BigInt = 0): Concrete = {
+  def apply(typ: Type): Concrete = {
+    typ match {
+      case u: UIntType => Concrete.poisonedUInt(widthToInt(u.width))
+      case s: SIntType => Concrete.poisonedSInt(widthToInt(s.width))
+      case ClockType   => ConcreteUInt(0, 1)
+      case _ => throw new InterpreterException(s"Unsupported LoFIRRTL type for interpreter $typ")
+    }
+  }
+  def apply(typ: Type, initialValue: BigInt): Concrete = {
     typ match {
       case u: UIntType => ConcreteUInt(initialValue, widthToInt(u.width))
       case s: SIntType => ConcreteSInt(initialValue, widthToInt(s.width))

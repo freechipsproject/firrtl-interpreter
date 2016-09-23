@@ -36,7 +36,9 @@ class PrintStopSpec extends FlatSpec with Matchers {
 
     val interpreter = FirrtlTerp(input)
 
-    interpreter.doCycles(2)
+    intercept[StopException] {
+      interpreter.doCycles(2)
+    }
     interpreter.stopped should be (true)
     interpreter.stopResult should be (2)
   }
@@ -47,13 +49,15 @@ class PrintStopSpec extends FlatSpec with Matchers {
         |circuit Stop0 :
         |  module Stop0 :
         |    input clk : Clock
-        |    stop(clk, UInt(1), 0) ; Failure!
+        |    stop(clk, UInt(1), 0) ; Success!
         |
       """.stripMargin
 
     val interpreter = FirrtlTerp(input)
 
-    interpreter.doCycles(2)
+    intercept[StopException] {
+      interpreter.doCycles(2)
+    }
     interpreter.stopped should be (true)
     interpreter.stopResult should be (0)
   }

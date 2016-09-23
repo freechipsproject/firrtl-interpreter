@@ -68,6 +68,9 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
       """.stripMargin
 
     val tester = new InterpretiveTester(chirrtlMemInput) {
+      poke("reset", 1)
+      step(1)
+      poke("reset", 0)
       step(1)
     }
   }
