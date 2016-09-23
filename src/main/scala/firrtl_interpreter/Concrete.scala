@@ -15,22 +15,28 @@ trait Concrete {
 
   def +(that: Concrete): Concrete = {
     (this, that) match {
-      case (ConcreteUInt(v1, w1, p1), ConcreteUInt(v2, w2, p2)) => ConcreteUInt(v1 + v2, w1.max(w2) + 1, poison(p1, p2))
-      case (ConcreteUInt(v1, w1, p1), ConcreteSInt(v2, w2, p2)) => ConcreteSInt(v1 + v2, w1.max(w2) + 1, poison(p1, p2))
-      case (ConcreteSInt(v1, w1, p1), ConcreteUInt(v2, w2, p2)) => ConcreteSInt(v1 + v2, w1.max(w2) + 1, poison(p1, p2))
-      case (ConcreteSInt(v1, w1, p1), ConcreteSInt(v2, w2, p2)) => ConcreteSInt(v1 + v2, w1.max(w2) + 1, poison(p1, p2))
+      case (ConcreteUInt(v1, w1, p1), ConcreteUInt(v2, w2, p2)) =>
+        ConcreteUInt(v1 + v2, w1.max(w2) + 1, poison(p1, p2))
+      case (ConcreteUInt(v1, w1, p1), ConcreteSInt(v2, w2, p2)) =>
+        ConcreteSInt(v1 + v2, w1.max(w2 - 1) + 2, poison(p1, p2))
+      case (ConcreteSInt(v1, w1, p1), ConcreteUInt(v2, w2, p2)) =>
+        ConcreteSInt(v1 + v2, w2.max(w1 - 1) + 2, poison(p1, p2))
+      case (ConcreteSInt(v1, w1, p1), ConcreteSInt(v2, w2, p2)) =>
+        ConcreteSInt(v1 + v2, w1.max(w2) + 1, poison(p1, p2))
     }
   }
   def -(that: Concrete): Concrete = {
     (this, that) match {
-      case (ConcreteUInt(v1, w1, p1), ConcreteUInt(v2, w2, p2)) => ConcreteSInt(v1 - v2, w1.max(w2) + 1, poison(p1, p2))
+      case (ConcreteUInt(v1, w1, p1), ConcreteUInt(v2, w2, p2)) =>
+        ConcreteSInt(v1 - v2, w1.max(w2) + 1, poison(p1, p2))
       case (ConcreteUInt(v1, w1, p1), ConcreteSInt(v2, w2, p2)) =>
         val newWidth = (w1 + 2).max(w2 + 1)
         ConcreteSInt(v1 - v2, newWidth, poison(p1, p2))
       case (ConcreteSInt(v1, w1, p1), ConcreteUInt(v2, w2, p2)) =>
         val newWidth = if(w1 == 1) w2 + 1 else (w1 + 1).max(w2 + 2)
         ConcreteSInt(v1 - v2, newWidth, poison(p1, p2))
-      case (ConcreteSInt(v1, w1, p1), ConcreteSInt(v2, w2, p2)) => ConcreteSInt(v1 - v2, w1.max(w2) + 1, poison(p1, p2))
+      case (ConcreteSInt(v1, w1, p1), ConcreteSInt(v2, w2, p2)) =>
+        ConcreteSInt(v1 - v2, w1.max(w2) + 1, poison(p1, p2))
     }
   }
   def *(that: Concrete): Concrete = {
@@ -373,29 +379,3 @@ case class ConcreteClock(val value: BigInt) extends Concrete {
   }
   def forceWidth(tpe: Type): ConcreteClock = forceWidth(typeToWidth(tpe))
 }
-
-//object PoisonedSInt {
-//  def apply(width: Int): PoisonedSInt = {
-//    new PoisonedSInt(randomBigInt(width), width)
-//  }
-//}
-//object PoisonedUInt {
-//  def apply(width: Int): PoisonedUInt = {
-//    new PoisonedUInt(randomBigInt(width), width)
-//  }
-//}
-//class PoisonedUInt(myValue: BigInt, myWidth: Int) extends ConcreteUInt(myValue, myWidth) {
-//  override def forceWidth(w: Int): PoisonedUInt = new PoisonedUInt(myValue, w)
-//  override def forceWidth(tpe: Type): PoisonedUInt = forceWidth(typeToWidth(tpe))
-//  override def poisoned: Boolean = true
-//  override def toString: String = s"$value.PU<$width>"
-//}
-//class PoisonedSInt(myValue: BigInt, myWidth: Int) extends ConcreteSInt(myValue, myWidth) {
-//  override def forceWidth(w: Int): PoisonedSInt = new PoisonedSInt(value, w)
-//  override def forceWidth(tpe: Type): PoisonedSInt = forceWidth(typeToWidth(tpe))
-//  override def poisoned: Boolean = true
-//  override def toString: String = s"$value.PS<$width>"
-//}
-
-
-

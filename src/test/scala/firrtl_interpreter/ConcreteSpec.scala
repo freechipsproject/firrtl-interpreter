@@ -50,8 +50,8 @@ class ConcreteSpec extends FlatSpec with Matchers {
     (s1 + s2).isInstanceOf[ConcreteSInt] should be (true)
 
     (i1 + i2).width should be (i1.width.max(i2.width) + 1)
-    (i1 + s2).width should be (i1.width.max(s2.width) + 1)
-    (s1 + i2).width should be (s1.width.max(i2.width) + 1)
+    (i1 + s2).width should be (i1.width.max(s2.width - 1) + 2)
+    (s1 + i2).width should be ((s1.width - 1).max(i2.width) + 2)
     (s1 + s2).width should be (s1.width.max(s2.width) + 1)
   }
 
