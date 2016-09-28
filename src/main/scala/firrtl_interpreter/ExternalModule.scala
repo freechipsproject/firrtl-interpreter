@@ -2,7 +2,7 @@
 
 package firrtl_interpreter
 
-import firrtl.ir.{Type, Expression}
+import firrtl.ir.{Type, Expression, Width}
 
 import scala.collection._
 
@@ -15,6 +15,9 @@ case class BlackBoxOutput(name: String,
                           dependentInputs: Seq[String],
                           tpe: Type
                          ) extends Expression {
+  def mapExpr(f: Expression => Expression): Expression = f(this)
+  def mapType(f: Type => Type): Expression = this
+  def mapWidth(f: Width => Width): Expression = this
   def execute(inputValues: Seq[Concrete]): Concrete = {
     implementation.execute(inputValues, tpe: Type)
   }
