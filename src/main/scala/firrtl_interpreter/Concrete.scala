@@ -152,7 +152,7 @@ trait Concrete {
     case ConcreteUInt(thatValue, _, _) =>
       val shift = thatValue.toInt
       assert(shift >= 0, s"ERROR:$this >> $that ${that.value} must be >= 0")
-      assert(shift < this.width, s"ERROR:$this >> $that ${that.value} must be > ${this.width}")
+      assert(shift < this.width, s"ERROR:$this >> $that ${that.value} must be < ${this.width}")
       ConcreteUInt(this.value >> shift, this.width)
     case _ => throw new InterpreterException(s"Cannot shift $this >> $that where $that is not a UInt parameter")
   }
