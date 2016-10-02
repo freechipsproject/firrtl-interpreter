@@ -47,24 +47,6 @@ class CircuitStateSpec extends FlatSpec with Matchers {
     c.setValue("port0", ConcreteUInt(1, 1))
     c.isStale should be (true)
   }
-  it should "not allow cycle to be called on a stale state" in {
-    val u1Type = UIntType(IntWidth(1))
-    val u1Instance = TypeInstanceFactory(u1Type)
-    val port0 = Port(NoInfo, "port0", Input, u1Type)
-    val port1 = Port(NoInfo, "port1", Output, u1Type)
-    val c = new CircuitState(
-      inputPorts  = mutable.Map(port0.name -> u1Instance),
-      outputPorts = mutable.Map(port1.name -> u1Instance),
-      registers   = mutable.Map("reg1" -> u1Instance, "reg2" -> u1Instance),
-      memories    = mutable.Map(),
-      validNames  = mutable.HashSet("wire0")
-    )
-
-    c.isStale = true
-    intercept[AssertionError] {
-      c.cycle()
-    }
-  }
 
   it should "clear registers and ephemera when cycle is called" in {
     val u1Type = UIntType(IntWidth(1))

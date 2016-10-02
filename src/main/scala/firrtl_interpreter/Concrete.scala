@@ -281,6 +281,10 @@ trait Concrete {
         s"${poisonString}SInt<$width>${if(v<0)"1" else "0"}${"0"*((width-1)-bitString.length)}$bitString"
     }
   }
+  def showValue: String = {
+    def showPoison: String = if(poisoned) "☠" else ""
+    s"$showPoison$value$showPoison"
+  }
 }
 object Concrete {
   def apply(u: UIntLiteral): ConcreteUInt = {
