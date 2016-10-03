@@ -1,6 +1,8 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
+import firrtl.{ExecutionOptionsManager, CommonOptions}
+
 /**
   * Works a lot like the chisel classic tester compiles a firrtl input string
   * and allows poke, peek, expect and step
@@ -11,15 +13,25 @@ package firrtl_interpreter
   * Important note: port names in LoFirrtl have replaced dot notation with underscore notation
   * so that io.a.b must be referenced as io_a_b
   *
-  * @param input a firrtl program contained in a string
-  * @param vcdOutputFileName name of file to put vcd output in, empty string turns this off
+  * @param input              a firrtl program contained in a string
+  * @param optionsManager     collection of options for the interpreter
   */
-class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
+class InterpretiveTester(
+    input: String,
+    optionsManager: ExecutionOptionsManager with HasInterpreterOptions =
+      new ExecutionOptionsManager("firrtl-interpreter") with HasInterpreterOptions) {
   var expectationsMet = 0
 
   val interpreter = FirrtlTerp(input)
-  if(vcdOutputFileName.nonEmpty) {
-    interpreter.makeVCDLogger(vcdOutputFileName)
+  val interpreterOptions = optionsManager.interpreterOptions
+  val commonOptions      = optionsManager.commonOptions
+
+  setVerbose(interpreterOptions.setVerbose)
+
+  if(interpreterOptions.writeVCD) {
+    optionsManager.setTopNameIfNotSet(interpreter.loweredAst.main)
+    optionsManager.makeTargetDir()
+    interpreter.makeVCDLogger(interpreterOptions.vcdOutputFileName(optionsManager))
   }
   def writeVCD(): Unit = {
     interpreter.writeVCD()
@@ -168,6 +180,7 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
     * A simplistic report of the number of expects that passed and
     */
   def report(): Unit = {
+    interpreter.writeVCD()
     println(reportString)
   }
 }
