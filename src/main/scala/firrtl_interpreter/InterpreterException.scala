@@ -10,3 +10,9 @@ object InterpreterException {
   def apply(message: String): InterpreterException = new InterpreterException(message: String)
 }
 
+class StopException(message: String) extends Exception(message)
+object StopException {
+  def apply(message: String): StopException = new StopException(message: String)
+}
+
+

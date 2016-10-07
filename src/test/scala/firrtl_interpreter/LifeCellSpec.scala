@@ -43,13 +43,18 @@ class LifeCellSpec extends FlatSpec with Matchers {
         |    node T_35 = mux(io.set_dead, UInt<1>("h00"), T_34)
         |    node T_36 = mux(io.set_alive, UInt<1>("h01"), T_35)
         |    is_alive <= T_36
-        |    io.is_alive <= is_alive
+        |    io.is_alive <= T_36
         |      """.stripMargin
 
     new InterpretiveTester(input, vcdOutputFileName = "life_cell.vcd") {
+      interpreter.evaluator.useTopologicalSortedKeys = true
       // setVerbose()
+      step(1)
 
       def setAlive(alive: Boolean): Unit = {
+        poke("reset", 1)
+        step(1)
+        poke("reset", 0)
         poke("io_running", 0)
         poke("io_set_alive", if(alive) 1 else 0)
         poke("io_set_dead",  if(alive) 0 else 1)
@@ -85,6 +90,7 @@ class LifeCellSpec extends FlatSpec with Matchers {
         0,0,0,
         0,0,0
       )
+      setVerbose(true)
       step(1)
       expect("io_is_alive", 0)
 

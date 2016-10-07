@@ -35,10 +35,21 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
   println("LoFirrtl" + "="*120)
   println(loweredAst.serialize)
 
+  /**
+    * turns on evaluator debugging. Can make output quite
+    * verbose.
+    * @param value  The desired verbose setting
+    */
   override def setVerbose(value: Boolean): Unit = {
     super.setVerbose(value)
     evaluator.setVerbose(value)
   }
+
+  /**
+    * Once a stop has occured, the intepreter will not allow pokes until
+    * the stop has been cleared
+    */
+  def clearStop(): Unit = {lastStopResult = None}
 
   val dependencyGraph    = DependencyGraph(loweredAst)
 
@@ -79,6 +90,7 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
     if(!force) {
       assert(circuitState.isInput(name),
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
+      if(checkStopped("setValue")) return Concrete.poisonedUInt(1)
     }
 
     circuitState.setValue(name, value)
@@ -103,14 +115,8 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
     log(circuitState.prettyString())
     log(s"resolve dependencies")
     evaluator.resolveDependencies(specificDependencies)
-    log(s"process reset")
-    evaluator.processRegisterResets()
-    log(s"check prints")
-    evaluator.checkPrints()
-    log(s"check stops")
-    lastStopResult = evaluator.checkStops()
+
     circuitState.isStale = false
-    log(s"${circuitState.prettyString()}")
   }
 
   def reEvaluate(name: String): Unit = {
@@ -118,11 +124,23 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
     evaluateCircuit(Seq(name))
   }
 
+  def checkStopped(attemptedCommand: String = "command"): Boolean = {
+    if(stopped) {
+      log(s"circuit has been stopped: ignoring $attemptedCommand")
+    }
+    stopped
+  }
+
   def cycle(showState: Boolean = false): Unit = {
+    if(checkStopped("cycle")) return
+
     if(circuitState.isStale) {
       log("interpreter cycle() called, state is stale, re-evaluate Circuit")
       log(circuitState.prettyString())
+
+      log(s"process reset")
       evaluateCircuit()
+      evaluator.processRegisterResets()
     }
     else {
       log(s"interpreter cycle() called, state is fresh")
@@ -130,12 +148,28 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
 
     circuitState.cycle()
 
-//    println(s"FirrtlTerp: cycle complete ${"="*80}\n${sourceState.prettyString()}")
-    if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${circuitState.prettyString()}")
+    log(s"check prints")
+    evaluator.checkPrints()
+    log(s"check stops")
+    lastStopResult = evaluator.checkStops()
 
+    log(s"${circuitState.prettyString()}")
+    if(stopped) {
+      if(stopResult == 0) {
+        throw StopException(s"Success: Stop result $stopResult")
+      }
+      else {
+        throw StopException(s"Failure: Stop result $stopResult")
+      }
+    }
+
+    //    println(s"FirrtlTerp: cycle complete ${"="*80}\n${sourceState.prettyString()}")
+    if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${circuitState.prettyString()}")
   }
 
   def doCycles(n: Int): Unit = {
+    if(checkStopped(s"doCycles($n)")) return
+
     println(s"Initial state ${"-"*80}\n${circuitState.prettyString()}")
 
     for(cycle_number <- 1 to n) {

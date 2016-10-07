@@ -141,7 +141,7 @@ class Memory(
     var enable: Boolean     = false
     var clock: Int          = 0
     var address: Int        = 0
-    var data: Concrete      = ConcreteUInt(0, dataWidth)
+    var data: Concrete      = Concrete.poisonedUInt(dataWidth)
 
     def setValue(fieldName: String, concreteValue: Concrete): Unit = {
       fieldName match {
@@ -182,7 +182,7 @@ class Memory(
       override def toString: String = s"[${readPipeLineData.value}]"
     }
     val pipeLine : ArrayBuffer[ReadPipeLineElement] = {
-      ArrayBuffer.fill(latency)(ReadPipeLineElement(ConcreteUInt(0, dataWidth)))
+      ArrayBuffer.fill(latency)(ReadPipeLineElement(Concrete.poisonedUInt(dataWidth)))
     }
 
     override def setValue(fieldName: String, concreteValue: Concrete): Unit = {
@@ -195,16 +195,16 @@ class Memory(
         data = dataStore(address)
       }
       else {
-        pipeLine(0) = ReadPipeLineElement(if(enable) dataStore(address) else PoisonedUInt(dataWidth))
+        pipeLine(0) = ReadPipeLineElement(if(enable) dataStore(address) else Concrete.poisonedUInt(dataWidth))
       }
     }
     def cycle(): Unit = {
       if(latency > 0) {
         data = pipeLine.remove(0).readPipeLineData
-        pipeLine += ReadPipeLineElement(if(enable) dataStore(address) else PoisonedUInt(dataWidth))
+        pipeLine += ReadPipeLineElement(if(enable) dataStore(address) else Concrete.poisonedUInt(dataWidth))
       }
       else {
-        data = if(enable) dataStore(address) else PoisonedUInt(dataWidth)
+        data = if(enable) dataStore(address) else Concrete.poisonedUInt(dataWidth)
       }
     }
     override def toString: String = {
@@ -282,14 +282,14 @@ class Memory(
   case class ReadWritePort(portName: String) extends MemoryPort {
     val latency:   Int           = readLatency
     var writeMode: Boolean       = false
-    var readData:  Concrete      = ConcreteUInt(0, dataWidth)
+    var readData:  Concrete      = Concrete.poisonedUInt(dataWidth)
     var mask:      Concrete      = ConcreteUInt(0, dataWidth)
 
     case class ReadPipeLineElement(readPipeLineData: Concrete) {
       override def toString: String = s"[${readPipeLineData.value}]"
     }
     val readPipeLine : ArrayBuffer[ReadPipeLineElement] = {
-      ArrayBuffer.fill(readLatency)(ReadPipeLineElement(ConcreteUInt(0, dataWidth)))
+      ArrayBuffer.fill(readLatency)(ReadPipeLineElement(Concrete.poisonedUInt(dataWidth)))
     }
 
     case class WritePipeLineElement(enable: Boolean, address: Int, data: Concrete, mask: Concrete) {
@@ -314,7 +314,7 @@ class Memory(
           readData = dataStore(address)
         }
         else {
-          readPipeLine(0) = ReadPipeLineElement(if(enable) dataStore(address) else PoisonedUInt(dataWidth))
+          readPipeLine(0) = ReadPipeLineElement(if(enable) dataStore(address) else Concrete.poisonedUInt(dataWidth))
         }
       }
     }
@@ -339,10 +339,10 @@ class Memory(
     def cycle(): Unit = {
       if(readLatency > 0) {
         readData = readPipeLine.remove(0).readPipeLineData
-        readPipeLine += ReadPipeLineElement(if(enable) dataStore(address) else PoisonedUInt(dataWidth))
+        readPipeLine += ReadPipeLineElement(if(enable) dataStore(address) else Concrete.poisonedUInt(dataWidth))
       }
       else {
-        readData = if(enable) dataStore(address) else PoisonedUInt(dataWidth)
+        readData = if(enable) dataStore(address) else Concrete.poisonedUInt(dataWidth)
       }
 
       if(writeLatency > 0) {

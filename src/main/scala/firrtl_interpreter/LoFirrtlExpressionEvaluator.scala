@@ -63,6 +63,18 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
         resolveDependency(elem)
       }
     }
+
+    /*
+    Check to see if this output found on the rhs of dependency relationship
+    has been computed yet
+     */
+    if(circuitState.isOutput(key)) {
+      if(! circuitState.rhsOutputs.contains(key) &&
+         dependencyGraph.nameToExpression.contains(key)) {
+        resolveDependency(key)
+        circuitState.rhsOutputs += key
+      }
+    }
     circuitState.getValue(key) match {
       case Some(value) => value
       case _ =>
@@ -276,7 +288,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
       expression match {
         case Mux(condition, trueExpression, falseExpression, tpe) =>
           evaluate(condition) match {
-            case ConcreteUInt(value, 1) =>
+            case ConcreteUInt(value, 1, _) =>
               val v = if (value > 0) {
                 if(evaluateAll) { evaluate(falseExpression)}
                 evaluate(trueExpression)
@@ -417,7 +429,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
       }
       else {
         throw new InterpreterException(s"error: don't know what to do with key $key")
-        //      ConcreteUInt(0, 1)
+        //      Concrete.poisonedUInt(1)
       }
     }
 
