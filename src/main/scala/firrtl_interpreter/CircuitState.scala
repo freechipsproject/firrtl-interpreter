@@ -90,9 +90,11 @@ case class CircuitState(
   }
   /**
     * prepare this cycle
+    * advance registers
+    * clear wire values
+    * cycle all memories
     */
   def cycle(): Unit = {
-    assert(!isStale, s"Cycle cannot be called when stale, refresh should occur at a higher level")
     registers.keys.foreach { key =>
       registers(key) = nextRegisters(key)
     }
@@ -103,7 +105,7 @@ case class CircuitState(
       vcd.incrementTime()
     }
     nameToConcreteValue = mutable.HashMap((inputPorts ++ outputPorts ++ registers).toSeq:_*)
-    isStale = true
+
     stateCounter += 1
   }
   def cycleMemories(): Unit = {
@@ -194,7 +196,7 @@ case class CircuitState(
     val (prefix, separator, postfix) = if(dense) (": ", ", ", "") else (":\n  ", "\n  ", "")
     def showConcreteValues(msg: String, m: Map[String, Concrete]): String = {
       m.keys.toSeq.sorted.map { case key =>
-        s"$key=${m(key).value}"
+        s"$key=${m(key).showValue}"
       }.mkString(msg + prefix, separator, postfix)
     }
     s"""

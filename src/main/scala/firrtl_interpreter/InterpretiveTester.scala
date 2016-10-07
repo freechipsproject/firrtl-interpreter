@@ -110,17 +110,18 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
     * @param expectedValue the BigInt value required
     */
   def expect(name: String, expectedValue: BigInt): Unit = {
-    def testValue(value: BigInt): Unit = {
-      if (value != expectedValue) {
+    def testValue(concrete: Concrete): Unit = {
+      if (concrete.value != expectedValue) {
         if(! interpreter.verbose) interpreter.reEvaluate(name)
-        throw new InterpreterException (s"Error:expect($name, $expectedValue) got $value")
+        throw new InterpreterException (s"Error:expect($name, $expectedValue) got ${concrete.showValue}")
       }
     }
     if(interpreter.checkStopped(s"expect($name, $expectedValue)")) return
 
     interpreter.getValue(name) match {
-      case ConcreteUInt (value, _, _) => testValue(value)
-      case ConcreteSInt(value, _, _)  => testValue(value)
+      case value: ConcreteUInt  => testValue(value)
+      case value: ConcreteSInt  => testValue(value)
+      case value: ConcreteClock => testValue(value)
       case _ =>
         throw new InterpreterException(s"Error:expect($name, $expectedValue) value not found")
     }
@@ -137,6 +138,7 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
     if(interpreter.checkStopped(s"step($n)")) return
 
     for(_ <- 0 until n) {
+      interpreter.circuitState.isStale = true
       interpreter.cycle()
     }
   }

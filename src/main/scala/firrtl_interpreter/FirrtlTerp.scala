@@ -165,7 +165,6 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
 
     //    println(s"FirrtlTerp: cycle complete ${"="*80}\n${sourceState.prettyString()}")
     if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${circuitState.prettyString()}")
-
   }
 
   def doCycles(n: Int): Unit = {
