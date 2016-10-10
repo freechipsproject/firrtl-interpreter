@@ -2,7 +2,7 @@ name := "firrtl-interpreter"
 
 organization := "edu.berkeley.cs"
 
-version := "1.0-SNAPSHOT"
+version := "0.1-BETA-SNAPSHOT"
 
 val chiselVersion = System.getProperty("chiselVersion", "3.0")
 
@@ -15,7 +15,7 @@ resolvers ++= Seq(
 )
 
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
-val defaultVersions = Map("firrtl" -> "1.0-SNAPSHOT")
+val defaultVersions = Map("firrtl" -> "0.2-BETA-SNAPSHOT")
 
 libraryDependencies ++= (Seq("firrtl").map {
   dep: String => "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", defaultVersions(dep)) })
