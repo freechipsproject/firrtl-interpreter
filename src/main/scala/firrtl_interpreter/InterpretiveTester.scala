@@ -138,7 +138,6 @@ class InterpretiveTester(input: String, vcdOutputFileName: String = "") {
     if(interpreter.checkStopped(s"step($n)")) return
 
     for(_ <- 0 until n) {
-      interpreter.circuitState.isStale = true
       interpreter.cycle()
     }
   }
