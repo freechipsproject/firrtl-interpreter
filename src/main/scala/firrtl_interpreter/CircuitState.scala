@@ -105,6 +105,7 @@ case class CircuitState(
       vcd.incrementTime()
     }
     nameToConcreteValue = mutable.HashMap((inputPorts ++ outputPorts ++ registers).toSeq:_*)
+    isStale = true
 
     stateCounter += 1
   }
