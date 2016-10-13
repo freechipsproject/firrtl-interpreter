@@ -334,7 +334,7 @@ case class ConcreteUInt(val value: BigInt, val width: Int, poisoned: Boolean = f
   val bitsRequired = requiredBitsForUInt(value)
   if((width > 0) && (bitsRequired > width)) {
     throw new InterpreterException(
-      s"error: ConcreteUInt($value, $width) bad width $width needs ${requiredBitsForUInt(value.toInt)}"
+      s"error: ConcreteUInt($value, $width) bad width $width needs ${requiredBitsForUInt(value)}"
     )
   }
   def forceWidth(newWidth:Int): ConcreteUInt = {
