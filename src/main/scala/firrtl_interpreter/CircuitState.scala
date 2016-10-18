@@ -69,7 +69,7 @@ case class CircuitState(
     vcdOutputFileName = fileName
   }
   def writeVCD(): Unit = {
-    vcdLoggerOption.get.write(vcdOutputFileName)
+    vcdLoggerOption.foreach { _.write(vcdOutputFileName) }
   }
   def disableVCD(): Unit = {
     vcdLoggerOption.foreach { vcd =>

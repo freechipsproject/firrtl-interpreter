@@ -71,7 +71,6 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
     circuitState = circuitState
   )
   val timer = evaluator.timer
-  println("evaluator created")
 
   def getValue(name: String): Concrete = {
     assert(dependencyGraph.validNames.contains(name),

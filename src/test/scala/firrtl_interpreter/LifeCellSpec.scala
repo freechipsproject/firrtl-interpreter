@@ -1,6 +1,7 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
+import firrtl.ExecutionOptionsManager
 import org.scalatest.{FlatSpec, Matchers}
 
 class LifeCellSpec extends FlatSpec with Matchers {
@@ -46,8 +47,11 @@ class LifeCellSpec extends FlatSpec with Matchers {
         |    io.is_alive <= T_36
         |      """.stripMargin
 
-    new InterpretiveTester(input, vcdOutputFileName = "life_cell.vcd") {
-      interpreter.evaluator.useTopologicalSortedKeys = true
+    val optionsManager = new ExecutionOptionsManager("firrtl-interpreter") with HasInterpreterOptions {
+      interpreterOptions = InterpreterOptions(writeVCD = true)
+    }
+
+    new InterpretiveTester(input, optionsManager) {
       // setVerbose()
       step(1)
 
@@ -90,7 +94,6 @@ class LifeCellSpec extends FlatSpec with Matchers {
         0,0,0,
         0,0,0
       )
-      setVerbose(true)
       step(1)
       expect("io_is_alive", 0)
 
