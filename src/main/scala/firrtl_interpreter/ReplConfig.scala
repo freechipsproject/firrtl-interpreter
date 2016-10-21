@@ -34,5 +34,3 @@ trait HasReplConfig {
     .text("script file to load on startup, default is no file")
 
 }
-
-class ReplOptionsManager extends ExecutionOptionsManager("firrtl-repl") with HasReplConfig with HasInterpreterOptions

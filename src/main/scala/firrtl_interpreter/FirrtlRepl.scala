@@ -3,6 +3,8 @@ package firrtl_interpreter
 
 import java.io.File
 
+import firrtl.ExecutionOptionsManager
+
 import scala.collection.mutable.ArrayBuffer
 import scala.tools.jline.console.ConsoleReader
 import scala.tools.jline.console.history.FileHistory
@@ -20,7 +22,7 @@ abstract class Command(val name: String) {
   }
 }
 
-class FirrtlRepl(optionsManager: ReplOptionsManager) {
+class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with HasInterpreterOptions) {
   val replConfig = optionsManager.replConfig
   val interpreterOptions = optionsManager.interpreterOptions
 
@@ -695,13 +697,13 @@ class FirrtlRepl(optionsManager: ReplOptionsManager) {
 }
 
 object FirrtlRepl {
-  def execute(optionsManager: ReplOptionsManager): Unit = {
+  def execute(optionsManager: ExecutionOptionsManager with HasReplConfig with HasInterpreterOptions): Unit = {
     val repl = new FirrtlRepl(optionsManager)
     repl.run()
   }
 
   def main(args: Array[String]): Unit = {
-    val optionsManager = new ReplOptionsManager
+    val optionsManager = new ExecutionOptionsManager("firrtl-repl") with HasReplConfig with HasInterpreterOptions
 
     optionsManager.parse(args) match {
       case true =>
