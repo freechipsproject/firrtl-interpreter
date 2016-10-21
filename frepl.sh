@@ -1,1 +1,1 @@
-sbt "run-main firrtl_interpreter.FirrtlRepl"
+sbt "run-main firrtl_interpreter.FirrtlRepl $*"

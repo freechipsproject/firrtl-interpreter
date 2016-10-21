@@ -3,6 +3,7 @@ package firrtl_interpreter
 
 import java.io.File
 
+import firrtl.ExecutionOptionsManager
 import firrtl_interpreter.real.DspRealFactory
 import scopt.OptionParser
 
@@ -23,7 +24,10 @@ abstract class Command(val name: String) {
   }
 }
 
-class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
+class FirrtlRepl(optionsManager: ReplOptionsManager) {
+  val replConfig = optionsManager.replConfig
+  val interpreterOptions = optionsManager.interpreterOptions
+
   val terminal = TerminalFactory.create()
   val console = new ConsoleReader
   val historyPath = "~/.firrtl_repl_history".replaceFirst("^~",System.getProperty("user.home"))
@@ -37,8 +41,9 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
   history.load(historyFile)
   console.setHistory(history)
 
-  var interpreterOpt: Option[FirrtlTerp] = None
-  def interpreter: FirrtlTerp = interpreterOpt.get
+  var currentInterpeterOpt: Option[FirrtlTerp] = None
+
+  def interpreter: FirrtlTerp = currentInterpeterOpt.get
   var args = Array.empty[String]
   var done = false
 
@@ -56,11 +61,13 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
       }
     }
     val input = io.Source.fromFile(file).mkString
-    val blackBoxFactories = if(replConfig.dspSupport) Seq(new DspRealFactory) else Seq.empty
-    interpreterOpt = Some(FirrtlTerp(input, blackBoxFactories = blackBoxFactories))
-    interpreterOpt.foreach { _=>
-      interpreter.evaluator.allowCombinationalLoops = replConfig.allowCycles
-      interpreter.evaluator.useTopologicalSortedKeys = replConfig.sortKeys
+
+    currentInterpeterOpt = Some(FirrtlTerp(input, blackBoxFactories = interpreterOptions.blackBoxFactories))
+    currentInterpeterOpt.foreach { _=>
+      interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
+      interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
+      interpreter.setVerbose(interpreterOptions.setVerbose)
+
       console.println(s"Flags: $showFlags")
       console.println(
         s"dependency graph ${interpreter.dependencyGraph.validNames.size} " +
@@ -231,7 +238,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
       new Command("poke") {
         def usage: (String, String) = ("poke inputPortName value", "set an input port to the given integer value")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -267,7 +274,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
       new Command("peek") {
         def usage: (String, String) = ("peek componentName", "show the current value of the named circuit component")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -404,7 +411,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
       new Command("timing") {
         def usage: (String, String) = ("timing [clear|bin]", "show the current timing state")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -463,7 +470,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
         def usage: (String, String) = ("verbose [true|false|toggle]",
           "set evaluator verbose mode (default toggle) during dependency evaluation")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -487,7 +494,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
         def usage: (String, String) = ("eval-all [true|false|toggle]",
           "set evaluator to execute un-needed branches (default toggle) during dependency evaluation")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -511,7 +518,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
         def usage: (String, String) = ("allow-cycles [true|false|toggle]",
           "set evaluator allow combinational loops (could cause correctness problems")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -536,7 +543,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
         def usage: (String, String) = ("ordered-exec [true|false|toggle]",
           "set evaluator execute circuit in dependency order, now recursive component evaluation")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -687,34 +694,12 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
 }
 
 object FirrtlRepl {
-  val parser = new OptionParser[ReplConfig]("scopt") {
-    head("scopt", "3.x")
-    opt[Boolean]('c', "allow-cycles") action { (x, c) =>
-      c.copy(allowCycles = x)
-    } text { "allow-cycles will continue execution despite combinational loop" }
-
-    opt[Boolean]('o', "ordered-exec") action { (x, c) =>
-      c.copy(sortKeys = x)
-    } text { "execute in dependency order, can increase traversed branches" }
-
-    opt[String]('i', "input") action { (x, c) =>
-      c.copy(firrtlSourceName = x)
-    } text { "firrtl file to execute" }
-
-    opt[String]('s', "script") action { (x, c) =>
-      c.copy(scriptName = x)
-    } text { "script file to load" }
-
-    opt[Boolean]('d', "dsp-support") action { (x, c) =>
-      c.copy(dspSupport = x)
-      c
-    } text { "script file to load" }
-  }
-
   def main(args: Array[String]): Unit = {
-    parser.parse(args, ReplConfig()) match {
-      case Some(replConfig) =>
-        val repl = new FirrtlRepl(replConfig)
+    val optionsManager = new ReplOptionsManager
+
+    optionsManager.parse(args) match {
+      case true =>
+        val repl = new FirrtlRepl(optionsManager)
         repl.run()
       case _ =>
     }

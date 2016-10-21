@@ -5,10 +5,11 @@ package firrtl_interpreter
 import firrtl.ExecutionOptionsManager
 
 case class InterpreterOptions(
-    writeVCD: Boolean = false,
-    setVerbose: Boolean = false,
-    setOrderedExec: Boolean = false,
-    randomSeed: Long        = System.currentTimeMillis(),
+    writeVCD:          Boolean              = false,
+    setVerbose:        Boolean              = false,
+    setOrderedExec:    Boolean              = false,
+    allowCycles:       Boolean              = false,
+    randomSeed:        Long                 = System.currentTimeMillis(),
     blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty)
   extends firrtl.ComposableOptions {
 
@@ -49,6 +50,13 @@ trait HasInterpreterOptions {
       interpreterOptions = interpreterOptions.copy(setOrderedExec = true)
     }
     .text("operates on dependencies optimally, can increase overhead, makes verbose mode easier to read")
+
+  parser.opt[Unit]("fr-allow-cycles")
+    .abbr("fiac")
+    .foreach { _ =>
+      interpreterOptions = interpreterOptions.copy(allowCycles = true)
+    }
+    .text(s"allow combinational loops to be processed, though unreliable, default is ${interpreterOptions.allowCycles}")
 
   parser.opt[Long]("fint-random-seed")
     .abbr("firs")

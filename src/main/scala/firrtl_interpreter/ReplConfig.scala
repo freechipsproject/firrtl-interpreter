@@ -2,12 +2,37 @@
 
 package firrtl_interpreter
 
-import scala.collection.mutable.ArrayBuffer
+import firrtl.ExecutionOptionsManager
 
 case class ReplConfig(
-                       allowCycles:       Boolean = false,
-                       sortKeys:          Boolean = false,
-                       firrtlSourceName:  String  = "",
-                       scriptName:        String  = "",
-                       dspSupport:        Boolean = false
-                     )
+    firrtlSourceName:  String  = "",
+    scriptName:        String  = "",
+    dspSupport:        Boolean = false)
+  extends firrtl.ComposableOptions
+
+trait HasReplConfig {
+  self: ExecutionOptionsManager =>
+
+  var replConfig = ReplConfig()
+
+  parser.note("firrtl-repl")
+
+  parser.opt[String]("fr-firrtl-source")
+    .abbr("frfs")
+    .valueName("<firrtl-source-file>")
+    .foreach { x =>
+      replConfig = replConfig.copy(firrtlSourceName = x)
+    }
+    .text("firrtl file to load on startup, default is no file")
+
+  parser.opt[String]("fr-script-file")
+    .abbr("frsf")
+    .valueName("<firrtl-script-file>")
+    .foreach { x =>
+      replConfig = replConfig.copy(scriptName = x)
+    }
+    .text("script file to load on startup, default is no file")
+
+}
+
+class ReplOptionsManager extends ExecutionOptionsManager("firrtl-repl") with HasReplConfig with HasInterpreterOptions
