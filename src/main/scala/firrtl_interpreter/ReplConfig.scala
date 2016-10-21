@@ -7,7 +7,7 @@ import firrtl.ExecutionOptionsManager
 case class ReplConfig(
     firrtlSourceName:  String  = "",
     scriptName:        String  = "",
-    dspSupport:        Boolean = false)
+    firrtlSource:      String = "")
   extends firrtl.ComposableOptions
 
 trait HasReplConfig {

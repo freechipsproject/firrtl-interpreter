@@ -3,10 +3,6 @@ package firrtl_interpreter
 
 import java.io.File
 
-import firrtl.ExecutionOptionsManager
-import firrtl_interpreter.real.DspRealFactory
-import scopt.OptionParser
-
 import scala.collection.mutable.ArrayBuffer
 import scala.tools.jline.console.ConsoleReader
 import scala.tools.jline.console.history.FileHistory
@@ -52,16 +48,7 @@ class FirrtlRepl(optionsManager: ReplOptionsManager) {
   var currentScript: Option[Script] = None
   val intPattern = """(-?\d+)""".r
 
-  def loadFile(fileName: String): Unit = {
-    var file = new File(fileName)
-    if(! file.exists()) {
-      file = new File(fileName + ".fir")
-      if(! file.exists()) {
-        throw new Exception(s"file $fileName does not exist")
-      }
-    }
-    val input = io.Source.fromFile(file).mkString
-
+  def loadSource(input: String): Unit = {
     currentInterpeterOpt = Some(FirrtlTerp(input, blackBoxFactories = interpreterOptions.blackBoxFactories))
     currentInterpeterOpt.foreach { _=>
       interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
@@ -77,6 +64,18 @@ class FirrtlRepl(optionsManager: ReplOptionsManager) {
       interpreter.evaluator.timer.enabled = true
     }
     buildCompletions()
+  }
+
+  def loadFile(fileName: String): Unit = {
+    var file = new File(fileName)
+    if(! file.exists()) {
+      file = new File(fileName + ".fir")
+      if(! file.exists()) {
+        throw new Exception(s"file $fileName does not exist")
+      }
+    }
+    val input = io.Source.fromFile(file).mkString
+    loadSource(input)
   }
 
   def loadScript(fileName: String): Unit = {
@@ -629,13 +628,15 @@ class FirrtlRepl(optionsManager: ReplOptionsManager) {
 
 
   def run() {
-    if(replConfig.firrtlSourceName.nonEmpty) {
+    if(replConfig.firrtlSource.nonEmpty) {
+      loadSource(replConfig.firrtlSource)
+    }
+    else if(replConfig.firrtlSourceName.nonEmpty) {
       loadFile(replConfig.firrtlSourceName)
     }
     if(replConfig.scriptName.nonEmpty) {
       loadScript(replConfig.scriptName)
     }
-
 
     buildCompletions()
 
@@ -694,6 +695,11 @@ class FirrtlRepl(optionsManager: ReplOptionsManager) {
 }
 
 object FirrtlRepl {
+  def execute(optionsManager: ReplOptionsManager): Unit = {
+    val repl = new FirrtlRepl(optionsManager)
+    repl.run()
+  }
+
   def main(args: Array[String]): Unit = {
     val optionsManager = new ReplOptionsManager
 
