@@ -55,8 +55,6 @@ class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq
     */
   def clearStop(): Unit = {lastStopResult = None}
 
-  val dependencyGraph    = DependencyGraph(loweredAst)
-
   var circuitState = CircuitState(dependencyGraph)
   println("Circuit state created")
 

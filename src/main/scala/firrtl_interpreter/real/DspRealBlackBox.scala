@@ -5,6 +5,11 @@ package firrtl_interpreter.real
 import firrtl.ir.Type
 import firrtl_interpreter._
 
+
+object DspReal {
+  val UnderlyingWidth = 64
+}
+
 abstract class DspRealTwoArgumentToDouble extends BlackBoxImplementation {
   /**
     * sub-classes must implement this two argument function
@@ -28,7 +33,9 @@ abstract class DspRealTwoArgumentToDouble extends BlackBoxImplementation {
     val doubleArg2 = bigIntBitsToDouble(arg2.value)
     val doubleResult = twoOp(doubleArg1, doubleArg2)
     val result = doubleToBigIntBits(doubleResult)
-    TypeInstanceFactory(tpe, result)
+    ConcreteSInt(result, DspReal.UnderlyingWidth).asUInt
+
+//    TypeInstanceFactory(tpe, result)
   }
 }
 
@@ -53,7 +60,7 @@ abstract class DspRealOneArgumentToDouble extends BlackBoxImplementation {
     val doubleArg1 = bigIntBitsToDouble(arg1.value)
     val doubleResult = oneOp(doubleArg1)
     val result = doubleToBigIntBits(doubleResult)
-    TypeInstanceFactory(tpe, result)
+    ConcreteSInt(result, DspReal.UnderlyingWidth).asUInt
   }
 }
 
@@ -85,7 +92,10 @@ abstract class DspRealTwoArgumentToBoolean extends BlackBoxImplementation {
 }
 
 class DspRealAdd(val name: String) extends DspRealTwoArgumentToDouble {
-  def twoOp(double1: Double, double2: Double): Double = double1 + double2
+  def twoOp(double1: Double, double2: Double): Double = {
+    val result = double1 + double2
+    result
+  }
 }
 
 class DspRealSubtract(val name: String) extends DspRealTwoArgumentToDouble {

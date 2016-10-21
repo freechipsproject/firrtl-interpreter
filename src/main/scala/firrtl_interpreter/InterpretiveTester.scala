@@ -1,10 +1,7 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
-import firrtl.{ExecutionOptionsManager, CommonOptions}
-import firrtl_interpreter.real.DspRealFactory
-
-import scala.collection.mutable.ArrayBuffer
+import firrtl.{ExecutionOptionsManager}
 
 /**
   * Works a lot like the chisel classic tester compiles a firrtl input string
@@ -19,21 +16,17 @@ import scala.collection.mutable.ArrayBuffer
   * @param input              a firrtl program contained in a string
   * @param optionsManager     collection of options for the interpreter
   */
-class InterpretiveTester(input: String,
-                         vcdOutputFileName: String = "",
-                         blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) {
 class InterpretiveTester(
     input: String,
     optionsManager: ExecutionOptionsManager with HasInterpreterOptions =
       new ExecutionOptionsManager("firrtl-interpreter") with HasInterpreterOptions) {
-                         var blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) {
   var expectationsMet = 0
 
-  if(blackBoxFactories.isEmpty) blackBoxFactories = Seq(new DspRealFactory)
-
-  val interpreter = FirrtlTerp(input)
+  val interpreter        = FirrtlTerp(input)
   val interpreterOptions = optionsManager.interpreterOptions
   val commonOptions      = optionsManager.commonOptions
+
+  val blackBoxFactories = optionsManager.interpreterOptions.blackBoxFactories
 
   setVerbose(interpreterOptions.setVerbose)
 
@@ -41,12 +34,6 @@ class InterpretiveTester(
     optionsManager.setTopNameIfNotSet(interpreter.loweredAst.main)
     optionsManager.makeTargetDir()
     interpreter.makeVCDLogger(interpreterOptions.vcdOutputFileName(optionsManager))
-  val interpreter = FirrtlTerp(input, blackBoxFactories = blackBoxFactories)
-  if(vcdOutputFileName.nonEmpty) {
-    interpreter.makeVCDLogger(vcdOutputFileName)
-  }
-  def writeVCD(): Unit = {
-    interpreter.writeVCD()
   }
 
   def setVerbose(value: Boolean = true): Unit = {

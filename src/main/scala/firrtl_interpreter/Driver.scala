@@ -7,7 +7,9 @@ import firrtl.ExecutionOptionsManager
 case class InterpreterOptions(
     writeVCD: Boolean = false,
     setVerbose: Boolean = false,
-    setOrderedExec: Boolean = false)
+    setOrderedExec: Boolean = false,
+    randomSeed: Long        = System.currentTimeMillis(),
+    blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty)
   extends firrtl.ComposableOptions {
 
   def vcdOutputFileName(optionsManager: ExecutionOptionsManager): String = {
@@ -44,9 +46,17 @@ trait HasInterpreterOptions {
   parser.opt[Unit]("fint-ordered-exec")
     .abbr("fioe")
     .foreach { _ =>
-    interpreterOptions = interpreterOptions.copy(setOrderedExec = true)
-  }
+      interpreterOptions = interpreterOptions.copy(setOrderedExec = true)
+    }
     .text("operates on dependencies optimally, can increase overhead, makes verbose mode easier to read")
+
+  parser.opt[Long]("fint-random-seed")
+    .abbr("firs")
+      .valueName("<long-value>")
+    .foreach { x =>
+      interpreterOptions = interpreterOptions.copy(randomSeed = x)
+    }
+    .text("seed used for random numbers generated for tests and poison values, default is current time in ms")
 
 
 }

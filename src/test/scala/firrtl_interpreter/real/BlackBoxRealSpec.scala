@@ -2,6 +2,7 @@
 
 package firrtl_interpreter.real
 
+import firrtl.ExecutionOptionsManager
 import firrtl_interpreter._
 import org.scalatest.{FreeSpec, Matchers}
 
@@ -37,7 +38,10 @@ class BlackBoxRealSpec extends FreeSpec with Matchers {
           |    T_15_node <= BBFAdd_1.out
         """.stripMargin
 
-      val tester = new InterpretiveTester(input, blackBoxFactories = Seq(new DspRealFactory))
+      val optionsManager = new ExecutionOptionsManager("interpreter") with HasInterpreterOptions {
+        interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(new DspRealFactory), randomSeed = 0L)
+      }
+      val tester = new InterpretiveTester(input, optionsManager)
       tester.interpreter.verbose = true
       tester.interpreter.setVerbose(true)
 
@@ -69,7 +73,10 @@ class BlackBoxRealSpec extends FreeSpec with Matchers {
         |    BBFIntPart_1.in <= io_a_node
       """.stripMargin
 
-    val tester = new InterpretiveTester(input, blackBoxFactories = Seq(new DspRealFactory))
+    val optionsManager = new ExecutionOptionsManager("interpreter") with HasInterpreterOptions {
+      interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(new DspRealFactory))
+    }
+    val tester = new InterpretiveTester(input, optionsManager)
     tester.interpreter.verbose = true
     tester.interpreter.setVerbose(true)
 
