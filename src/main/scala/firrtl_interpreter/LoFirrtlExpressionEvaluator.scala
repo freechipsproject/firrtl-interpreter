@@ -374,7 +374,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
         case c: UIntLiteral => Concrete(c).forceWidth(c.tpe)
         case c: SIntLiteral => Concrete(c).forceWidth(c.tpe)
         case blackBox: BlackBoxOutput =>
-          println(s"got a black box, $blackBox")
+          log(s"got a black box, $blackBox")
           val concreteInputs = blackBox.dependentInputs.map { input => getValue(input)}
           blackBox.execute(concreteInputs)
       }
