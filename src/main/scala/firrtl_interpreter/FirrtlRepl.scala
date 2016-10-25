@@ -3,7 +3,7 @@ package firrtl_interpreter
 
 import java.io.File
 
-import scopt.OptionParser
+import firrtl.ExecutionOptionsManager
 
 import scala.collection.mutable.ArrayBuffer
 import scala.tools.jline.console.ConsoleReader
@@ -22,7 +22,12 @@ abstract class Command(val name: String) {
   }
 }
 
-class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
+class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with HasInterpreterOptions) {
+  val replConfig = optionsManager.replConfig
+  val interpreterOptions = optionsManager.interpreterOptions
+
+  firrtl_interpreter.random.setSeed(interpreterOptions.randomSeed)
+
   val terminal = TerminalFactory.create()
   val console = new ConsoleReader
   val historyPath = "~/.firrtl_repl_history".replaceFirst("^~",System.getProperty("user.home"))
@@ -36,8 +41,9 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
   history.load(historyFile)
   console.setHistory(history)
 
-  var interpreterOpt: Option[FirrtlTerp] = None
-  def interpreter: FirrtlTerp = interpreterOpt.get
+  var currentInterpeterOpt: Option[FirrtlTerp] = None
+
+  def interpreter: FirrtlTerp = currentInterpeterOpt.get
   var args = Array.empty[String]
   var done = false
 
@@ -45,6 +51,24 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
   val scriptFactory = ScriptFactory(this)
   var currentScript: Option[Script] = None
   val intPattern = """(-?\d+)""".r
+
+  def loadSource(input: String): Unit = {
+    currentInterpeterOpt = Some(FirrtlTerp(input, blackBoxFactories = interpreterOptions.blackBoxFactories))
+    currentInterpeterOpt.foreach { _=>
+      interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
+      interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
+      interpreter.setVerbose(interpreterOptions.setVerbose)
+
+      console.println(s"Flags: $showFlags")
+      console.println(
+        s"dependency graph ${interpreter.dependencyGraph.validNames.size} " +
+          s"elements ${interpreter.dependencyGraph.numberOfStatements} " +
+          s"statements ${interpreter.dependencyGraph.numberOfNodes} nodes"
+      )
+      interpreter.evaluator.timer.enabled = true
+    }
+    buildCompletions()
+  }
 
   def loadFile(fileName: String): Unit = {
     var file = new File(fileName)
@@ -55,19 +79,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
       }
     }
     val input = io.Source.fromFile(file).mkString
-    interpreterOpt = Some(FirrtlTerp(input))
-    interpreterOpt.foreach { _=>
-      interpreter.evaluator.allowCombinationalLoops = replConfig.allowCycles
-      interpreter.evaluator.useTopologicalSortedKeys = replConfig.sortKeys
-      console.println(s"Flags: $showFlags")
-      console.println(
-        s"dependency graph ${interpreter.dependencyGraph.validNames.size} " +
-          s"elements ${interpreter.dependencyGraph.numberOfStatements} " +
-          s"statements ${interpreter.dependencyGraph.numberOfNodes} nodes"
-      )
-      interpreter.evaluator.timer.enabled = true
-    }
-    buildCompletions()
+    loadSource(input)
   }
 
   def loadScript(fileName: String): Unit = {
@@ -202,7 +214,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
 
       },
       new Command("vcd") {
-        def usage: (String, String) = ("vcd fileName|[done]", "vcd loaded script")
+        def usage: (String, String) = ("firrtl_interpreter.vcd fileName|[done]", "firrtl_interpreter.vcd loaded script")
         override def completer: Option[ArgumentCompleter] = {
           Some(new ArgumentCompleter(
             new StringsCompleter({"vcd"}),
@@ -212,7 +224,8 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
         def run(args: Array[String]): Unit = {
           currentScript match {
             case Some(script) =>
-              getOneArg("vcd [fileName|done]", argOption = Some("out.vcd")) match {
+              getOneArg("firrtl_interpreter.vcd [fileName|done]",
+                argOption = Some("out.firrtl_interpreter.vcd")) match {
                 case Some("done")   =>
                   interpreter.disableVCD()
                 case Some(fileName) =>
@@ -228,7 +241,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
       new Command("poke") {
         def usage: (String, String) = ("poke inputPortName value", "set an input port to the given integer value")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -244,8 +257,14 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
           getTwoArgs("poke inputPortName value") match {
             case Some((portName, valueString)) =>
               try {
-                val value = valueString.toInt
-                interpreter.setValueWithBigInt(portName, value)
+                if(valueString.startsWith("0x")) {
+                  val hexValue = BigInt(valueString.drop(2), 16)
+                  interpreter.setValueWithBigInt(portName, hexValue)
+                }
+                else {
+                  val value = valueString.toInt
+                  interpreter.setValueWithBigInt(portName, value)
+                }
               }
               catch {
                 case e: Exception =>
@@ -258,7 +277,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
       new Command("peek") {
         def usage: (String, String) = ("peek componentName", "show the current value of the named circuit component")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -395,7 +414,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
       new Command("timing") {
         def usage: (String, String) = ("timing [clear|bin]", "show the current timing state")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -454,7 +473,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
         def usage: (String, String) = ("verbose [true|false|toggle]",
           "set evaluator verbose mode (default toggle) during dependency evaluation")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -478,7 +497,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
         def usage: (String, String) = ("eval-all [true|false|toggle]",
           "set evaluator to execute un-needed branches (default toggle) during dependency evaluation")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -502,7 +521,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
         def usage: (String, String) = ("allow-cycles [true|false|toggle]",
           "set evaluator allow combinational loops (could cause correctness problems")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -527,7 +546,7 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
         def usage: (String, String) = ("ordered-exec [true|false|toggle]",
           "set evaluator execute circuit in dependency order, now recursive component evaluation")
         override def completer: Option[ArgumentCompleter] = {
-          if(interpreterOpt.isEmpty) {
+          if(currentInterpeterOpt.isEmpty) {
             None
           }
           else {
@@ -613,13 +632,15 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
 
 
   def run() {
-    if(replConfig.firrtlSourceName.nonEmpty) {
+    if(replConfig.firrtlSource.nonEmpty) {
+      loadSource(replConfig.firrtlSource)
+    }
+    else if(replConfig.firrtlSourceName.nonEmpty) {
       loadFile(replConfig.firrtlSourceName)
     }
     if(replConfig.scriptName.nonEmpty) {
       loadScript(replConfig.scriptName)
     }
-
 
     buildCompletions()
 
@@ -677,31 +698,18 @@ class FirrtlRepl(replConfig: ReplConfig = ReplConfig()) {
   }
 }
 
-
 object FirrtlRepl {
-  val parser = new OptionParser[ReplConfig]("scopt") {
-    head("scopt", "3.x")
-    opt[Boolean]('c', "allow-cycles") action { (x, c) =>
-      c.copy(allowCycles = x)
-    } text { "allow-cycles will attempt allow circuit to run with a combinational loop" }
-
-    opt[Boolean]('o', "ordered-exec") action { (x, c) =>
-      c.copy(sortKeys = x)
-    } text { "execute in dependency order, can increase traversed branches" }
-
-    opt[String]('i', "input") action { (x, c) =>
-      c.copy(firrtlSourceName = x)
-    } text { "firrtl file to execute" }
-
-    opt[String]('s', "script") action { (x, c) =>
-      c.copy(scriptName = x)
-    } text { "script file to load" }
+  def execute(optionsManager: ExecutionOptionsManager with HasReplConfig with HasInterpreterOptions): Unit = {
+    val repl = new FirrtlRepl(optionsManager)
+    repl.run()
   }
 
   def main(args: Array[String]): Unit = {
-    parser.parse(args, ReplConfig()) match {
-      case Some(replConfig) =>
-        val repl = new FirrtlRepl(replConfig)
+    val optionsManager = new ExecutionOptionsManager("firrtl-repl") with HasReplConfig with HasInterpreterOptions
+
+    optionsManager.parse(args) match {
+      case true =>
+        val repl = new FirrtlRepl(optionsManager)
         repl.run()
       case _ =>
     }

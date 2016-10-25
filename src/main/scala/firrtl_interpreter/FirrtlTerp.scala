@@ -2,7 +2,10 @@
 
 package firrtl_interpreter
 
+import firrtl_interpreter.real.DspRealFactory
 import firrtl.ir._
+
+import scala.collection.mutable.ArrayBuffer
 
 // TODO: Add poison concept/multi-state
 // TODO: try inlining pass
@@ -26,7 +29,7 @@ import firrtl.ir._
   *
   * @param ast the circuit to be simulated
   */
-class FirrtlTerp(ast: Circuit) extends SimpleLogger {
+class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) extends SimpleLogger {
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
   def stopResult: Int  = lastStopResult.get
@@ -45,13 +48,12 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
     evaluator.setVerbose(value)
   }
 
+  val dependencyGraph    = DependencyGraph(loweredAst, this)
   /**
     * Once a stop has occured, the intepreter will not allow pokes until
     * the stop has been cleared
     */
   def clearStop(): Unit = {lastStopResult = None}
-
-  val dependencyGraph    = DependencyGraph(loweredAst)
 
   var circuitState = CircuitState(dependencyGraph)
   println("Circuit state created")
@@ -147,6 +149,11 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
 
     circuitState.cycle()
 
+    for (elem <- blackBoxFactories) {
+      elem.cycle()
+    }
+
+//    println(s"FirrtlTerp: cycle complete ${"="*80}\n${sourceState.prettyString()}")
     log(s"check prints")
     evaluator.checkPrints()
     log(s"check stops")
@@ -180,11 +187,21 @@ class FirrtlTerp(ast: Circuit) extends SimpleLogger {
 }
 
 object FirrtlTerp {
-  def apply(input: String, verbose: Boolean = false): FirrtlTerp = {
+  val blackBoxFactory = new DspRealFactory
+  def apply(input: String,
+            verbose: Boolean = false,
+            blackBoxFactories: Seq[BlackBoxFactory] = Seq(blackBoxFactory)): FirrtlTerp = {
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
-    val interpreter = new FirrtlTerp(ast)
+    val interpreter = new FirrtlTerp(ast, blackBoxFactories = blackBoxFactories)
     interpreter.setVerbose(verbose)
-    interpreter.evaluateCircuit()
+
+    try {
+      interpreter.evaluateCircuit()
+    }
+    catch {
+      case ie: InterpreterException =>
+        println(s"Error: InterpreterExecption(${ie.getMessage} during warmup evaluation")
+    }
     interpreter
   }
 }

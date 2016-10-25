@@ -13,7 +13,8 @@ package object firrtl_interpreter {
   val BitsRequiredOverflowSizeBigInt = Big1 << DangerShiftSize
 
   val random = util.Random
-  random.setSeed(0L)
+  random.setSeed(System.currentTimeMillis())
+
   def randomBigInt(width: Int): BigInt = {
     BigInt(width, random)
   }
@@ -147,6 +148,15 @@ package object firrtl_interpreter {
       computeBits(num)
     }
   }
+
+  def doubleToBigIntBits(double: Double): BigInt = {
+    BigInt(java.lang.Double.doubleToLongBits(double))
+  }
+
+  def bigIntBitsToDouble(bigInt: BigInt): Double = {
+    java.lang.Double.longBitsToDouble(bigInt.toLong)
+  }
+
 
   trait SimpleLogger {
     var verbose = false

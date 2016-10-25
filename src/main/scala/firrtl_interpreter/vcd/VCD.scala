@@ -1,6 +1,6 @@
 // See LICENSE for license details.
 
-package vcd
+package firrtl_interpreter.vcd
 
 import java.io.PrintWriter
 import java.text.{SimpleDateFormat, DateFormat}
