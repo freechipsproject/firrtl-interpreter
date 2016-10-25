@@ -194,7 +194,14 @@ object FirrtlTerp {
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
     val interpreter = new FirrtlTerp(ast, blackBoxFactories = blackBoxFactories)
     interpreter.setVerbose(verbose)
-    interpreter.evaluateCircuit()
+
+    try {
+      interpreter.evaluateCircuit()
+    }
+    catch {
+      case ie: InterpreterException =>
+        println(s"Error: InterpreterExecption(${ie.getMessage} during warmup evaluation")
+    }
     interpreter
   }
 }

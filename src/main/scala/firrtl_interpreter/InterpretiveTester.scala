@@ -1,7 +1,7 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
-import firrtl.{ExecutionOptionsManager}
+import firrtl.ExecutionOptionsManager
 
 /**
   * Works a lot like the chisel classic tester compiles a firrtl input string
@@ -21,6 +21,8 @@ class InterpretiveTester(
     optionsManager: ExecutionOptionsManager with HasInterpreterOptions =
       new ExecutionOptionsManager("firrtl-interpreter") with HasInterpreterOptions) {
   var expectationsMet = 0
+
+  firrtl_interpreter.random.setSeed(optionsManager.interpreterOptions.randomSeed)
 
   val interpreter        = FirrtlTerp(input)
   val interpreterOptions = optionsManager.interpreterOptions

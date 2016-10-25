@@ -2,7 +2,7 @@
 
 package firrtl_interpreter
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{FlatSpec, Matchers}
 
 // scalastyle:off magic.number
 class ConcreteSIntSpec extends FlatSpec with Matchers {
