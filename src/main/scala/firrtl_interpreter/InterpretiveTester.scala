@@ -1,7 +1,7 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
-import firrtl.{ExecutionOptionsManager, CommonOptions}
+import firrtl.{ExecutionOptionsManager}
 
 /**
   * Works a lot like the chisel classic tester compiles a firrtl input string
@@ -22,9 +22,11 @@ class InterpretiveTester(
       new ExecutionOptionsManager("firrtl-interpreter") with HasInterpreterOptions) {
   var expectationsMet = 0
 
-  val interpreter = FirrtlTerp(input)
+  val interpreter        = FirrtlTerp(input)
   val interpreterOptions = optionsManager.interpreterOptions
   val commonOptions      = optionsManager.commonOptions
+
+  val blackBoxFactories = optionsManager.interpreterOptions.blackBoxFactories
 
   setVerbose(interpreterOptions.setVerbose)
 
@@ -32,9 +34,6 @@ class InterpretiveTester(
     optionsManager.setTopNameIfNotSet(interpreter.loweredAst.main)
     optionsManager.makeTargetDir()
     interpreter.makeVCDLogger(interpreterOptions.vcdOutputFileName(optionsManager))
-  }
-  def writeVCD(): Unit = {
-    interpreter.writeVCD()
   }
 
   def setVerbose(value: Boolean = true): Unit = {
