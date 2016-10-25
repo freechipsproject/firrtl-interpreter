@@ -416,8 +416,9 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
     val stream = getClass.getResourceAsStream("/HasLoop.fir")
     val input = io.Source.fromInputStream(stream).mkString
 
+    val interpreter = FirrtlTerp(input)
     intercept[InterpreterException] {
-      FirrtlTerp(input)
+      interpreter.evaluateCircuit()
     }
   }
 

@@ -26,6 +26,8 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
   val replConfig = optionsManager.replConfig
   val interpreterOptions = optionsManager.interpreterOptions
 
+  firrtl_interpreter.random.setSeed(interpreterOptions.randomSeed)
+
   val terminal = TerminalFactory.create()
   val console = new ConsoleReader
   val historyPath = "~/.firrtl_repl_history".replaceFirst("^~",System.getProperty("user.home"))
