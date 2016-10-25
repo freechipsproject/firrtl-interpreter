@@ -40,7 +40,7 @@ class GCDTester extends FlatSpec with Matchers {
 
 
   it should "run with InterpretedTester" in {
-    new InterpretiveTester(gcdFirrtl, vcdOutputFileName = "gcd.vcd") {
+    new InterpretiveTester(gcdFirrtl) {
       // interpreter.setVerbose()
       step(1)
       poke("io_a", 34)
@@ -55,8 +55,6 @@ class GCDTester extends FlatSpec with Matchers {
         step(1)
       }
       expect("io_z", 17)
-
-      writeVCD()
     }
   }
 }
