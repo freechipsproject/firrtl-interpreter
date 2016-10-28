@@ -192,12 +192,12 @@ object DependencyGraph extends SimpleLogger {
         processPorts(module)
         processDependencyStatements(modulePrefix, module.body, dependencyGraph)
       case extModule: ExtModule => // Look to see if we have an implementation for this
-        println(s"got external module ${extModule.name} instance $modulePrefix")
+        log(s"got external module ${extModule.name} instance $modulePrefix")
         processPorts(extModule)
         /* use exists while looking for the right factory, short circuits iteration when found */
-        println(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
+        log(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
         dependencyGraph.blackBoxFactories.exists { factory =>
-          println("Found an existing factory")
+          log("Found an existing factory")
           factory.createInstance(modulePrefix, extModule.name) match {
             case Some(implementation) =>
               processExternalInstance(extModule, modulePrefix, implementation, dependencyGraph)
