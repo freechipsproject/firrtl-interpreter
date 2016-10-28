@@ -10,7 +10,9 @@ case class InterpreterOptions(
     setOrderedExec:    Boolean              = false,
     allowCycles:       Boolean              = false,
     randomSeed:        Long                 = System.currentTimeMillis(),
-    blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty)
+    blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty,
+    maxExecutionDepth: Long                 = ExpressionExecutionStack.defaultMaxExecutionDepth
+    )
   extends firrtl.ComposableOptions {
 
   def vcdOutputFileName(optionsManager: ExecutionOptionsManager): String = {
@@ -66,6 +68,13 @@ trait HasInterpreterOptions {
     }
     .text("seed used for random numbers generated for tests and poison values, default is current time in ms")
 
+  parser.opt[Long]("fint-max-execution-depth")
+    .abbr("fmed")
+      .valueName("<long-value>")
+    .foreach { x =>
+      interpreterOptions = interpreterOptions.copy(maxExecutionDepth = x)
+    }
+    .text("depth of stack used to evaluate expressions")
 
 }
 
