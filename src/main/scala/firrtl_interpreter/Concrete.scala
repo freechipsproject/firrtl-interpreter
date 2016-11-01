@@ -283,7 +283,7 @@ trait Concrete {
   }
   def showValue: String = {
     def showPoison: String = if(poisoned) "☠" else ""
-    s"$showPoison$value$showPoison"
+    s"$showPoison $value$showPoison"
   }
 }
 object Concrete {
