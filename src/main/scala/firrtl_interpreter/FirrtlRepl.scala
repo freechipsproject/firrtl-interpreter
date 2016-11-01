@@ -758,8 +758,6 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
 
     while (! done) {
       try {
-
-//        val line = console.readLine()
         val line = getNextLine
 
         args = line.split(" ")

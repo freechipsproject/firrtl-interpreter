@@ -17,7 +17,7 @@ object TypeInstanceFactory {
       case _ => throw new InterpreterException(s"Unsupported LoFIRRTL type for interpreter $typ")
     }
   }
-  def apply(typ: Type, initialValue: BigInt): Concrete = {
+  def apply(typ: Type, initialValue: BigInt, poisoned: Boolean = false): Concrete = {
     typ match {
       case u: UIntType => ConcreteUInt(initialValue, widthToInt(u.width))
       case s: SIntType => ConcreteSInt(initialValue, widthToInt(s.width))
