@@ -250,7 +250,9 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
               new StringsCompleter({
                 "poke"
               }),
-              new StringsCompleter(jlist(interpreter.dependencyGraph.inputPorts.toSeq))
+              new StringsCompleter(
+                jlist(interpreter.dependencyGraph.inputPorts.toSeq ++ interpreter.dependencyGraph.registerNames)
+              )
             ))
           }
         }
@@ -266,6 +268,62 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
                   val value = valueString.toInt
                   interpreter.setValueWithBigInt(portName, value)
                 }
+              }
+              catch {
+                case e: Exception =>
+                  error(s"exception ${e.getMessage} $e")
+              }
+            case _ =>
+          }
+        }
+      },
+      new Command("rpoke") {
+        private def settableThings = {
+          interpreter.dependencyGraph.inputPorts.toSeq ++ interpreter.dependencyGraph.registerNames
+        }
+        def usage: (String, String) = ("rpoke regex value", "poke value into ports that match regex")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpeterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({
+                "rpoke"
+              }),
+              new StringsCompleter(jlist(settableThings))
+            ))
+          }
+        }
+        def run(args: Array[String]): Unit = {
+          getTwoArgs("rpoke regex value") match {
+            case Some((pokeRegex, valueString)) =>
+              try {
+                val pokeValue = {
+                  if(valueString.startsWith("0x")) {
+                    BigInt(valueString.drop(2), 16)
+                  }
+                  else {
+                    BigInt(valueString)
+                  }
+                }
+                val portRegex = pokeRegex.r
+                val setThings = settableThings.flatMap { settableThing =>
+                  portRegex.findFirstIn(settableThing) match {
+                    case Some(foundPort) =>
+                      interpreter.setValueWithBigInt(settableThing, pokeValue)
+                      Some(settableThing)
+                    case _ => None
+                  }
+                }
+                if(setThings.nonEmpty) {
+                  console.println(s"poking value $pokeValue into ${setThings.toList.sorted.mkString(", ")}")
+                }
+                else {
+                  console.println(s"Sorry now settable ports matched regex $pokeRegex")
+                }
+
+
               }
               catch {
                 case e: Exception =>
@@ -295,11 +353,62 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
             case Some(componentName) =>
               try {
                 val value = interpreter.getValue(componentName)
-                console.println(s"peek $componentName $value")
+                console.println(s"peek $componentName ${value.showValue}")
+              }
+              catch {
+                case e: Exception =>
+                  error(s"exception ${e.getMessage}")
+                case a: AssertionError =>
+                  error(s"exception ${a.getMessage}")
+              }
+            case _ =>
+          }
+        }
+      },
+      new Command("rpeek") {
+        private def peekableThings = interpreter.circuitState.validNames.toSeq
+        def usage: (String, String) = ("rpeek regex", "show the current value of things matching the regex")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpeterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({
+                "rpeek"
+              }),
+              new StringsCompleter(jlist(peekableThings))
+            ))
+          }
+        }
+        //scalastyle:off cyclomatic.complexity
+        def run(args: Array[String]): Unit = {
+          getOneArg("rpeek regex") match {
+            case Some((peekRegex)) =>
+              try {
+                val portRegex = peekRegex.r
+                val numberOfThingsPeeked = peekableThings.sorted.count { settableThing =>
+                  portRegex.findFirstIn(settableThing) match {
+                    case Some(foundPort) =>
+                      try {
+                        val value = interpreter.getValue(settableThing)
+                        console.println(s"rpeek $settableThing ${value.showValue}")
+                        true
+                      }
+                      catch { case _: Exception => false}
+                    case _ =>
+                      false
+                  }
+                }
+                if(numberOfThingsPeeked == 0) {
+                  console.println(s"Sorry now settable ports matched regex $peekRegex")
+                }
               }
               catch {
                 case e: Exception =>
                   error(s"exception ${e.getMessage} $e")
+                case a: AssertionError =>
+                  error(s"exception ${a.getMessage}")
               }
             case _ =>
           }
@@ -649,8 +758,6 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
 
     while (! done) {
       try {
-
-//        val line = console.readLine()
         val line = getNextLine
 
         args = line.split(" ")
