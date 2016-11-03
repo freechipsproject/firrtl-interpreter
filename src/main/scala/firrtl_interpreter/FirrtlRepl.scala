@@ -457,10 +457,39 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
           "randomize all inputs except reset)")
         def run(args: Array[String]): Unit = {
           for{
-            (inputPortName, value) <- interpreter.circuitState.inputPorts
-            if inputPortName != "reset"
+            (component, value) <- interpreter.circuitState.inputPorts ++
+              interpreter.circuitState.outputPorts ++
+              interpreter.circuitState.ephemera
           } {
-            interpreter.setValue(inputPortName, TypeInstanceFactory(value, randomBigInt(value.width)))
+            try {
+              val newValue = TypeInstanceFactory(value, poisoned = false)
+              interpreter.setValue(component, newValue)
+              console.println(s"setting $component to $newValue")
+            }
+            catch {
+              case e: Exception =>
+                console.println(s"Error randomize: setting $component to $value error ${e.getMessage}")
+            }
+          }
+          for((component, value) <- interpreter.circuitState.registers) {
+            try {
+              val newValue = TypeInstanceFactory(value, poisoned = false)
+              interpreter.circuitState.registers(component) = newValue
+              val newNextValue = TypeInstanceFactory(value, poisoned = false)
+              interpreter.circuitState.nextRegisters(component) = newNextValue
+              console.println(s"setting $component to $newValue")
+            }
+            catch {
+              case e: Exception =>
+                console.println(s"Error randomize: setting $component to $value error ${e.getMessage}")
+            }
+          }
+          for(memory <- interpreter.circuitState.memories.values) {
+            for(memoryIndex <- 0 until memory.dataStore.length) {
+              memory.dataStore.update(
+                memoryIndex,
+                TypeInstanceFactory(memory.dataStore.underlyingData.head, poisoned = false))
+            }
           }
           console.println(interpreter.circuitState.prettyString())
         }
@@ -470,10 +499,24 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
           "poison everything)")
         def run(args: Array[String]): Unit = {
           for{
-            (component, value) <- interpreter.circuitState.inputPorts ++ interpreter.circuitState.outputPorts ++
-              interpreter.circuitState.registers ++ interpreter.circuitState.nextRegisters
+            (component, value) <- interpreter.circuitState.inputPorts ++
+              interpreter.circuitState.outputPorts ++
+              interpreter.circuitState.ephemera
           } {
             interpreter.setValue(component, TypeInstanceFactory(value))
+          }
+          for((component, value) <- interpreter.circuitState.registers) {
+            try {
+              val newValue = TypeInstanceFactory(value, poisoned = true)
+              interpreter.circuitState.registers(component) = newValue
+              val newNextValue = TypeInstanceFactory(value, poisoned = true)
+              interpreter.circuitState.nextRegisters(component) = newNextValue
+              console.println(s"setting $component to $newValue")
+            }
+            catch {
+              case e: Exception =>
+                console.println(s"Error poison: setting $component to $value error ${e.getMessage}")
+            }
           }
           for(memory <- interpreter.circuitState.memories.values) {
             for(memoryIndex <- 0 until memory.dataStore.length) {
