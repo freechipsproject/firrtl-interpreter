@@ -4,6 +4,7 @@ package firrtl_interpreter
 import java.io.File
 
 import firrtl.ExecutionOptionsManager
+import firrtl_interpreter.vcd.VCD
 
 import scala.collection.mutable.ArrayBuffer
 import scala.tools.jline.console.ConsoleReader
@@ -52,6 +53,9 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
   var currentScript: Option[Script] = None
   val IntPattern = """(-?\d+)""".r
 
+  var currentVcdScript: Option[VCD] = None
+  var replVcdController: Option[ReplVcdController] = None
+
   def loadSource(input: String): Unit = {
     currentInterpeterOpt = Some(FirrtlTerp(input, blackBoxFactories = interpreterOptions.blackBoxFactories))
     currentInterpeterOpt.foreach { _=>
@@ -89,6 +93,21 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
       case Some(script) =>
         console.println(s"loaded script file ${script.fileName} with ${script.length} lines")
       case _ =>
+    }
+  }
+
+  def loadVcdScript(fileName: String): Unit = {
+    val dutName = currentInterpeterOpt match {
+      case Some(interpreter) => interpreter.ast.main
+      case None => ""
+    }
+    try {
+      currentVcdScript = Some(VCD.read(fileName, dutName))
+      replVcdController = Some(new ReplVcdController(this, this.interpreter, currentVcdScript.get))
+    }
+    catch {
+      case e: Exception =>
+        console.println(s"Failed to load vcd script $fileName, error: ${e.getMessage}")
     }
   }
   // scalastyle:off number.of.methods
@@ -253,6 +272,21 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
 
       },
       new Command("vcd") {
+        def usage: (String, String) = ("vcd [run|list|test|help]", "control vcd input file")
+        override def completer: Option[ArgumentCompleter] = {
+          Some(new ArgumentCompleter(
+            new StringsCompleter({"vcd"}),
+            new StringsCompleter(jlist(Seq("run", "inputs", "list", "test")))
+          ))
+        }
+        def run(args: Array[String]): Unit = {
+          replVcdController match {
+            case Some(controller) => controller.processListCommand(args)
+            case _ => error(s"No current script")
+          }
+        }
+      },
+      new Command("record-vcd") {
         def usage: (String, String) = ("firrtl_interpreter.vcd fileName|[done]", "firrtl_interpreter.vcd loaded script")
         override def completer: Option[ArgumentCompleter] = {
           Some(new ArgumentCompleter(
@@ -832,6 +866,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
   /**
     * gets the next line from either the current executing script or from the console.
     * Strips comments from the line, may result in empty string, command parser is ok with that
+ *
     * @return
     */
   def getNextLine: String = {
@@ -847,7 +882,12 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
       case _ =>
         console.readLine()
     }
-    rawLine.split("#").head
+    if(rawLine == null) {
+      "quit"
+    }
+    else {
+      rawLine.split("#").head
+    }
   }
 
   def scriptRunning: Boolean = {
@@ -857,7 +897,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
     }
   }
 
-
+  //scalastyle:off method.length
   def run() {
     if(replConfig.firrtlSource.nonEmpty) {
       loadSource(replConfig.firrtlSource)
@@ -868,10 +908,22 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
     if(replConfig.scriptName.nonEmpty) {
       loadScript(replConfig.scriptName)
     }
-
+    if(replConfig.useVcdScript) {
+      loadVcdScript(optionsManager.getVcdFileName)
+    }
     buildCompletions()
 
     console.setPrompt("firrtl>> ")
+
+    if(replConfig.runScriptAtStart) {
+      currentScript match {
+        case Some(script) =>
+          script.reset()
+          script.runRemaining()
+        case None =>
+          console.println(s"Error: fr-run-script-at-startup set, with no script file")
+      }
+    }
 
     while (! done) {
       try {
@@ -899,10 +951,12 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
           done = true
         case e: Exception =>
           console.println(s"Exception occurred: ${e.getMessage}")
+          e.printStackTrace()
       }
     }
 
     console.println(s"saving history ${history.size()}")
+    console.flush()
     history.flush()
     console.shutdown()
     terminal.restore()

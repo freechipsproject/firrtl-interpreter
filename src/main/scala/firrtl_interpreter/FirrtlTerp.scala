@@ -29,7 +29,7 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @param ast the circuit to be simulated
   */
-class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) extends SimpleLogger {
+class FirrtlTerp(val ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) extends SimpleLogger {
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
   def stopResult: Int  = lastStopResult.get
@@ -97,14 +97,15 @@ class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq
     circuitState.setValue(name, value)
   }
 
-  def setValueWithBigInt(name: String, value: BigInt, force: Boolean = true): Concrete = {
+  def setValueWithBigInt(
+      name: String, value: BigInt, force: Boolean = true, registerPoke: Boolean = false): Concrete = {
     if(!force) {
       assert(circuitState.isInput(name),
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
     }
     val concreteValue = TypeInstanceFactory(dependencyGraph.nameToType(name), value)
 
-    circuitState.setValue(name, concreteValue)
+    circuitState.setValue(name, concreteValue, registerPoke = registerPoke)
   }
 
   def hasInput(name: String): Boolean  = dependencyGraph.hasInput(name)

@@ -46,4 +46,10 @@ object TypeInstanceFactory {
       case ConcreteSInt(_, width, p) => ConcreteSInt(value, width, p)
     }
   }
+  def makeSimilar(template: Concrete, value: BigInt, poisoned: Boolean): Concrete = {
+    template match {
+      case ConcreteUInt(_, width, p) => ConcreteUInt(value, width, poisoned)
+      case ConcreteSInt(_, width, p) => ConcreteSInt(value, width, poisoned)
+    }
+  }
 }

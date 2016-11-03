@@ -63,6 +63,27 @@ case class CircuitState(
 
   var vcdLoggerOption = Option.empty[VCD]
   var vcdOutputFileName = ""
+
+  /**
+    * Clone this circuitState.
+    * @note This does not yet clone memories.  It merely copies them
+    * @return  a cloned version of this state
+    */
+  override def clone: CircuitState = {
+    val newState = CircuitState(
+      inputPorts = mutable.Map[String, Concrete]() ++ inputPorts,
+      outputPorts = mutable.Map[String, Concrete]() ++ outputPorts,
+      registers = mutable.Map[String, Concrete]() ++ registers,
+      memories = mutable.Map[String, Memory]() ++ memories,
+      validNames = validNames
+    )
+    newState.nextRegisters ++= nextRegisters
+    newState.ephemera ++= ephemera
+    newState.rhsOutputs ++= rhsOutputs
+    newState.stateCounter = stateCounter
+    newState.isStale = isStale
+    newState
+  }
   def makeVCDLogger(dependencyGraph: DependencyGraph, fileName: String = "out.firrtl_interpreter.vcd"): Unit = {
     val vcd = VCD(dependencyGraph.circuit.main)
     vcdLoggerOption = Some(vcd)
@@ -98,8 +119,8 @@ case class CircuitState(
     registers.keys.foreach { key =>
       registers(key) = nextRegisters(key)
     }
-    nextRegisters.clear()
-    ephemera.clear()
+//    nextRegisters.clear()
+//    ephemera.clear()
     cycleMemories()
     vcdLoggerOption.foreach { vcd =>
       vcd.incrementTime()
@@ -112,7 +133,7 @@ case class CircuitState(
   def cycleMemories(): Unit = {
     memories.values.foreach { memory => memory.cycle() }
   }
-  def setValue(key: String, concreteValue: Concrete): Concrete = {
+  def setValue(key: String, concreteValue: Concrete, registerPoke: Boolean = false): Concrete = {
     vcdLoggerOption.foreach { vcd =>
       vcd.wireChanged(key, concreteValue.value, concreteValue.width)
     }
@@ -126,9 +147,13 @@ case class CircuitState(
       nameToConcreteValue(key) = concreteValue
     }
     else if(registers.contains(key)) {
-//      println(s"Updating nextRegister $key => $concreteValue")
-      nextRegisters(key) = concreteValue
-      // we continue to use the initial values of registers when they appear on RHS of an expression
+      if(registerPoke) {
+        registers(key) = concreteValue
+      }
+      else {
+        nextRegisters(key) = concreteValue
+        // we continue to use the initial values of registers when they appear on RHS of an expression
+      }
     }
     else if(isMemory(key)) {
 //      println(s"Updating memory interface $key => $concreteValue")
