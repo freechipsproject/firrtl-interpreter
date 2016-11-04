@@ -17,6 +17,21 @@ object TypeInstanceFactory {
       case _ => throw new InterpreterException(s"Unsupported LoFIRRTL type for interpreter $typ")
     }
   }
+  def apply(template: Concrete): Concrete = {
+    template match {
+      case u: ConcreteUInt => Concrete.poisonedUInt(u.width)
+      case s: ConcreteSInt => Concrete.poisonedSInt(s.width)
+      case _ => throw new InterpreterException(s"Unsupported LoFIRRTL type for interpreter $template")
+    }
+  }
+  def apply(typ: Concrete, poisoned: Boolean): Concrete = {
+    typ match {
+      case u: ConcreteUInt => Concrete.randomUInt(u.width, poisoned)
+      case s: ConcreteSInt => Concrete.randomSInt(s.width, poisoned)
+      case s: ConcreteClock => Concrete.randomClock()
+      case _ => throw new InterpreterException(s"Unsupported LoFIRRTL type for interpreter $typ")
+    }
+  }
   def apply(typ: Type, initialValue: BigInt, poisoned: Boolean = false): Concrete = {
     typ match {
       case u: UIntType => ConcreteUInt(initialValue, widthToInt(u.width))

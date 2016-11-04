@@ -50,7 +50,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
   var inScript = false
   val scriptFactory = ScriptFactory(this)
   var currentScript: Option[Script] = None
-  val intPattern = """(-?\d+)""".r
+  val IntPattern = """(-?\d+)""".r
 
   def loadSource(input: String): Unit = {
     currentInterpeterOpt = Some(FirrtlTerp(input, blackBoxFactories = interpreterOptions.blackBoxFactories))
@@ -87,7 +87,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
     currentScript = scriptFactory(fileName)
     currentScript match {
       case Some(script) =>
-        console.println(s"loaded script file ${script.length} with ${script.fileName} lines")
+        console.println(s"loaded script file ${script.fileName} with ${script.length} lines")
       case _ =>
     }
   }
@@ -108,19 +108,19 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
     def getTwoArgs(failureMessage: String,
                    arg1Option: Option[String] = None,
                    arg2Option: Option[String] = None
-                  ): Option[(String,String)] = {
+                  ): (Option[String],Option[String]) = {
       if(args.length == 3) {
-        Some(args(1), args(2))
+        (Some(args(1)), Some(args(2)))
       }
-      else if(args.length == 2 && arg2Option.isDefined) {
-        Some(args(1), arg2Option.get)
+      else if(args.length == 2) {
+        (Some(args(1)), arg2Option)
       }
-      else if(args.length == 1 && arg1Option.isDefined && arg2Option.isDefined) {
-        Some(arg1Option.get, arg2Option.get)
+      else if(args.length == 1) {
+        (arg1Option, arg2Option)
       }
       else {
         error(failureMessage)
-        None
+        (None, None)
       }
     }
     //noinspection ScalaStyle
@@ -174,37 +174,75 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
         }
       },
       new Command("run") {
-        def usage: (String, String) = ("run [linesToRun|all|reset]", "run loaded script")
+        def usage: (String, String) = ("run [linesToRun|all|list|reset]", "run loaded script")
         override def completer: Option[ArgumentCompleter] = {
           Some(new ArgumentCompleter(
             new StringsCompleter({"run"}),
             new StringsCompleter(jlist(Seq("all", "reset", "list")))
           ))
         }
+        def handleList(script: Script, listArg: Option[String]): Unit = {
+          val (min, max) = listArg match {
+            case Some(IntPattern(intString)) =>
+              val windowHalfSize = intString.toInt
+              (script.currentLine + 1 - windowHalfSize, script.currentLine + 2 + windowHalfSize)
+            case Some(other) =>
+              console.println(s"run list parameter=$other, parameter must be an positive integer")
+              (0, 0)
+            case _ =>
+              (0, script.length)
+          }
+          console.println(
+            script.lines.zipWithIndex.flatMap { case (line, index) =>
+              if(index >= min && index < max) {
+                if (index == script.currentLine + 1) {
+                  Some(Console.GREEN + f"$index%3d $line" + Console.RESET)
+                }
+                else {
+                  Some(f"$index%3d $line")
+                }
+              }
+              else {
+                None
+              }
+            }.mkString("\n")
+          )
+        }
         // scalastyle:off cyclomatic.complexity
         def run(args: Array[String]): Unit = {
           currentScript match {
             case Some(script) =>
-              getOneArg("run [linesToRun|all|reset|list]", argOption = Some("all")) match {
-                case Some("all")   =>
+              getTwoArgs("run [lines|skip [n]|set n|all|reset|list [n]], default is 1 => run 1 line",
+                arg1Option = Some("1"), arg2Option = None) match {
+                case (Some("all"), _)   =>
                   console.println("run all")
                   if(script.atEnd) { script.reset() }
                   else { script.runRemaining() }
-                case Some("reset") => script.reset()
-                  console.println("run reset")
-                case Some("list") =>
-                  console.println(
-                    script.lines.zipWithIndex.map { case (line, index) =>
-                      f"$index%3d $line"
-                    }.mkString("\n")
-                  )
-                case Some(intPattern(intString)) =>
-                  console.println(s"run $intString")
+                case (Some("reset"), _) =>
+                  script.reset()
+                  handleList(script, Some("2"))
+                case (Some("list"), listArg) =>
+                  handleList(script, listArg)
+                case (Some("skip"), listArg) =>
+                  val skip = listArg match {
+                    case Some(IntPattern(intString)) => intString.toInt
+                    case _ => 1
+                  }
+                  script.setSkipLines(skip)
+                case (Some("set"), listArg) =>
+                  listArg match {
+                    case Some(IntPattern(intString)) =>
+                      script.setLine(intString.toInt)
+                      handleList(script, Some("2"))
+                    case _ =>
+                      console.println("must specify set line number")
+                  }
+                case (Some(IntPattern(intString)), _) =>
                   val linesToRun = intString.toInt
                   script.setLinesToRun(linesToRun)
-                case None =>
+                case (None, None) =>
                   script.runRemaining()
-                case Some(arg) =>
+                case (Some(arg), _) =>
                   error(s"unrecognized run_argument $arg")
               }
             case _ =>
@@ -258,7 +296,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
         }
         def run(args: Array[String]): Unit = {
           getTwoArgs("poke inputPortName value") match {
-            case Some((portName, valueString)) =>
+            case (Some(portName), Some(valueString)) =>
               try {
                 if(valueString.startsWith("0x")) {
                   val hexValue = BigInt(valueString.drop(2), 16)
@@ -297,7 +335,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
         }
         def run(args: Array[String]): Unit = {
           getTwoArgs("rpoke regex value") match {
-            case Some((pokeRegex, valueString)) =>
+            case (Some(pokeRegex), Some(valueString)) =>
               try {
                 val pokeValue = {
                   if(valueString.startsWith("0x")) {
@@ -419,10 +457,71 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
           "randomize all inputs except reset)")
         def run(args: Array[String]): Unit = {
           for{
-            (inputPortName, value) <- interpreter.circuitState.inputPorts
-            if inputPortName != "reset"
+            (component, value) <- interpreter.circuitState.inputPorts ++
+              interpreter.circuitState.outputPorts ++
+              interpreter.circuitState.ephemera
           } {
-            interpreter.setValue(inputPortName, TypeInstanceFactory(value, randomBigInt(value.width)))
+            try {
+              val newValue = TypeInstanceFactory(value, poisoned = false)
+              interpreter.setValue(component, newValue)
+              console.println(s"setting $component to $newValue")
+            }
+            catch {
+              case e: Exception =>
+                console.println(s"Error randomize: setting $component to $value error ${e.getMessage}")
+            }
+          }
+          for((component, value) <- interpreter.circuitState.registers) {
+            try {
+              val newValue = TypeInstanceFactory(value, poisoned = false)
+              interpreter.circuitState.registers(component) = newValue
+              val newNextValue = TypeInstanceFactory(value, poisoned = false)
+              interpreter.circuitState.nextRegisters(component) = newNextValue
+              console.println(s"setting $component to $newValue")
+            }
+            catch {
+              case e: Exception =>
+                console.println(s"Error randomize: setting $component to $value error ${e.getMessage}")
+            }
+          }
+          for(memory <- interpreter.circuitState.memories.values) {
+            for(memoryIndex <- 0 until memory.dataStore.length) {
+              memory.dataStore.update(
+                memoryIndex,
+                TypeInstanceFactory(memory.dataStore.underlyingData.head, poisoned = false))
+            }
+          }
+          console.println(interpreter.circuitState.prettyString())
+        }
+      },
+      new Command("poison") {
+        def usage: (String, String) = ("poison",
+          "poison everything)")
+        def run(args: Array[String]): Unit = {
+          for{
+            (component, value) <- interpreter.circuitState.inputPorts ++
+              interpreter.circuitState.outputPorts ++
+              interpreter.circuitState.ephemera
+          } {
+            interpreter.setValue(component, TypeInstanceFactory(value))
+          }
+          for((component, value) <- interpreter.circuitState.registers) {
+            try {
+              val newValue = TypeInstanceFactory(value, poisoned = true)
+              interpreter.circuitState.registers(component) = newValue
+              val newNextValue = TypeInstanceFactory(value, poisoned = true)
+              interpreter.circuitState.nextRegisters(component) = newNextValue
+              console.println(s"setting $component to $newValue")
+            }
+            catch {
+              case e: Exception =>
+                console.println(s"Error poison: setting $component to $value error ${e.getMessage}")
+            }
+          }
+          for(memory <- interpreter.circuitState.memories.values) {
+            for(memoryIndex <- 0 until memory.dataStore.length) {
+              memory.dataStore.update(memoryIndex, TypeInstanceFactory(memory.dataType))
+            }
           }
           console.println(interpreter.circuitState.prettyString())
         }
@@ -430,6 +529,18 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
       new Command("reset") {
         def usage: (String, String) = ("reset [numberOfSteps]",
           "assert reset (if present) for numberOfSteps (default 1)")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpeterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({
+                "reset"
+              })
+            ))
+          }
+        }
         def run(args: Array[String]): Unit = {
           getOneArg("reset [numberOfSteps]", Some("1")) match {
             case Some(numberOfStepsString) =>
@@ -718,8 +829,13 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
     }
   }
 
+  /**
+    * gets the next line from either the current executing script or from the console.
+    * Strips comments from the line, may result in empty string, command parser is ok with that
+    * @return
+    */
   def getNextLine: String = {
-    currentScript match {
+    val rawLine = currentScript match {
       case Some(script) =>
         script.getNextLineOption match {
           case Some(line) =>
@@ -731,6 +847,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
       case _ =>
         console.readLine()
     }
+    rawLine.split("#").head
   }
 
   def scriptRunning: Boolean = {
@@ -760,14 +877,14 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
       try {
         val line = getNextLine
 
-        args = line.split(" ")
+        args = line.split(" +")
 
         if (args.length > 0) {
           if (Commands.commandMap.contains(args.head)) {
             Commands.commandMap(args.head).run(args.tail)
           }
           else {
-            error(s"unknown command $line, try help")
+            if(line.nonEmpty) error(s"unknown command $line, try help")
           }
         }
         else {
@@ -784,6 +901,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
           console.println(s"Exception occurred: ${e.getMessage}")
       }
     }
+
     console.println(s"saving history ${history.size()}")
     history.flush()
     console.shutdown()
