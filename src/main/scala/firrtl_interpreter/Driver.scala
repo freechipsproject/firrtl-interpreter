@@ -11,7 +11,9 @@ case class InterpreterOptions(
     allowCycles:       Boolean              = false,
     randomSeed:        Long                 = System.currentTimeMillis(),
     blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty,
-    maxExecutionDepth: Long                 = ExpressionExecutionStack.defaultMaxExecutionDepth)
+    maxExecutionDepth: Long                 = ExpressionExecutionStack.defaultMaxExecutionDepth,
+    showFirrtlAtLoad:  Boolean              = false,
+    lowCompileAtLoad:  Boolean              = true)
   extends firrtl.ComposableOptions {
 
   def vcdOutputFileName(optionsManager: ExecutionOptionsManager): String = {
@@ -69,12 +71,25 @@ trait HasInterpreterOptions {
 
   parser.opt[Long]("fint-max-execution-depth")
     .abbr("fimed")
-      .valueName("<long-value>")
+    .valueName("<long-value>")
     .foreach { x =>
       interpreterOptions = interpreterOptions.copy(maxExecutionDepth = x)
     }
     .text("depth of stack used to evaluate expressions")
 
+  parser.opt[Unit]("show-firrtl-at-load")
+    .abbr("fisfas")
+    .foreach { _ =>
+      interpreterOptions = interpreterOptions.copy(showFirrtlAtLoad = true)
+    }
+    .text("compiled low firrtl at firrtl load time")
+
+  parser.opt[Unit]("run-lower-compiler-on-load")
+    .abbr("filcol")
+    .foreach { _ =>
+      interpreterOptions = interpreterOptions.copy(lowCompileAtLoad = true)
+    }
+    .text("run lowering compuler when firrtl file is loaded")
 }
 
 object Driver {
@@ -101,3 +116,5 @@ object Driver {
     }
   }
 }
+
+class InterpreterOptionsManager extends ExecutionOptionsManager("firrtl-interpreter") with HasInterpreterOptions

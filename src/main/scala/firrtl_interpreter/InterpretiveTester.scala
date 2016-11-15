@@ -30,7 +30,7 @@ class InterpretiveTester(
 
   val blackBoxFactories = optionsManager.interpreterOptions.blackBoxFactories
 
-  interpreter.evaluator.evaluationStack.MaxExecutionDepth = interpreterOptions.maxExecutionDepth
+  interpreter.evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
 
   setVerbose(interpreterOptions.setVerbose)
 

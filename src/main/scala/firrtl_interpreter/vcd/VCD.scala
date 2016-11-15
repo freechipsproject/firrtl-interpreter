@@ -216,13 +216,23 @@ object VCD extends LazyLogging {
         nextWord match {
           case ValueChangeScalar(value, varCode) =>
             if(! ignoredWires.contains(varCode)) {
-              valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value))
+              if(wires.contains(varCode)) {
+                valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value))
+              }
+              else {
+                logger.error(s"Found change value for $varCode but this key not defined")
+              }
             }
           case ValueChangeVector("b", value) =>
             if(words.hasNext) {
               val varCode = words.next
               if(! ignoredWires.contains(varCode)) {
-                valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, 2))
+                if(wires.contains(varCode)) {
+                  valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, 2))
+                }
+                else {
+                  logger.error(s"Found change value for $varCode but this key not defined")
+                }
               }
             }
             else {

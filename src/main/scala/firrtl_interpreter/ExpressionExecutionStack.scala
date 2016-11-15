@@ -8,12 +8,12 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 object ExpressionExecutionStack {
-  val defaultMaxExecutionDepth: Long = 1000
+  val defaultMaxExecutionDepth: Long = 100000
 }
 
 class ExpressionExecutionStack(parent: LoFirrtlExpressionEvaluator) {
   val dependencyGraph = parent.dependencyGraph
-  var MaxExecutionDepth = ExpressionExecutionStack.defaultMaxExecutionDepth
+  var maxExecutionDepth = ExpressionExecutionStack.defaultMaxExecutionDepth
   def allowCombinationalLoops: Boolean = parent.allowCombinationalLoops
 
   val expressionStack = new ArrayBuffer[StackItem]
@@ -34,8 +34,8 @@ class ExpressionExecutionStack(parent: LoFirrtlExpressionEvaluator) {
   def push(keyOption: Option[String], expression: Expression): Boolean = {
     var returnValue = true
     expressionStack += StackItem(keyOption, expression)
-    if(expressionStack.length > MaxExecutionDepth) {
-      throw new InterruptedException(s"Expression Stack too deep, max is $MaxExecutionDepth")
+    if(expressionStack.length > maxExecutionDepth) {
+      throw new InterruptedException(s"Expression Stack too deep, max is $maxExecutionDepth")
     }
     keyOption.foreach { expressionKey =>
       if(stackKeys.contains(expressionKey)) {

@@ -61,7 +61,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
     currentInterpeterOpt.foreach { _=>
       interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
       interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
-      interpreter.evaluator.evaluationStack.MaxExecutionDepth = interpreterOptions.maxExecutionDepth
+      interpreter.evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
       interpreter.setVerbose(interpreterOptions.setVerbose)
 
       console.println(s"Flags: $showFlags")
@@ -586,7 +586,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
                   interpreter.evaluateCircuit()
                 }
                 interpreter.setValueWithBigInt("reset", 0)
-                console.println(interpreter.circuitState.prettyString())
+                // console.println(interpreter.circuitState.prettyString())
               }
               catch {
                 case e: Exception =>
