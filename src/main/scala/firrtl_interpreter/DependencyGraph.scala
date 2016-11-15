@@ -41,6 +41,7 @@ object DependencyGraph extends SimpleLogger {
       dependencyGraph.numberOfNodes += 1
       val result = expression match {
         case Mux(condition, trueExpression, falseExpression, tpe) =>
+          dependencyGraph.numberOfMuxes += 1
           Mux(
             renameExpression(condition),
             renameExpression(trueExpression),
@@ -284,6 +285,7 @@ class DependencyGraph(val circuit: Circuit,
 
   var numberOfStatements = 0
   var numberOfNodes = 0
+  var numberOfMuxes = 0
 
   def update(key: String, e: Expression): Unit = nameToExpression(key) = e
   def apply(key: String): Option[Expression] = {
@@ -305,6 +307,16 @@ class DependencyGraph(val circuit: Circuit,
       memoryOutputKeys(portKey) = dependentPorts
     }
     newMemory
+  }
+
+  def getInfo: String = {
+    f"""
+       |Circuit Info:
+       |  Statements:      $numberOfStatements%11d
+       |  Nodes:           $numberOfNodes%11d
+       |  Muxes:           $numberOfMuxes%11d
+       |  Expressions:     ${nameToExpression.size}%11d
+     """.stripMargin
   }
 
   def addSourceInfo(name: String, info: Info): Unit = {

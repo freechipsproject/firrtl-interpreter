@@ -358,6 +358,13 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
       }
     }
   }
+  it should "not create negative numbers" in {
+    val shifted = ConcreteSInt(BigInt("-13944528177324565200897"), 75)
+    val shifter = ConcreteUInt(74, 7)
+
+    val res = shifted >> shifter
+    res.value should be (-1)
+  }
 
   behavior of "Head"
 
