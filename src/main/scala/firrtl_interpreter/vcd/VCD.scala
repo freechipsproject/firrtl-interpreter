@@ -3,13 +3,17 @@
 package firrtl_interpreter.vcd
 
 import java.io.PrintWriter
-import java.text.{SimpleDateFormat, DateFormat}
+import java.text.SimpleDateFormat
+
+import logger.LazyLogging
 
 import collection._
-import java.util.{Date, TimeZone, Calendar}
+import java.util.{Date, TimeZone}
 
-object VCD {
-  val Version = "0.1"
+import scala.collection.mutable.ArrayBuffer
+
+object VCD extends LazyLogging {
+  val Version = "0.2"
 
   val DateDeclaration = "$date"
   val VersionDeclaration = "$version"
@@ -25,8 +29,19 @@ object VCD {
   val idChars = (33 to 126).map { asciiValue => asciiValue.toChar.toString }
   val numberOfIdChars = idChars.length
 
-  def apply(moduleName: String, timeScale: String = "1ps", comment: String = ""): VCD = {
+  // A number of regular expressions to parse vcd lines
+  val SectionHeader = """^\$([^\$]+) *$""".r
+  val EndSection = """^\$end *$""".r
 
+  val ScopedModule = """\s*(?i)(\S+)\s+(\S+)\s*""".r
+  val JustScoped = """\s*(\S+)\s*""".r
+
+  val VarSpec = """\s*(\w+)\s+(\d+)\s+(\S+)\s+([\S ]+)\s*""".r
+  val ValueChangeScalar = """\s*(\d+)(\S)\s*""".r
+  val ValueChangeVector = """\s*([rb])([0-9\.]+)s*""".r
+  val TimeStamp = """\s*#(\d+)\s*""".r
+
+  def apply(moduleName: String, timeScale: String = "1ps", comment: String = ""): VCD = {
     val tz = TimeZone.getTimeZone("UTC")
     val df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmZ")
     df.setTimeZone(tz)
@@ -39,6 +54,241 @@ object VCD {
       timeScale,
       moduleName
     )
+  }
+
+  //scalastyle:off cyclomatic.complexity method.length
+  /**
+    * Read and parse the specified vcd file, producing a VCD data structure
+ *
+    * @param vcdFile name of file to parse
+    * @return a populated VCD class
+    */
+  def read(vcdFile: String, startScope: String = ""): VCD = {
+    val wordsBuffer = io.Source.fromFile(vcdFile).getLines().mkString(" ")
+    val words = wordsBuffer.split("""\s+""").toIterator
+
+    val dateHeader = new StringBuilder
+    val versionHeader = new StringBuilder
+    val commentHeader = new StringBuilder
+    val timeScaleHeader = new StringBuilder
+    val scopeBuffer = new StringBuilder
+    val endDefinition = new StringBuilder
+    val currentVar = new StringBuilder
+
+    var scopeRoot: Option[Scope] = None
+    var currentScope: Option[Scope] = None
+    var desiredScopeFound = false
+
+    val wires = new mutable.HashMap[String, Wire]
+    val ignoredWires = new mutable.HashMap[String, Wire]
+
+    var currentTime = -1L
+    val valuesAtTime = new mutable.HashMap[Long, mutable.HashSet[Change]] {
+      override def default(key: Long): mutable.HashSet[Change] = {
+        this(key) = new mutable.HashSet[Change]
+        this(key)
+      }
+    }
+
+    def addScope(name: String): Unit = {
+      currentScope match {
+        case Some(scope) =>
+          currentScope = Some(Scope(name, currentScope))
+          scope.subScopes += currentScope.get
+        case  _ =>
+          if(startScope.isEmpty || name == startScope) {
+            scopeRoot = Some(Scope(name))
+            currentScope = scopeRoot
+            desiredScopeFound = true
+          }
+      }
+    }
+
+    def processScope(): Unit = {
+      if(words.hasNext) {
+        words.next match {
+          case EndSection() =>
+            scopeBuffer.toString() match {
+              case ScopedModule(kind, moduleName) =>
+                if(kind != "module") {
+                  logger.debug(s"unsupported scope type ${scopeBuffer.toString()}")
+                }
+                addScope(moduleName)
+              case _ =>
+                logger.warn(s"unknown scope format ${scopeBuffer.toString()}")
+            }
+            scopeBuffer.clear()
+          case text =>
+            scopeBuffer.append(s" $text")
+            processScope()
+        }
+      }
+    }
+
+    def processUpScope(): Unit = {
+      if(words.hasNext) {
+        words.next match {
+          case EndSection() =>
+            currentScope = currentScope match {
+              case Some(scope) => scope.parent
+              case None =>
+                desiredScopeFound = false
+                None
+            }
+          case text =>
+            processScope()
+        }
+      }
+    }
+
+    def scopePathString(scopeOption: Option[Scope], path: String = ""): String = {
+      scopeOption match {
+        case Some(scope) => scopePathString(scope.parent) + scope.name + "."
+        case None => ""
+      }
+    }
+
+    def scopePath(scopeOption: Option[Scope]): List[String] = {
+      def walkPath(scopeOption: Option[Scope]): List[String] = {
+        scopeOption match {
+          case Some(scope) =>
+            scope.name :: walkPath(scope.parent)
+          case None =>
+            Nil
+        }
+      }
+      walkPath(scopeOption).reverse match {
+        case Nil => Nil
+        case head :: tail => tail
+      }
+    }
+
+    def addVar(s: String): Unit = {
+      s match {
+        case VarSpec("wire", sizeString, idString, referenceString) =>
+          val varName = referenceString.split(" +").head
+          if(desiredScopeFound) {
+            logger.debug(s"AddVar ${scopePathString(currentScope)}$varName")
+            wires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
+            currentScope.foreach(_.wires += wires(idString))
+          }
+          else {
+            logger.debug(s"Ignore var ${scopePathString(currentScope)}$varName")
+            ignoredWires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
+          }
+        case _ =>
+          logger.warn(s"Could not parse var $s")
+      }
+    }
+
+    def processVar(): Unit = {
+      if(words.hasNext) {
+        words.next match {
+          case EndSection() =>
+            addVar(currentVar.toString())
+            currentVar.clear()
+          case text =>
+            currentVar.append(s" $text")
+            processVar()
+        }
+      }
+    }
+
+    def processHeader(builder: StringBuilder): Unit = {
+      if(words.hasNext) {
+        if(words.next match {
+          case EndSection() =>
+            false
+          case text =>
+            builder.append(s" $text")
+            true
+        }) {
+          processHeader(builder)
+        }
+      }
+    }
+
+    def processDump(): Unit = {
+      valuesAtTime(-1L)
+      while(words.hasNext) {
+        val nextWord = words.next
+        logger.debug(s"Process dump $nextWord")
+        nextWord match {
+          case ValueChangeScalar(value, varCode) =>
+            if(! ignoredWires.contains(varCode)) {
+              valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value))
+            }
+          case ValueChangeVector("b", value) =>
+            if(words.hasNext) {
+              val varCode = words.next
+              if(! ignoredWires.contains(varCode)) {
+                valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, 2))
+              }
+            }
+            else {
+
+            }
+          case ValueChangeVector("r", value) =>
+            if(words.hasNext) {
+              words.next
+              logger.warn(s"Error r$value 'r' format not supported")
+            }
+          case TimeStamp(timeValue) =>
+            currentTime = timeValue.toLong
+            logger.debug(s"current time now $currentTime")
+          case EndSection() =>
+            logger.debug(s"end of dump")
+          case text =>
+        }
+      }
+    }
+
+    def processSections(): Unit = {
+      if (words.hasNext) {
+        words.next() match {
+          case SectionHeader(sectionHeader) =>
+            logger.debug(s"processing section header $sectionHeader")
+            sectionHeader match {
+              case "date" => processHeader(dateHeader)
+              case "version" => processHeader(versionHeader)
+              case "comment" => processHeader(commentHeader)
+              case "timescale" => processHeader(timeScaleHeader)
+              case "scope" => processScope()
+              case "upscope" => processUpScope()
+              case "var" => processVar()
+              case "enddefinitions" => processHeader(endDefinition)
+              case "dumpvars" => processDump()
+              case _ =>
+            }
+          case _ =>
+            processDump()
+            logger.debug("skipping")
+        }
+        processSections()
+      }
+    }
+
+    // Here is where things get kicked off. You need to parse the various header fields before the VCD can be created
+    processSections()
+
+    val vcd = VCD(
+      dateHeader.toString(), versionHeader.toString(), commentHeader.toString(), timeScaleHeader.toString, "")
+
+    vcd.wires ++= wires
+    vcd.valuesAtTime ++= valuesAtTime
+    scopeRoot match {
+      case Some(scope) => vcd.scopeRoot = scope
+      case None =>
+    }
+    vcd
+
+  }
+
+  def main(args: Array[String]) {
+    val vcd = read(args.head)
+    println(s"vcd = $vcd")
+
+    vcd.write(args.tail.head)
   }
 }
 
@@ -63,9 +313,10 @@ case class VCD(
 
          ) {
   var currentIdNumber = 0
-  var timeStamp = 0L
+  var timeStamp = -1L
   val lastValues = new mutable.HashMap[String, Change]
   val valuesAtTime = new mutable.HashMap[Long, mutable.HashSet[Change]]
+  var scopeRoot = Scope("")
   val wires = new mutable.HashMap[String, Wire]
 
   def getIdString(value: Int = currentIdNumber, currentString: String = ""): String = {
@@ -117,16 +368,15 @@ case class VCD(
   def incrementId(): Unit = currentIdNumber += 1
 
   def serializeChanges: String = {
-    var time = 0L
     val s = new StringBuilder
-    while( time <= timeStamp) {
+
+    valuesAtTime.keys.toList.sorted.foreach { time =>
       valuesAtTime.get(time).foreach { changeSet =>
         s.append(s"#$time\n")
         changeSet.foreach { change =>
           s.append(change.serialize + "\n")
         }
       }
-      time += 1
     }
     s.toString()
   }
@@ -139,32 +389,35 @@ case class VCD(
   }
 
   def serialize: String = {
-    val header =
-      s"""
-        |${VCD.DateDeclaration}
-        |  $date
-        |${VCD.End}
-        |${VCD.VersionDeclaration}
-        |  $version
-        |${VCD.End}
-        |${VCD.CommentDeclaration}
-        |  $comment
-        |${VCD.End}
-        |${VCD.TimeScaleDeclaration} $timeScale  ${VCD.End}
-        |${VCD.ScopeDeclaration} module $scope ${VCD.End}""".stripMargin
+    val buffer = new StringBuilder
 
-    val wireSection = wires.keys.toSeq.sorted.map { case key =>
-      wires(key).toString
-    }.mkString("\n")
+    buffer.append(VCD.DateDeclaration + "\n")
+    buffer.append(date + "\n")
+    buffer.append(VCD.End + "\n")
+    buffer.append(VCD.VersionDeclaration + "\n")
+    buffer.append(version + "\n")
+    buffer.append(VCD.End + "\n")
+    buffer.append(VCD.CommentDeclaration + "\n")
+    buffer.append(comment + "\n")
+    buffer.append(VCD.End + "\n")
+    buffer.append(s"${VCD.TimeScaleDeclaration} $timeScale  ${VCD.End}\n")
 
-    header + "\n" +
-      wireSection + "\n" +
-      s"${VCD.UpScopeDeclaration} ${VCD.End}\n" +
-      s"${VCD.EndDefinitionsDeclaration} ${VCD.End}\n" +
-      s"${VCD.DumpVarsDeclaration}\n" +
-      serializeStartup + "\n" +
-      serializeChanges
+    def doScope(scope: Scope, depth: Int = 0): Unit = {
+      def indent(inc: Int = 0): String = " " * ( depth + inc )
+      buffer.append(s"${indent(0)}${VCD.ScopeDeclaration} module ${scope.name} ${VCD.End}\n")
+      scope.wires.foreach { wire => buffer.append(indent(1) + wire.toString + "\n") }
+      scope.subScopes.foreach { subScope => doScope(subScope, depth + 2) }
+      buffer.append(s"${indent(0)}${VCD.UpScopeDeclaration} ${VCD.End}\n")
+    }
+
+    doScope(scopeRoot)
+    buffer.append(s"${VCD.EndDefinitionsDeclaration} ${VCD.End}\n")
+    buffer.append(s"${VCD.DumpVarsDeclaration}\n")
+    buffer.append(serializeStartup + s"\n${VCD.End}\n")
+    buffer.append(serializeChanges)
+    buffer.toString()
   }
+
 
   def write(fileName: String): Unit = {
     new PrintWriter(fileName) {
@@ -174,7 +427,8 @@ case class VCD(
   }
 }
 
-case class Wire(name: String, id: String, width: Int) {
+case class Wire(name: String, id: String, width: Int, path: Array[String] = Array.empty) {
+  def fullName: String = (path ++ Seq(name)).mkString(".")
   override def toString: String = {
     s"${VCD.VarDeclaration} wire $width $id $name ${VCD.End}"
   }
@@ -207,4 +461,9 @@ case class Change(wire: Wire, value: BigInt) {
         s" ${wire.id}"
     }
   }
+}
+
+case class Scope(name: String, parent: Option[Scope] = None) {
+  val subScopes = new ArrayBuffer[Scope]()
+  val wires = new ArrayBuffer[Wire]()
 }

@@ -47,6 +47,8 @@ class VCDSpec extends FlatSpec with Matchers {
     vcd.addWire("carol", 16)
     vcd.addWire("ted", 3)
 
+    // time starts at -1 to support initialized values
+    vcd.incrementTime()
     for(i <- 0 to 10) {
       vcd.wireChanged("bob", i)
       vcd.wireChanged("carol", i / 2)

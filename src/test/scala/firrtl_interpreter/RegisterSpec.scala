@@ -124,4 +124,51 @@ class RegisterSpec extends FlatSpec with Matchers {
   it should "load registers before any dependencies are evaluated" in {
     // TODO: what should happen here
   }
+
+  behavior of "poking registers"
+
+  it should "poke a register" in {
+    val input =
+      """
+        |circuit Stop0 :
+        |  module Stop0 :
+        |    input clk : Clock
+        |    input in : UInt<16>
+        |    output out : UInt<16>
+        |
+        |    reg reg1 : UInt<16>, clk
+        |    reg reg2 : UInt<16>, clk
+        |    wire T_1 : UInt<16>
+        |    wire T_2 : UInt<16>
+        |
+        |    reg1 <= in
+        |    T_1 <= reg1
+        |    reg2 <= T_1
+        |    T_2 <= reg2
+        |    out <= T_2
+        |
+      """.stripMargin
+
+    val tester = new InterpretiveTester(input)
+
+    tester.poke("in", 7)
+    tester.peekConcrete("reg1").poisoned should be (true)
+    tester.peekConcrete("reg2").poisoned should be (true)
+    tester.step()
+    tester.peekConcrete("reg1").poisoned should be (false)
+    tester.peek("reg1") should be (7)
+    tester.peekConcrete("reg2").poisoned should be (true)
+    tester.poke("in", 3)
+    tester.step()
+    tester.peek("reg1") should be (3)
+
+    tester.poke("in", 8)
+    tester.poke("reg1", 42)
+    tester.peek("reg1") should be (42)
+    tester.peek("T_1") should be (42)
+    tester.step()
+    tester.peek("T_2") should be (42)
+    tester.peek("reg2") should be (42)
+    tester.peek("reg1") should be (8)
+  }
 }
