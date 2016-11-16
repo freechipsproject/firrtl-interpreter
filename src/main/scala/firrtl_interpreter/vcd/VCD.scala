@@ -56,6 +56,46 @@ object VCD extends LazyLogging {
     )
   }
 
+  class WordIterator(fileName: String) extends Iterator[String] {
+    val lines = io.Source.fromFile(fileName).getLines()
+    var currentLineNumber = 0
+    var currentLine: Iterator[String] = Iterator.empty
+    var _hasNext = false
+    def hasNext: Boolean = _hasNext
+    var nextWord = ""
+
+    def next: String = {
+      val lastWord = nextWord
+      loadNextWord()
+      lastWord
+    }
+
+    loadNextWord()
+
+    def loadNextWord(): Unit = {
+      if(currentLine.hasNext) {
+        nextWord = currentLine.next()
+        if(nextWord.isEmpty) {
+          loadNextWord()
+        }
+        else {
+          _hasNext = true
+        }
+      }
+      else {
+        if(lines.hasNext) {
+          currentLineNumber += 1
+          currentLine = lines.next().trim.split("""\s+""").toIterator
+          loadNextWord()
+        }
+        else {
+          _hasNext = false
+          nextWord = ""
+        }
+      }
+    }
+  }
+
   //scalastyle:off cyclomatic.complexity method.length
   /**
     * Read and parse the specified vcd file, producing a VCD data structure
@@ -64,8 +104,8 @@ object VCD extends LazyLogging {
     * @return a populated VCD class
     */
   def read(vcdFile: String, startScope: String = ""): VCD = {
-    val wordsBuffer = io.Source.fromFile(vcdFile).getLines().mkString(" ")
-    val words = wordsBuffer.split("""\s+""").toIterator
+//    val words = wordsBuffer.split("""\s+""").toIterator
+    val words = new WordIterator(vcdFile)
 
     val dateHeader = new StringBuilder
     val versionHeader = new StringBuilder
@@ -111,11 +151,11 @@ object VCD extends LazyLogging {
             scopeBuffer.toString() match {
               case ScopedModule(kind, moduleName) =>
                 if(kind != "module") {
-                  logger.debug(s"unsupported scope type ${scopeBuffer.toString()}")
+                  logger.debug(s"unsupported scope type ${scopeBuffer.toString()} at line ${words.currentLineNumber}")
                 }
                 addScope(moduleName)
               case _ =>
-                logger.warn(s"unknown scope format ${scopeBuffer.toString()}")
+                logger.warn(s"unknown scope format ${scopeBuffer.toString()} at line ${words.currentLineNumber}")
             }
             scopeBuffer.clear()
           case text =>
@@ -168,16 +208,16 @@ object VCD extends LazyLogging {
         case VarSpec("wire", sizeString, idString, referenceString) =>
           val varName = referenceString.split(" +").head
           if(desiredScopeFound) {
-            logger.debug(s"AddVar ${scopePathString(currentScope)}$varName")
+            logger.debug(s"AddVar ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
             wires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
             currentScope.foreach(_.wires += wires(idString))
           }
           else {
-            logger.debug(s"Ignore var ${scopePathString(currentScope)}$varName")
+            logger.debug(s"Ignore var ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
             ignoredWires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
           }
         case _ =>
-          logger.warn(s"Could not parse var $s")
+          logger.warn(s"Could not parse var $s at line ${words.currentLineNumber}")
       }
     }
 
@@ -212,7 +252,7 @@ object VCD extends LazyLogging {
       valuesAtTime(-1L)
       while(words.hasNext) {
         val nextWord = words.next
-        logger.debug(s"Process dump $nextWord")
+        logger.debug(s"Process dump $nextWord at line ${words.currentLineNumber}")
         nextWord match {
           case ValueChangeScalar(value, varCode) =>
             if(! ignoredWires.contains(varCode)) {
@@ -231,7 +271,7 @@ object VCD extends LazyLogging {
                   valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, 2))
                 }
                 else {
-                  logger.error(s"Found change value for $varCode but this key not defined")
+                  logger.error(s"Found change value for $varCode but this key not defined at line ${words.currentLineNumber}")
                 }
               }
             }
@@ -241,13 +281,13 @@ object VCD extends LazyLogging {
           case ValueChangeVector("r", value) =>
             if(words.hasNext) {
               words.next
-              logger.warn(s"Error r$value 'r' format not supported")
+              logger.warn(s"Error r$value 'r' format not supported at line ${words.currentLineNumber}")
             }
           case TimeStamp(timeValue) =>
             currentTime = timeValue.toLong
-            logger.debug(s"current time now $currentTime")
+            logger.debug(s"current time now $currentTime at line ${words.currentLineNumber}")
           case EndSection() =>
-            logger.debug(s"end of dump")
+            logger.debug(s"end of dump at line ${words.currentLineNumber}")
           case text =>
         }
       }
@@ -255,9 +295,10 @@ object VCD extends LazyLogging {
 
     def processSections(): Unit = {
       if (words.hasNext) {
-        words.next() match {
+        val nextWord = words.next
+        nextWord match {
           case SectionHeader(sectionHeader) =>
-            logger.debug(s"processing section header $sectionHeader")
+            logger.debug(s"processing section header $sectionHeader at line ${words.currentLineNumber}")
             sectionHeader match {
               case "date" => processHeader(dateHeader)
               case "version" => processHeader(versionHeader)
@@ -272,7 +313,7 @@ object VCD extends LazyLogging {
             }
           case _ =>
             processDump()
-            logger.debug("skipping")
+            logger.debug("skipping at line ${words.currentLineNumber}")
         }
         processSections()
       }
@@ -282,7 +323,8 @@ object VCD extends LazyLogging {
     processSections()
 
     val vcd = VCD(
-      dateHeader.toString(), versionHeader.toString(), commentHeader.toString(), timeScaleHeader.toString, "")
+      dateHeader.toString().trim, versionHeader.toString().trim,
+      commentHeader.toString().trim, timeScaleHeader.toString().trim, "")
 
     vcd.wires ++= wires
     vcd.valuesAtTime ++= valuesAtTime
