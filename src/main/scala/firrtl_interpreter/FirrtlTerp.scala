@@ -35,8 +35,8 @@ class FirrtlTerp(val ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] =
   def stopResult: Int  = lastStopResult.get
 
   val loweredAst = ToLoFirrtl.lower(ast)
-  println("LoFirrtl" + "="*120)
-  println(loweredAst.serialize)
+  log("LoFirrtl" + "="*120)
+  log(loweredAst.serialize)
 
   /**
     * turns on evaluator debugging. Can make output quite
