@@ -43,7 +43,11 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
   }
 
   def now: String = {
-    s"Event: $currentTimeIndex Time: ${timeStamps(currentTimeIndex)}"
+    showEvent(currentTimeIndex)
+  }
+
+  def showEvent(timeIndex: Int): String = {
+    s"Event: $timeIndex Time: ${timeStamps(timeIndex)}"
   }
 
   def showInputs(timeIndex: Int): Unit = {
@@ -69,7 +73,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
   def showChanges(timeIndex: Int): Unit = {
     var hasStep = false
     if(timeIndex == currentTimeIndex) console.print(Console.GREEN)
-    console.println(now)
+    console.println(showEvent(timeIndex))
     vcd.valuesAtTime(timeStamps(timeIndex)).foreach { change =>
       if(change.wire.name == "clock" && change.value == BigInt(0)) {
         hasStep = true

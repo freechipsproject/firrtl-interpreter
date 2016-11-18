@@ -38,7 +38,7 @@ object VCD extends LazyLogging {
 
   val VarSpec = """\s*(\w+)\s+(\d+)\s+(\S+)\s+([\S ]+)\s*""".r
   val ValueChangeScalar = """\s*(\d+)(\S+)\s*""".r
-  val ValueChangeVector = """\s*([rb])([0-9\.]+)s*""".r
+  val ValueChangeVector = """\s*([rbh])([0-9\.]+)s*""".r
   val TimeStamp = """\s*#(\d+)\s*""".r
 
   def apply(moduleName: String, timeScale: String = "1ps", comment: String = ""): VCD = {
@@ -101,10 +101,15 @@ object VCD extends LazyLogging {
     * Read and parse the specified vcd file, producing a VCD data structure
  *
     * @param vcdFile name of file to parse
+    *                @param varPrefix only retain vars that contain prefix, remove prefix while recording
     * @return a populated VCD class
     */
-  def read(vcdFile: String, startScope: String = ""): VCD = {
-//    val words = wordsBuffer.split("""\s+""").toIterator
+  def read(
+      vcdFile: String,
+      startScope: String = "",
+      renameStartScope: String = "",
+      varPrefix: String = "",
+      newVarPrefix: String = ""): VCD = {
     val words = new WordIterator(vcdFile)
 
     val dateHeader = new StringBuilder
@@ -120,7 +125,8 @@ object VCD extends LazyLogging {
     var desiredScopeFound = false
 
     val wires = new mutable.HashMap[String, Wire]
-    val ignoredWires = new mutable.HashMap[String, Wire]
+    val aliasedWires = new mutable.HashMap[String, Wire]
+    val skippedWires = new mutable.HashMap[String, Wire]
 
     var currentTime = -1L
     val valuesAtTime = new mutable.HashMap[Long, mutable.HashSet[Change]] {
@@ -137,7 +143,8 @@ object VCD extends LazyLogging {
           scope.subScopes += currentScope.get
         case  _ =>
           if(startScope.isEmpty || name == startScope) {
-            scopeRoot = Some(Scope(name))
+            val newName = if(renameStartScope.isEmpty) name else renameStartScope
+            scopeRoot = Some(Scope(newName))
             currentScope = scopeRoot
             desiredScopeFound = true
           }
@@ -203,23 +210,47 @@ object VCD extends LazyLogging {
       }
     }
 
+    def checkName(name: String): Option[String] = {
+      if(name == "clock") {
+        Some(name)
+      }
+      else if(name.startsWith(varPrefix)) {
+        if(newVarPrefix.nonEmpty) {
+          Some(newVarPrefix + name.drop(varPrefix.length))
+        }
+        else {
+          Some(name)
+        }
+      }
+      else {
+        None
+      }
+    }
+
     def addVar(s: String): Unit = {
       s match {
         case VarSpec("wire", sizeString, idString, referenceString) =>
-          val varName = referenceString.split(" +").head
-          if(desiredScopeFound) {
-            if(! wires.contains(idString)) {
-              logger.debug(s"AddVar ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
-              wires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
-              currentScope.foreach(_.wires += wires(idString))
-            } else {
-              logger.warn(
-                s"AddVar duplicate ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
-            }
-          }
-          else {
-            logger.debug(s"Ignore var ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
-            ignoredWires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
+          checkName(referenceString.split(" +").head) match {
+            case Some(varName) =>
+              if(desiredScopeFound) {
+                if(! wires.contains(idString)) {
+                  logger.debug(s"AddVar ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
+                  wires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
+                  currentScope.foreach(_.wires += wires(idString))
+                } else {
+                  logger.warn(
+                    s"AddVar duplicate ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
+                  aliasedWires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
+                }
+              }
+              else {
+                logger.debug(s"Ignore var ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
+                skippedWires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
+              }
+            case _ =>
+              val varName = referenceString.split(" +").head
+              logger.debug(s"Ignore var ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
+              skippedWires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
           }
         case _ =>
           logger.warn(s"Could not parse var $s at line ${words.currentLineNumber}")
@@ -260,30 +291,34 @@ object VCD extends LazyLogging {
         logger.debug(s"Process dump $nextWord at line ${words.currentLineNumber}")
         nextWord match {
           case ValueChangeScalar(value, varCode) =>
-            if(! ignoredWires.contains(varCode)) {
-              if(wires.contains(varCode)) {
-                valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value))
-              }
-              else {
-                logger.warn(
-                  s"Found change value for $varCode but this key not defined  at line ${words.currentLineNumber}")
-              }
+            if(wires.contains(varCode)) {
+              valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value))
+            }
+            else {
+              logger.warn(
+                s"Found change value for $varCode but this key not defined  at line ${words.currentLineNumber}")
             }
           case ValueChangeVector("b", value) =>
             if(words.hasNext) {
               val varCode = words.next
-              if(! ignoredWires.contains(varCode)) {
-                if(wires.contains(varCode)) {
-                  valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, 2))
-                }
-                else {
-                  logger.warn(
-                    s"Found change value for $varCode but this key not defined at line ${words.currentLineNumber}")
-                }
+              if(wires.contains(varCode)) {
+                valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, 2))
+              }
+              else {
+                logger.warn(
+                  s"Found change value for $varCode but this key not defined at line ${words.currentLineNumber}")
               }
             }
-            else {
-
+          case ValueChangeVector("h", value) =>
+            if(words.hasNext) {
+              val varCode = words.next
+              if(wires.contains(varCode)) {
+                valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, 16))
+              }
+              else {
+                logger.warn(
+                  s"Found change value for $varCode but this key not defined at line ${words.currentLineNumber}")
+              }
             }
           case ValueChangeVector("r", value) =>
             if(words.hasNext) {
@@ -344,10 +379,28 @@ object VCD extends LazyLogging {
   }
 
   def main(args: Array[String]) {
-    val vcd = read(args.head)
-    println(s"vcd = $vcd")
+    val manager = new VCDOptionsManager
 
-    args.tail.headOption.foreach { case outName => vcd.write(outName) }
+    if(manager.parse(args)) {
+      val config = manager.vcdConfig
+
+      val vcd = read(
+        vcdFile = config.vcdSourceName,
+        startScope = config.startScope,
+        renameStartScope = config.renameStartScope,
+        varPrefix = config.varPrefix,
+        newVarPrefix = config.newVarPrefix
+      )
+
+      println(s"${vcd.info}")
+
+      if(config.vcdTargetName.nonEmpty) {
+        vcd.write(config.vcdTargetName) }
+    }
+    else {
+      manager.parser.showUsageAsError()
+    }
+
   }
 }
 
@@ -377,6 +430,26 @@ case class VCD(
   val valuesAtTime = new mutable.HashMap[Long, mutable.HashSet[Change]]
   var scopeRoot = Scope("")
   val wires = new mutable.HashMap[String, Wire]
+
+  def info: String = {
+    val infoLines = Seq(
+      "vcd" -> version,
+      "timescale" -> timeScale,
+      "comment" -> comment,
+      "date" -> date,
+      "unique wires" -> wires.size.toString,
+      "events" -> valuesAtTime.size.toString
+    )
+    val maxLabel: Int = infoLines.filter(_._2.trim.nonEmpty).map(_._1.length).max
+    infoLines.flatMap { case (label, value) =>
+      if(value.trim.nonEmpty) {
+        Some(label + ":" + (" " * (4 + maxLabel - label.length)) + value)
+      }
+      else {
+        None
+      }
+    }.mkString("\n")
+  }
 
   def getIdString(value: Int = currentIdNumber, currentString: String = ""): String = {
     val index = value % VCD.numberOfIdChars

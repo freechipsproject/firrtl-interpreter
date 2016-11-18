@@ -277,11 +277,13 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
           Some(new ArgumentCompleter(
             new StringsCompleter({"vcd"}),
             new ArgumentCompleter(
-              new StringsCompleter(jlist(Seq("run", "inputs", "list", "test")))
-            ),
-            new ArgumentCompleter(
-              new StringsCompleter({"load"}),
-              new FileNameCompleter
+              new ArgumentCompleter(
+                new StringsCompleter(jlist(Seq("run", "inputs", "list", "test")))
+              ),
+              new ArgumentCompleter(
+                new StringsCompleter({"load"}),
+                new FileNameCompleter
+              )
             )
           ))
         }
