@@ -23,7 +23,7 @@ abstract class Command(val name: String) {
   }
 }
 
-class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with HasInterpreterOptions) {
+class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig with HasInterpreterOptions) {
   val replConfig = optionsManager.replConfig
   val interpreterOptions = optionsManager.interpreterOptions
 
@@ -276,7 +276,13 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
         override def completer: Option[ArgumentCompleter] = {
           Some(new ArgumentCompleter(
             new StringsCompleter({"vcd"}),
-            new StringsCompleter(jlist(Seq("run", "inputs", "list", "test")))
+            new ArgumentCompleter(
+              new StringsCompleter(jlist(Seq("run", "inputs", "list", "test")))
+            ),
+            new ArgumentCompleter(
+              new StringsCompleter({"load"}),
+              new FileNameCompleter
+            )
           ))
         }
         def run(args: Array[String]): Unit = {
@@ -290,7 +296,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
         def usage: (String, String) = ("firrtl_interpreter.vcd fileName|[done]", "firrtl_interpreter.vcd loaded script")
         override def completer: Option[ArgumentCompleter] = {
           Some(new ArgumentCompleter(
-            new StringsCompleter({"vcd"}),
+            new StringsCompleter({"record-vcd"}),
             new FileNameCompleter
           ))
         }
@@ -613,7 +619,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
                   }
                 }
                 if(! scriptRunning) {
-                  console.println(interpreter.circuitState.prettyString())
+                  // console.println(interpreter.circuitState.prettyString())
                   console.println(s"step $numberOfSteps in ${interpreter.timer.prettyLastTime("steps")}")
                 }
               }
@@ -664,6 +670,12 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
         def usage: (String, String) = ("show", "show the state of the circuit")
         def run(args: Array[String]): Unit = {
           console.println(interpreter.circuitState.prettyString())
+        }
+      },
+      new Command("info") {
+        def usage: (String, String) = ("show", "show the state of the circuit")
+        def run(args: Array[String]): Unit = {
+          console.println(interpreter.dependencyGraph.getInfo)
         }
       },
       new Command("timing") {

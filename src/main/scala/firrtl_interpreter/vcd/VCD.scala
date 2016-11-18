@@ -37,7 +37,7 @@ object VCD extends LazyLogging {
   val JustScoped = """\s*(\S+)\s*""".r
 
   val VarSpec = """\s*(\w+)\s+(\d+)\s+(\S+)\s+([\S ]+)\s*""".r
-  val ValueChangeScalar = """\s*(\d+)(\S)\s*""".r
+  val ValueChangeScalar = """\s*(\d+)(\S+)\s*""".r
   val ValueChangeVector = """\s*([rb])([0-9\.]+)s*""".r
   val TimeStamp = """\s*#(\d+)\s*""".r
 
@@ -208,9 +208,14 @@ object VCD extends LazyLogging {
         case VarSpec("wire", sizeString, idString, referenceString) =>
           val varName = referenceString.split(" +").head
           if(desiredScopeFound) {
-            logger.debug(s"AddVar ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
-            wires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
-            currentScope.foreach(_.wires += wires(idString))
+            if(! wires.contains(idString)) {
+              logger.debug(s"AddVar ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
+              wires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
+              currentScope.foreach(_.wires += wires(idString))
+            } else {
+              logger.warn(
+                s"AddVar duplicate ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
+            }
           }
           else {
             logger.debug(s"Ignore var ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
@@ -260,7 +265,8 @@ object VCD extends LazyLogging {
                 valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value))
               }
               else {
-                logger.error(s"Found change value for $varCode but this key not defined")
+                logger.warn(
+                  s"Found change value for $varCode but this key not defined  at line ${words.currentLineNumber}")
               }
             }
           case ValueChangeVector("b", value) =>
@@ -271,7 +277,8 @@ object VCD extends LazyLogging {
                   valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, 2))
                 }
                 else {
-                  logger.error(s"Found change value for $varCode but this key not defined at line ${words.currentLineNumber}")
+                  logger.warn(
+                    s"Found change value for $varCode but this key not defined at line ${words.currentLineNumber}")
                 }
               }
             }
@@ -340,7 +347,7 @@ object VCD extends LazyLogging {
     val vcd = read(args.head)
     println(s"vcd = $vcd")
 
-    vcd.write(args.tail.head)
+    args.tail.headOption.foreach { case outName => vcd.write(outName) }
   }
 }
 

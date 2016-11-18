@@ -75,10 +75,10 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
         hasStep = true
       }
       else if(inputs.contains(change.wire.name)) {
-        console.println(s"poke ${change.wire.name} ${change.value}")
+        console.println(s"poke ${change.wire.fullName} ${change.value}")
       }
       else {
-        console.println(s"changed: ${change.wire.name} to ${change.value}")
+        console.println(s"changed: ${change.wire.fullName} to ${change.value}")
       }
     }
     if(hasStep) {
@@ -116,43 +116,43 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     val stepped = stepOnPosEdgelock()
 
     vcd.valuesAtTime(timeStamps(currentTimeIndex)).foreach { change =>
-      val name = change.wire.name
+//      val name = change.wire.name
       val fullName = change.wire.fullName
       val newValue = change.value
 
-      if(inputs.contains(name)) {
+      if(inputs.contains(fullName)) {
         console.println(s"poke $fullName $newValue")
 
-        interpreter.setValueWithBigInt(name, newValue)
-        vcdCircuitState.setInput(name, newValue)
+        interpreter.setValueWithBigInt(fullName, newValue)
+        vcdCircuitState.setInput(fullName, newValue)
       }
       else {
-        vcdCircuitState.getValue(name) match {
+        vcdCircuitState.getValue(fullName) match {
           case Some(oldConcrete) =>
             val newConcrete = TypeInstanceFactory.makeSimilar(oldConcrete, newValue, poisoned = false)
-            val isRegister = interpreter.circuitState.registers.contains(name)
-            //interpreter.setValueWithBigInt(name, newValue, registerPoke = isRegister)
-            //vcdCircuitState.setValue(name, newConcrete, registerPoke = isRegister)
+            val isRegister = interpreter.circuitState.registers.contains(fullName)
+            //interpreter.setValueWithBigInt(fullName, newValue, registerPoke = isRegister)
+            //vcdCircuitState.setValue(fullName, newConcrete, registerPoke = isRegister)
             if(currentTimeIndex < 1) {
               console.println(s"setting: $fullName to ${newConcrete.value}")
-              interpreter.setValueWithBigInt(name, newValue, registerPoke = isRegister)
+              interpreter.setValueWithBigInt(fullName, newValue, registerPoke = isRegister)
             }
             else {
               console.println(s"recording: $fullName ${oldConcrete.value} to ${newConcrete.value}")
             }
-            vcdCircuitState.setValue(name, newConcrete, registerPoke = isRegister)
+            vcdCircuitState.setValue(fullName, newConcrete, registerPoke = isRegister)
           case _ =>
             if(vcdCircuitState.validNames.contains(fullName)) {
               interpreter.dependencyGraph.nameToType.get(fullName).foreach { typ =>
                 val newConcrete = TypeInstanceFactory(typ, newValue, poisoned = false)
                 if(currentTimeIndex < 1) {
                   console.println(s"setting: $fullName to ${newConcrete.value}")
-                  interpreter.setValueWithBigInt(name, newValue)
+                  interpreter.setValueWithBigInt(fullName, newValue)
                 }
                 else {
                   console.println(s"recording: $fullName to ${newConcrete.value}")
                 }
-                vcdCircuitState.setValue(name, newConcrete)
+                vcdCircuitState.setValue(fullName, newConcrete)
               }
             }
             else {
@@ -251,24 +251,26 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
   //scalastyle:on cyclomatic.complexity
 
   def checkCurrentValueOfOutputs(): Unit = {
-    console.println(s"Testing outputs $now ${"=" * 20}")
-    def show(mismatch: Boolean, message: String): Unit = {
-      val prefix = if(mismatch) Console.RED else ""
-      val suffix = if(mismatch) Console.RESET else ""
-      console.println(prefix + message + suffix)
-    }
-    for(key <- vcdCircuitState.outputPorts.keys) {
-      val value = interpreter.getValue(key)
-      val expected = vcdCircuitState.outputPorts(key)
-      (value.poisoned, expected.poisoned) match {
-        case (true, true) =>
-          show(mismatch = false, f"output $key is poison expected poison")
-        case (false, true) =>
-          show(mismatch = true, f"output $key is $value expected poison")
-        case (true, false) =>
-          show(mismatch = true, f"output $key is poisoned expected $expected")
-        case (false, false) =>
-          show(mismatch = value.value != expected.value, f"output $key is ${value.value} expected ${expected.value}")
+    if (currentTimeIndex >= 0 && currentTimeIndex < timeStamps.length) {
+      console.println(s"Testing outputs $now ${"=" * 20}")
+      def show(mismatch: Boolean, message: String): Unit = {
+        val prefix = if (mismatch) Console.RED else ""
+        val suffix = if (mismatch) Console.RESET else ""
+        console.println(prefix + message + suffix)
+      }
+      for (key <- vcdCircuitState.outputPorts.keys) {
+        val value = interpreter.getValue(key)
+        val expected = vcdCircuitState.outputPorts(key)
+        (value.poisoned, expected.poisoned) match {
+          case (true, true) =>
+            show(mismatch = false, f"output $key is poison expected poison")
+          case (false, true) =>
+            show(mismatch = true, f"output $key is $value expected poison")
+          case (true, false) =>
+            show(mismatch = true, f"output $key is poisoned expected $expected")
+          case (false, false) =>
+            show(mismatch = value.value != expected.value, f"output $key is ${value.value} expected ${expected.value}")
+        }
       }
     }
   }
@@ -287,7 +289,9 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
 
   def show(lo: Int, hi: Int): Unit = {
     for(timeIndex <- lo until hi) {
-      showChanges(timeIndex)
+      if(timeIndex < timeStamps.length) {
+        showChanges(timeIndex)
+      }
     }
   }
 
@@ -331,6 +335,17 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     runUsage + listUsage
   }
 
+  def loadVcd(parameters: Array[String]): Unit = {
+    parameters.toList match {
+      case fileName :: _ =>
+        repl.loadVcdScript(fileName)
+      case Nil =>
+        if(repl.optionsManager.getVcdFileName.nonEmpty) {
+          repl.loadVcdScript(repl.optionsManager.getVcdFileName)
+        }
+    }
+  }
+
   /**
     * command parser for vcd family of repl commands
     *
@@ -338,6 +353,8 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     */
   def processListCommand(args: Array[String]): Unit = {
     args.headOption match {
+      case Some("load") =>
+        loadVcd(args.tail)
       case Some("inputs") =>
         showInputMap()
       case Some("run") =>
