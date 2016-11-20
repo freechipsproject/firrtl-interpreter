@@ -124,6 +124,13 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
       val fullName = change.wire.fullName
       val newValue = change.value
 
+      val wireId = change.wire.id
+
+      if(vcd.aliasedWires.contains(wireId)) {
+        console.println(s"Should also update")
+        console.println(vcd.aliasedWires(wireId).mkString("\n"))
+      }
+
       if(inputs.contains(fullName)) {
         console.println(s"poke $fullName $newValue")
 

@@ -124,8 +124,19 @@ object VCD extends LazyLogging {
     var currentScope: Option[Scope] = None
     var desiredScopeFound = false
 
+    val supportedVectorRadix = Map(
+      "b" -> 2,
+      "o" -> 8,
+      "h" -> 16
+    )
+
     val wires = new mutable.HashMap[String, Wire]
-    val aliasedWires = new mutable.HashMap[String, Wire]
+    val aliasedWires = new mutable.HashMap[String, mutable.HashSet[Wire]] {
+      override def default(key: String): mutable.HashSet[Wire] = {
+        this(key) = new mutable.HashSet[Wire]
+        this(key)
+      }
+    }
     val skippedWires = new mutable.HashMap[String, Wire]
 
     var currentTime = -1L
@@ -214,6 +225,9 @@ object VCD extends LazyLogging {
       if(name == "clock") {
         Some(name)
       }
+      if(name == "reset") {
+        Some(name)
+      }
       else if(name.startsWith(varPrefix)) {
         if(newVarPrefix.nonEmpty) {
           Some(newVarPrefix + name.drop(varPrefix.length))
@@ -233,14 +247,15 @@ object VCD extends LazyLogging {
           checkName(referenceString.split(" +").head) match {
             case Some(varName) =>
               if(desiredScopeFound) {
+                val wire: Wire = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
                 if(! wires.contains(idString)) {
-                  logger.debug(s"AddVar ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
-                  wires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
+                  wires(idString) = wire
+                  logger.debug(s"AddVar $wire at line ${words.currentLineNumber}")
                   currentScope.foreach(_.wires += wires(idString))
                 } else {
-                  logger.warn(
-                    s"AddVar duplicate ${scopePathString(currentScope)}$varName at line ${words.currentLineNumber}")
-                  aliasedWires(idString) = Wire(varName, idString, sizeString.toInt, scopePath(currentScope).toArray)
+                  logger.error(
+                    s"AddVar aliased wire $wire at line ${words.currentLineNumber}")
+                  aliasedWires(idString) += wire
                 }
               }
               else {
@@ -285,45 +300,33 @@ object VCD extends LazyLogging {
     }
 
     def processDump(): Unit = {
-      valuesAtTime(-1L)
+      valuesAtTime(-1L)  // this initializes a primordial -1 time slot for initialization
       while(words.hasNext) {
         val nextWord = words.next
-        logger.debug(s"Process dump $nextWord at line ${words.currentLineNumber}")
+        // logger.debug(s"Process dump $nextWord at line ${words.currentLineNumber}")
         nextWord match {
           case ValueChangeScalar(value, varCode) =>
             if(wires.contains(varCode)) {
+              logger.debug(s"Change scalar ${wires(varCode)} ${BigInt(value)} at line ${words.currentLineNumber}")
               valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value))
             }
             else {
               logger.warn(
                 s"Found change value for $varCode but this key not defined  at line ${words.currentLineNumber}")
             }
-          case ValueChangeVector("b", value) =>
+          case ValueChangeVector(radixString, value) =>
             if(words.hasNext) {
               val varCode = words.next
               if(wires.contains(varCode)) {
-                valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, 2))
+                supportedVectorRadix.get(radixString) match {
+                  case Some(radix) =>
+                    valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, radix))
+                  case None =>
+                    logger.warn(
+                      s"Found change value for $varCode but " +
+                        s"radix $radixString not supported at line ${words.currentLineNumber}")
+                }
               }
-              else {
-                logger.warn(
-                  s"Found change value for $varCode but this key not defined at line ${words.currentLineNumber}")
-              }
-            }
-          case ValueChangeVector("h", value) =>
-            if(words.hasNext) {
-              val varCode = words.next
-              if(wires.contains(varCode)) {
-                valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, 16))
-              }
-              else {
-                logger.warn(
-                  s"Found change value for $varCode but this key not defined at line ${words.currentLineNumber}")
-              }
-            }
-          case ValueChangeVector("r", value) =>
-            if(words.hasNext) {
-              words.next
-              logger.warn(s"Error r$value 'r' format not supported at line ${words.currentLineNumber}")
             }
           case TimeStamp(timeValue) =>
             currentTime = timeValue.toLong
@@ -364,12 +367,17 @@ object VCD extends LazyLogging {
     // Here is where things get kicked off. You need to parse the various header fields before the VCD can be created
     processSections()
 
+    if(scopeRoot.isEmpty) {
+      logger.error(s"Error: No start scope found, desired StartScope is $startScope")
+    }
+
     val vcd = VCD(
       dateHeader.toString().trim, versionHeader.toString().trim,
       commentHeader.toString().trim, timeScaleHeader.toString().trim, "")
 
     vcd.wires ++= wires
     vcd.valuesAtTime ++= valuesAtTime
+    vcd.aliasedWires = aliasedWires
     scopeRoot match {
       case Some(scope) => vcd.scopeRoot = scope
       case None =>
@@ -430,6 +438,12 @@ case class VCD(
   val valuesAtTime = new mutable.HashMap[Long, mutable.HashSet[Change]]
   var scopeRoot = Scope("")
   val wires = new mutable.HashMap[String, Wire]
+  var aliasedWires = new mutable.HashMap[String, mutable.HashSet[Wire]] {
+    override def default(key: String): mutable.HashSet[Wire] = {
+      this(key) = new mutable.HashSet[Wire]
+      this(key)
+    }
+  }
 
   def info: String = {
     val infoLines = Seq(
