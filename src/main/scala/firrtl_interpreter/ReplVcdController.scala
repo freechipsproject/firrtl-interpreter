@@ -371,7 +371,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     */
   def processListCommand(args: Array[String]): Unit = {
     args.headOption match {
-      case Some("load") =>
+      case Some("loa.d") =>
         loadVcd(args.tail)
       case Some("inputs") =>
         showInputMap()

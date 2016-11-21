@@ -225,7 +225,7 @@ object VCD extends LazyLogging {
       if(name == "clock") {
         Some(name)
       }
-      if(name == "reset") {
+      else if(name == "reset") {
         Some(name)
       }
       else if(name.startsWith(varPrefix)) {
