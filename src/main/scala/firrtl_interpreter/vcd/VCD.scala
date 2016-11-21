@@ -251,11 +251,12 @@ object VCD extends LazyLogging {
                 if(! wires.contains(idString)) {
                   wires(idString) = wire
                   logger.debug(s"AddVar $wire at line ${words.currentLineNumber}")
-                  currentScope.foreach(_.wires += wires(idString))
+                  currentScope.foreach(_.wires += wire)
                 } else {
-                  logger.error(
+                  logger.debug(
                     s"AddVar aliased wire $wire at line ${words.currentLineNumber}")
                   aliasedWires(idString) += wire
+                  currentScope.foreach(_.wires += wire)
                 }
               }
               else {

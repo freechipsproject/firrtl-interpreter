@@ -120,55 +120,62 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     val stepped = stepOnPosEdgelock()
 
     vcd.valuesAtTime(timeStamps(currentTimeIndex)).foreach { change =>
-//      val name = change.wire.name
+      //      val name = change.wire.name
       val fullName = change.wire.fullName
       val newValue = change.value
 
       val wireId = change.wire.id
 
+      updateCircuitState(fullName)
+
       if(vcd.aliasedWires.contains(wireId)) {
-        console.println(s"Should also update")
-        console.println(vcd.aliasedWires(wireId).mkString("\n"))
+        vcd.aliasedWires(wireId).foreach { aliasedWire =>
+          updateCircuitState(aliasedWire.fullName, s" -- shared with $fullName")
+        }
       }
 
-      if(inputs.contains(fullName)) {
-        console.println(s"poke $fullName $newValue")
 
-        interpreter.setValueWithBigInt(fullName, newValue)
-        vcdCircuitState.setInput(fullName, newValue)
-      }
-      else {
-        vcdCircuitState.getValue(fullName) match {
-          case Some(oldConcrete) =>
-            val newConcrete = TypeInstanceFactory.makeSimilar(oldConcrete, newValue, poisoned = false)
-            val isRegister = interpreter.circuitState.registers.contains(fullName)
-            //interpreter.setValueWithBigInt(fullName, newValue, registerPoke = isRegister)
-            //vcdCircuitState.setValue(fullName, newConcrete, registerPoke = isRegister)
-            if(currentTimeIndex < 1) {
-              console.println(s"setting: $fullName to ${newConcrete.value}")
-              interpreter.setValueWithBigInt(fullName, newValue, registerPoke = isRegister)
-            }
-            else {
-              console.println(s"recording: $fullName ${oldConcrete.value} to ${newConcrete.value}")
-            }
-            vcdCircuitState.setValue(fullName, newConcrete, registerPoke = isRegister)
-          case _ =>
-            if(vcdCircuitState.validNames.contains(fullName)) {
-              interpreter.dependencyGraph.nameToType.get(fullName).foreach { typ =>
-                val newConcrete = TypeInstanceFactory(typ, newValue, poisoned = false)
-                if(currentTimeIndex < 1) {
-                  console.println(s"setting: $fullName to ${newConcrete.value}")
-                  interpreter.setValueWithBigInt(fullName, newValue)
-                }
-                else {
-                  console.println(s"recording: $fullName to ${newConcrete.value}")
-                }
-                vcdCircuitState.setValue(fullName, newConcrete)
+
+      def updateCircuitState(fullName: String, message: String = ""): Unit = {
+        if (inputs.contains(fullName)) {
+          console.println(s"poke $fullName $newValue $message")
+
+          interpreter.setValueWithBigInt(fullName, newValue)
+          vcdCircuitState.setInput(fullName, newValue)
+        }
+        else {
+          vcdCircuitState.getValue(fullName) match {
+            case Some(oldConcrete) =>
+              val newConcrete = TypeInstanceFactory.makeSimilar(oldConcrete, newValue, poisoned = false)
+              val isRegister = interpreter.circuitState.registers.contains(fullName)
+              //interpreter.setValueWithBigInt(fullName, newValue, registerPoke = isRegister)
+              //vcdCircuitState.setValue(fullName, newConcrete, registerPoke = isRegister)
+              if (currentTimeIndex < 1) {
+                console.println(s"setting: $fullName to ${newConcrete.value} $message")
+                interpreter.setValueWithBigInt(fullName, newValue, registerPoke = isRegister)
               }
-            }
-            else {
-              // console.println(s"Don't know how to process entry: change $fullName to $newValue")
-            }
+              else {
+                console.println(s"recording: $fullName ${oldConcrete.value} to ${newConcrete.value} $message")
+              }
+              vcdCircuitState.setValue(fullName, newConcrete, registerPoke = isRegister)
+            case _ =>
+              if (vcdCircuitState.validNames.contains(fullName)) {
+                interpreter.dependencyGraph.nameToType.get(fullName).foreach { typ =>
+                  val newConcrete = TypeInstanceFactory(typ, newValue, poisoned = false)
+                  if (currentTimeIndex < 1) {
+                    console.println(s"setting: $fullName to ${newConcrete.value} $message")
+                    interpreter.setValueWithBigInt(fullName, newValue)
+                  }
+                  else {
+                    console.println(s"recording: $fullName to ${newConcrete.value} $message")
+                  }
+                  vcdCircuitState.setValue(fullName, newConcrete)
+                }
+              }
+              else {
+                // console.println(s"Don't know how to process entry: change $fullName to $newValue")
+              }
+          }
         }
       }
     }
