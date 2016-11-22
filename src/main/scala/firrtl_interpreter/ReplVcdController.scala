@@ -2,7 +2,7 @@
 
 package firrtl_interpreter
 
-import firrtl_interpreter.vcd.VCD
+import firrtl_interpreter.vcd.{Wire, VCD}
 
 class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val vcd: VCD) {
   val console = repl.console
@@ -126,17 +126,15 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
 
       val wireId = change.wire.id
 
-      updateCircuitState(fullName)
+      updateCircuitState(fullName, change.wire)
 
       if(vcd.aliasedWires.contains(wireId)) {
         vcd.aliasedWires(wireId).foreach { aliasedWire =>
-          updateCircuitState(aliasedWire.fullName, s" -- shared with $fullName")
+          updateCircuitState(aliasedWire.fullName, aliasedWire, s" -- shared with $fullName")
         }
       }
 
-
-
-      def updateCircuitState(fullName: String, message: String = ""): Unit = {
+      def updateCircuitState(fullName: String, wire: Wire, message: String = ""): Unit = {
         if (inputs.contains(fullName)) {
           console.println(s"poke $fullName $newValue $message")
 
@@ -364,6 +362,12 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     }
   }
 
+  def infoUsage: String = {
+    s"""
+       |vcd info
+     """.stripMargin
+  }
+
   /**
     * command parser for vcd family of repl commands
     *
@@ -371,7 +375,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     */
   def processListCommand(args: Array[String]): Unit = {
     args.headOption match {
-      case Some("loa.d") =>
+      case Some("load") =>
         loadVcd(args.tail)
       case Some("inputs") =>
         showInputMap()
@@ -379,6 +383,11 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
         run(args.tail)
       case Some("list") =>
         list(args.tail)
+      case Some("info") =>
+        console.println(vcd.info)
+        console.println(f"run event:      $currentTimeIndex%8d")
+        console.println(f"list position:  $currentListLocation%8d")
+        console.println(f"list size:      $currentListSize%8d")
       case Some("test") =>
         test(args.tail)
       case Some("help") =>

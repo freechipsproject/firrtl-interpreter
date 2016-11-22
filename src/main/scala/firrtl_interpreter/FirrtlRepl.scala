@@ -319,6 +319,55 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
           }
         }
       },
+      new Command("type") {
+        private def peekableThings = interpreter.circuitState.validNames.toSeq
+        def usage: (String, String) = ("type regex", "show the current type of things matching the regex")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpeterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({
+                "type"
+              }),
+              new StringsCompleter(jlist(peekableThings))
+            ))
+          }
+        }
+        //scalastyle:off cyclomatic.complexity
+        def run(args: Array[String]): Unit = {
+          getOneArg("type regex") match {
+            case Some((peekRegex)) =>
+              try {
+                val portRegex = peekRegex.r
+                val numberOfThingsPeeked = peekableThings.sorted.count { settableThing =>
+                  portRegex.findFirstIn(settableThing) match {
+                    case Some(foundPort) =>
+                      try {
+                        val value = interpreter.getValue(settableThing)
+                        console.println(s"type $settableThing ${value}")
+                        true
+                      }
+                      catch { case _: Exception => false}
+                    case _ =>
+                      false
+                  }
+                }
+                if(numberOfThingsPeeked == 0) {
+                  console.println(s"Sorry now settable ports matched regex $peekRegex")
+                }
+              }
+              catch {
+                case e: Exception =>
+                  error(s"exception ${e.getMessage} $e")
+                case a: AssertionError =>
+                  error(s"exception ${a.getMessage}")
+              }
+            case _ =>
+          }
+        }
+      },
       new Command("poke") {
         def usage: (String, String) = ("poke inputPortName value", "set an input port to the given integer value")
         override def completer: Option[ArgumentCompleter] = {

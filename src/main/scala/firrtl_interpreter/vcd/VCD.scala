@@ -384,9 +384,14 @@ object VCD extends LazyLogging {
       case None =>
     }
     vcd
-
   }
 
+  /**
+    * This exercises vcd reading and optionally writing
+    * and depending up filtering options can pull out only those change values that
+    * are specific to a particular module
+    * @param args command lines strings use --help to see what they are
+    */
   def main(args: Array[String]) {
     val manager = new VCDOptionsManager
 
