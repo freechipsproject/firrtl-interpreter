@@ -17,6 +17,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
   var currentListSize = 10
 
   var testAfterRun = true
+  var runVerbose = true
 
   val IntPattern = """(-?\d+)""".r
 
@@ -116,7 +117,10 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     * @return
     */
   def doChanges(): Boolean = {
-    console.println(s"$now ${"-" * 20}")
+    def showProgress(message: => String): Unit = {
+      if(runVerbose) console.println(message)
+    }
+    showProgress(s"$now ${"-" * 20}")
     val stepped = stepOnPosEdgelock()
 
     vcd.valuesAtTime(timeStamps(currentTimeIndex)).foreach { change =>
@@ -136,7 +140,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
 
       def updateCircuitState(fullName: String, wire: Wire, message: String = ""): Unit = {
         if (inputs.contains(fullName)) {
-          console.println(s"poke $fullName $newValue $message")
+          showProgress(s"poke $fullName $newValue $message")
 
           interpreter.setValueWithBigInt(fullName, newValue)
           vcdCircuitState.setInput(fullName, newValue)
@@ -149,11 +153,11 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
               //interpreter.setValueWithBigInt(fullName, newValue, registerPoke = isRegister)
               //vcdCircuitState.setValue(fullName, newConcrete, registerPoke = isRegister)
               if (currentTimeIndex < 1) {
-                console.println(s"setting: $fullName to ${newConcrete.value} $message")
+                showProgress(s"setting: $fullName to ${newConcrete.value} $message")
                 interpreter.setValueWithBigInt(fullName, newValue, registerPoke = isRegister)
               }
               else {
-                console.println(s"recording: $fullName ${oldConcrete.value} to ${newConcrete.value} $message")
+                showProgress(s"recording: $fullName ${oldConcrete.value} to ${newConcrete.value} $message")
               }
               vcdCircuitState.setValue(fullName, newConcrete, registerPoke = isRegister)
             case _ =>
@@ -161,17 +165,17 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
                 interpreter.dependencyGraph.nameToType.get(fullName).foreach { typ =>
                   val newConcrete = TypeInstanceFactory(typ, newValue, poisoned = false)
                   if (currentTimeIndex < 1) {
-                    console.println(s"setting: $fullName to ${newConcrete.value} $message")
+                    showProgress(s"setting: $fullName to ${newConcrete.value} $message")
                     interpreter.setValueWithBigInt(fullName, newValue)
                   }
                   else {
-                    console.println(s"recording: $fullName to ${newConcrete.value} $message")
+                    showProgress(s"recording: $fullName to ${newConcrete.value} $message")
                   }
                   vcdCircuitState.setValue(fullName, newConcrete)
                 }
               }
               else {
-                // console.println(s"Don't know how to process entry: change $fullName to $newValue")
+                // showProgress(s"Don't know how to process entry: change $fullName to $newValue")
               }
           }
         }
@@ -201,7 +205,9 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
       |vcd run set <event>        set next event to run
       |vcd run test               test outputs after each run command
       |vcd run notest             do not test outputs after each run command
-      |    """.stripMargin
+      |vcd run verbose            run in verbose mode (the default)
+      |vcd run noverbose          do not run in verbose mode
+      |""".stripMargin
   }
 
   //scalastyle:off cyclomatic.complexity method.length
@@ -230,14 +236,22 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
           while(currentTimeIndex < timeStamps.length && !doChanges()) {
             // repeat until no more events or doChange returns false when step has occurred
             currentTimeIndex += 1
-
           }
           if(testAfterRun) checkCurrentValueOfOutputs()
-        case "test" :: _ =>
-          testAfterRun = true
-        case "notest" :: _ =>
-          testAfterRun = false
       }
+      case "test" :: _ =>
+        testAfterRun = true
+      case "notest" :: _ =>
+        testAfterRun = false
+      case "verbose" :: _ =>
+        runVerbose = true
+      case "noverbose" :: _ =>
+        runVerbose = false
+      case "all" :: _ =>
+        while(currentTimeIndex < timeStamps.length) {
+          doChanges()
+          currentTimeIndex += 1
+        }
       case arg :: Nil =>
         arg match {
           case IntPattern(nString) =>
