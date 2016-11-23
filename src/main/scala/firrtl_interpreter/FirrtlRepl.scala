@@ -110,6 +110,18 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
         console.println(s"Failed to load vcd script $fileName, error: ${e.getMessage}")
     }
   }
+
+  def parseNumber(numberString: String): BigInt = {
+    def parseWithRadix(numString: String, radix: Int): BigInt = {
+      BigInt(numString, radix)
+    }
+
+    if(numberString.startsWith("0x"))     { parseWithRadix(numberString.drop(2), 16) }
+    else if(numberString.startsWith("h")) { parseWithRadix(numberString.drop(1), 16) }
+    else if(numberString.startsWith("o")) { parseWithRadix(numberString.drop(1), 8) }
+    else if(numberString.startsWith("b")) { parseWithRadix(numberString.drop(1), 2) }
+    else                                  { parseWithRadix(numberString, 10) }
+  }
   // scalastyle:off number.of.methods
   object Commands {
     def getOneArg(failureMessage: String, argOption: Option[String] = None): Option[String] = {
@@ -346,7 +358,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
                     case Some(foundPort) =>
                       try {
                         val value = interpreter.getValue(settableThing)
-                        console.println(s"type $settableThing ${value}")
+                        console.println(s"type $settableThing $value")
                         true
                       }
                       catch { case _: Exception => false}
@@ -389,14 +401,8 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
           getTwoArgs("poke inputPortName value") match {
             case (Some(portName), Some(valueString)) =>
               try {
-                if(valueString.startsWith("0x")) {
-                  val hexValue = BigInt(valueString.drop(2), 16)
-                  interpreter.setValueWithBigInt(portName, hexValue)
-                }
-                else {
-                  val value = valueString.toInt
-                  interpreter.setValueWithBigInt(portName, value)
-                }
+                val numberValue = parseNumber(valueString)
+                interpreter.setValueWithBigInt(portName, numberValue)
               }
               catch {
                 case e: Exception =>
@@ -428,14 +434,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
           getTwoArgs("rpoke regex value") match {
             case (Some(pokeRegex), Some(valueString)) =>
               try {
-                val pokeValue = {
-                  if(valueString.startsWith("0x")) {
-                    BigInt(valueString.drop(2), 16)
-                  }
-                  else {
-                    BigInt(valueString)
-                  }
-                }
+                val pokeValue = parseNumber(valueString)
                 val portRegex = pokeRegex.r
                 val setThings = settableThings.flatMap { settableThing =>
                   portRegex.findFirstIn(settableThing) match {
