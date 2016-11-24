@@ -7,7 +7,6 @@ import java.io.{StringWriter, Writer}
 import firrtl.LowFirrtlCompiler
 import firrtl.ir.Circuit
 import firrtl.ChirrtlForm
-import firrtl.Annotations.AnnotationMap
 
 object ToLoFirrtl {
   def lower(c: Circuit): Circuit = {
