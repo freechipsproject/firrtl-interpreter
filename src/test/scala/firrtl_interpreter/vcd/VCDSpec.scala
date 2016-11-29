@@ -65,4 +65,12 @@ class VCDSpec extends FlatSpec with Matchers {
 
     println(vcd.serialize)
   }
+
+  behavior of "VCD reader"
+
+  it should "be able to read a file" in {
+    val vcdFile = VCD.read("src/test/resources/GCD.vcd")
+
+    vcdFile.date should be ("2016-10-13T16:31+0000")
+  }
 }

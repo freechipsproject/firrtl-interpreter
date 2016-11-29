@@ -2,7 +2,7 @@
 
 package firrtl_interpreter
 
-import firrtl_interpreter.vcd.VCD
+import firrtl_interpreter.vcd.{Wire, VCD}
 
 class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val vcd: VCD) {
   val console = repl.console
@@ -17,6 +17,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
   var currentListSize = 10
 
   var testAfterRun = true
+  var runVerbose = true
 
   val IntPattern = """(-?\d+)""".r
 
@@ -43,7 +44,11 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
   }
 
   def now: String = {
-    s"Event: $currentTimeIndex Time: ${timeStamps(currentTimeIndex)}"
+    showEvent(currentTimeIndex)
+  }
+
+  def showEvent(timeIndex: Int): String = {
+    s"Event: $timeIndex Time: ${timeStamps(timeIndex)}"
   }
 
   def showInputs(timeIndex: Int): Unit = {
@@ -69,16 +74,16 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
   def showChanges(timeIndex: Int): Unit = {
     var hasStep = false
     if(timeIndex == currentTimeIndex) console.print(Console.GREEN)
-    console.println(now)
+    console.println(showEvent(timeIndex))
     vcd.valuesAtTime(timeStamps(timeIndex)).foreach { change =>
       if(change.wire.name == "clock" && change.value == BigInt(0)) {
         hasStep = true
       }
       else if(inputs.contains(change.wire.name)) {
-        console.println(s"poke ${change.wire.name} ${change.value}")
+        console.println(s"poke ${change.wire.fullName} ${change.value}")
       }
       else {
-        console.println(s"changed: ${change.wire.name} to ${change.value}")
+        console.println(s"changed: ${change.wire.fullName} to ${change.value}")
       }
     }
     if(hasStep) {
@@ -112,52 +117,67 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     * @return
     */
   def doChanges(): Boolean = {
-    console.println(s"$now ${"-" * 20}")
+    def showProgress(message: => String): Unit = {
+      if(runVerbose) console.println(message)
+    }
+    showProgress(s"$now ${"-" * 20}")
     val stepped = stepOnPosEdgelock()
 
     vcd.valuesAtTime(timeStamps(currentTimeIndex)).foreach { change =>
-      val name = change.wire.name
+      //      val name = change.wire.name
       val fullName = change.wire.fullName
       val newValue = change.value
 
-      if(inputs.contains(name)) {
-        console.println(s"poke $fullName $newValue")
+      val wireId = change.wire.id
 
-        interpreter.setValueWithBigInt(name, newValue)
-        vcdCircuitState.setInput(name, newValue)
+      updateCircuitState(fullName, change.wire)
+
+      if(vcd.aliasedWires.contains(wireId)) {
+        vcd.aliasedWires(wireId).foreach { aliasedWire =>
+          updateCircuitState(aliasedWire.fullName, aliasedWire, s" -- shared with $fullName")
+        }
       }
-      else {
-        vcdCircuitState.getValue(name) match {
-          case Some(oldConcrete) =>
-            val newConcrete = TypeInstanceFactory.makeSimilar(oldConcrete, newValue, poisoned = false)
-            val isRegister = interpreter.circuitState.registers.contains(name)
-            //interpreter.setValueWithBigInt(name, newValue, registerPoke = isRegister)
-            //vcdCircuitState.setValue(name, newConcrete, registerPoke = isRegister)
-            if(currentTimeIndex < 1) {
-              console.println(s"setting: $fullName to ${newConcrete.value}")
-              interpreter.setValueWithBigInt(name, newValue, registerPoke = isRegister)
-            }
-            else {
-              console.println(s"recording: $fullName ${oldConcrete.value} to ${newConcrete.value}")
-            }
-            vcdCircuitState.setValue(name, newConcrete, registerPoke = isRegister)
-          case _ =>
-            if(vcdCircuitState.validNames.contains(fullName)) {
-              interpreter.dependencyGraph.nameToType.get(fullName).foreach { typ =>
-                val newConcrete = TypeInstanceFactory(typ, newValue, poisoned = false)
-                if(currentTimeIndex < 1) {
-                  console.println(s"setting: $fullName to ${newConcrete.value}")
-                  interpreter.setValueWithBigInt(name, newValue)
-                }
-                else {
-                  console.println(s"recording: $fullName to ${newConcrete.value}")
-                }
-                vcdCircuitState.setValue(name, newConcrete)
+
+      def updateCircuitState(fullName: String, wire: Wire, message: String = ""): Unit = {
+        if (inputs.contains(fullName)) {
+          showProgress(s"poke $fullName $newValue $message")
+
+          interpreter.setValueWithBigInt(fullName, newValue)
+          vcdCircuitState.setInput(fullName, newValue)
+        }
+        else {
+          vcdCircuitState.getValue(fullName) match {
+            case Some(oldConcrete) =>
+              val newConcrete = TypeInstanceFactory.makeSimilar(oldConcrete, newValue, poisoned = false)
+              val isRegister = interpreter.circuitState.registers.contains(fullName)
+              //interpreter.setValueWithBigInt(fullName, newValue, registerPoke = isRegister)
+              //vcdCircuitState.setValue(fullName, newConcrete, registerPoke = isRegister)
+              if (currentTimeIndex < 1) {
+                showProgress(s"setting: $fullName to ${newConcrete.value} $message")
+                interpreter.setValueWithBigInt(fullName, newValue, registerPoke = isRegister)
               }
-            }
-            else {
-              // console.println(s"Don't know how to process entry: change $fullName to $newValue")
-            }
+              else {
+                showProgress(s"recording: $fullName ${oldConcrete.value} to ${newConcrete.value} $message")
+              }
+              vcdCircuitState.setValue(fullName, newConcrete, registerPoke = isRegister)
+            case _ =>
+              if (vcdCircuitState.validNames.contains(fullName)) {
+                interpreter.dependencyGraph.nameToType.get(fullName).foreach { typ =>
+                  val newConcrete = TypeInstanceFactory(typ, newValue, poisoned = false)
+                  if (currentTimeIndex < 1) {
+                    showProgress(s"setting: $fullName to ${newConcrete.value} $message")
+                    interpreter.setValueWithBigInt(fullName, newValue)
+                  }
+                  else {
+                    showProgress(s"recording: $fullName to ${newConcrete.value} $message")
+                  }
+                  vcdCircuitState.setValue(fullName, newConcrete)
+                }
+              }
+              else {
+                // showProgress(s"Don't know how to process entry: change $fullName to $newValue")
+              }
+          }
         }
       }
     }
@@ -185,7 +205,9 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
       |vcd run set <event>        set next event to run
       |vcd run test               test outputs after each run command
       |vcd run notest             do not test outputs after each run command
-      |    """.stripMargin
+      |vcd run verbose            run in verbose mode (the default)
+      |vcd run noverbose          do not run in verbose mode
+      |""".stripMargin
   }
 
   //scalastyle:off cyclomatic.complexity method.length
@@ -214,14 +236,22 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
           while(currentTimeIndex < timeStamps.length && !doChanges()) {
             // repeat until no more events or doChange returns false when step has occurred
             currentTimeIndex += 1
-
           }
           if(testAfterRun) checkCurrentValueOfOutputs()
-        case "test" :: _ =>
-          testAfterRun = true
-        case "notest" :: _ =>
-          testAfterRun = false
       }
+      case "test" :: _ =>
+        testAfterRun = true
+      case "notest" :: _ =>
+        testAfterRun = false
+      case "verbose" :: _ =>
+        runVerbose = true
+      case "noverbose" :: _ =>
+        runVerbose = false
+      case "all" :: _ =>
+        while(currentTimeIndex < timeStamps.length) {
+          doChanges()
+          currentTimeIndex += 1
+        }
       case arg :: Nil =>
         arg match {
           case IntPattern(nString) =>
@@ -251,24 +281,26 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
   //scalastyle:on cyclomatic.complexity
 
   def checkCurrentValueOfOutputs(): Unit = {
-    console.println(s"Testing outputs $now ${"=" * 20}")
-    def show(mismatch: Boolean, message: String): Unit = {
-      val prefix = if(mismatch) Console.RED else ""
-      val suffix = if(mismatch) Console.RESET else ""
-      console.println(prefix + message + suffix)
-    }
-    for(key <- vcdCircuitState.outputPorts.keys) {
-      val value = interpreter.getValue(key)
-      val expected = vcdCircuitState.outputPorts(key)
-      (value.poisoned, expected.poisoned) match {
-        case (true, true) =>
-          show(mismatch = false, f"output $key is poison expected poison")
-        case (false, true) =>
-          show(mismatch = true, f"output $key is $value expected poison")
-        case (true, false) =>
-          show(mismatch = true, f"output $key is poisoned expected $expected")
-        case (false, false) =>
-          show(mismatch = value.value != expected.value, f"output $key is ${value.value} expected ${expected.value}")
+    if (currentTimeIndex >= 0 && currentTimeIndex < timeStamps.length) {
+      console.println(s"Testing outputs $now ${"=" * 20}")
+      def show(mismatch: Boolean, message: String): Unit = {
+        val prefix = if (mismatch) Console.RED else ""
+        val suffix = if (mismatch) Console.RESET else ""
+        console.println(prefix + message + suffix)
+      }
+      for (key <- vcdCircuitState.outputPorts.keys) {
+        val value = interpreter.getValue(key)
+        val expected = vcdCircuitState.outputPorts(key)
+        (value.poisoned, expected.poisoned) match {
+          case (true, true) =>
+            show(mismatch = false, f"output $key is poison expected poison")
+          case (false, true) =>
+            show(mismatch = true, f"output $key is $value expected poison")
+          case (true, false) =>
+            show(mismatch = true, f"output $key is poisoned expected $expected")
+          case (false, false) =>
+            show(mismatch = value.value != expected.value, f"output $key is ${value.value} expected ${expected.value}")
+        }
       }
     }
   }
@@ -287,7 +319,9 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
 
   def show(lo: Int, hi: Int): Unit = {
     for(timeIndex <- lo until hi) {
-      showChanges(timeIndex)
+      if(timeIndex < timeStamps.length) {
+        showChanges(timeIndex)
+      }
     }
   }
 
@@ -331,6 +365,23 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     runUsage + listUsage
   }
 
+  def loadVcd(parameters: Array[String]): Unit = {
+    parameters.toList match {
+      case fileName :: _ =>
+        repl.loadVcdScript(fileName)
+      case Nil =>
+        if(repl.optionsManager.getVcdFileName.nonEmpty) {
+          repl.loadVcdScript(repl.optionsManager.getVcdFileName)
+        }
+    }
+  }
+
+  def infoUsage: String = {
+    s"""
+       |vcd info
+     """.stripMargin
+  }
+
   /**
     * command parser for vcd family of repl commands
     *
@@ -338,12 +389,19 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     */
   def processListCommand(args: Array[String]): Unit = {
     args.headOption match {
+      case Some("load") =>
+        loadVcd(args.tail)
       case Some("inputs") =>
         showInputMap()
       case Some("run") =>
         run(args.tail)
       case Some("list") =>
         list(args.tail)
+      case Some("info") =>
+        console.println(vcd.info)
+        console.println(f"run event:      $currentTimeIndex%8d")
+        console.println(f"list position:  $currentListLocation%8d")
+        console.println(f"list size:      $currentListSize%8d")
       case Some("test") =>
         test(args.tail)
       case Some("help") =>
