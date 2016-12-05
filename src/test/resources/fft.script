@@ -1,0 +1,7 @@
+
+record-vcd src/test/resources/fft.vcd
+reset 10
+randomize
+step 10
+record-vcd done
+quit

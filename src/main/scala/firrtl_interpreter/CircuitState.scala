@@ -88,6 +88,12 @@ case class CircuitState(
     val vcd = VCD(dependencyGraph.circuit.main)
     vcdLoggerOption = Some(vcd)
     vcdOutputFileName = fileName
+
+    for(instanceName <- dependencyGraph.instanceNames.keys) {
+      if(instanceName != dependencyGraph.circuit.main) {
+        vcd.scopeRoot.addScope(instanceName)
+      }
+    }
   }
   def writeVCD(): Unit = {
     vcdLoggerOption.foreach { _.write(vcdOutputFileName) }
@@ -105,6 +111,7 @@ case class CircuitState(
     * associated values cleared
     */
   def prepareForDependencyResolution(): Unit = {
+    vcdLoggerOption.foreach { vcd => vcd.incrementTime() }
     nameToConcreteValue = mutable.HashMap((inputPorts ++ outputPorts ++ registers).toSeq:_*)
     ephemera.clear()
     rhsOutputs.clear()
@@ -116,19 +123,25 @@ case class CircuitState(
     * cycle all memories
     */
   def cycle(): Unit = {
+    vcdLoggerOption.foreach { vcd =>
+      vcd.incrementTime(10)
+      vcd.raiseClock
+    }
     registers.keys.foreach { key =>
       registers(key) = nextRegisters(key)
     }
 //    nextRegisters.clear()
 //    ephemera.clear()
     cycleMemories()
-    vcdLoggerOption.foreach { vcd =>
-      vcd.incrementTime()
-    }
     nameToConcreteValue = mutable.HashMap((inputPorts ++ outputPorts ++ registers).toSeq:_*)
     isStale = true
 
     stateCounter += 1
+
+    vcdLoggerOption.foreach { vcd =>
+      vcd.incrementTime(10)
+      vcd.lowerClock
+    }
   }
   def cycleMemories(): Unit = {
     memories.values.foreach { memory => memory.cycle() }

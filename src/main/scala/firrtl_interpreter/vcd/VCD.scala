@@ -442,7 +442,7 @@ case class VCD(
   var timeStamp = -1L
   val lastValues = new mutable.HashMap[String, Change]
   val valuesAtTime = new mutable.HashMap[Long, mutable.HashSet[Change]]
-  var scopeRoot = Scope("")
+  var scopeRoot = Scope(scope)
   val wires = new mutable.HashMap[String, Wire]
   var aliasedWires = new mutable.HashMap[String, mutable.HashSet[Wire]] {
     override def default(key: String): mutable.HashSet[Wire] = {
@@ -483,8 +483,33 @@ case class VCD(
     }
   }
 
+  def addWireToScope(wire: Wire): Unit = {
+    def addIfNotPresent(scope: Scope): Unit = {
+      if(!scope.wires.contains(wire)) scope.wires += wire
+    }
+    wire.name.split("""\.""").toList match {
+      case wireName :: Nil =>
+        addIfNotPresent(scopeRoot)
+      case moduleName :: tail =>
+        def findAndAdd(scope: Scope): Unit = {
+          if(scope.name == moduleName) {
+            addIfNotPresent(scope)
+          }
+          else {
+            for(childScope <- scope.subScopes) {
+              findAndAdd(childScope)
+            }
+          }
+        }
+        findAndAdd(scopeRoot)
+      case _ =>
+        // shouldn't get here
+    }
+  }
+
   def addWire(wireName: String, width: Int): Unit = {
     val wire = Wire(wireName, getIdString(), width)
+    addWireToScope(wire)
     wires(wire.name) = wire
     incrementId()
   }
@@ -514,6 +539,14 @@ case class VCD(
 
   def incrementTime(increment: Int = 1) {
     timeStamp += 1
+  }
+
+  def raiseClock: Unit = {
+    wireChanged("clock", BigInt(1), 1)
+  }
+
+  def lowerClock: Unit = {
+    wireChanged("clock", BigInt(0), 1)
   }
 
 
@@ -618,4 +651,7 @@ case class Change(wire: Wire, value: BigInt) {
 case class Scope(name: String, parent: Option[Scope] = None) {
   val subScopes = new ArrayBuffer[Scope]()
   val wires = new ArrayBuffer[Wire]()
+  def addScope(subScopeName: String): Unit = {
+    subScopes += Scope(subScopeName)
+  }
 }
