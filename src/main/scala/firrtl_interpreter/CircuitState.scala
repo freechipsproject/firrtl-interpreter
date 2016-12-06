@@ -124,8 +124,8 @@ case class CircuitState(
     */
   def cycle(): Unit = {
     vcdLoggerOption.foreach { vcd =>
-      vcd.incrementTime(10)
       vcd.raiseClock
+      vcd.incrementTime(10)
     }
     registers.keys.foreach { key =>
       registers(key) = nextRegisters(key)
@@ -139,8 +139,8 @@ case class CircuitState(
     stateCounter += 1
 
     vcdLoggerOption.foreach { vcd =>
-      vcd.incrementTime(10)
       vcd.lowerClock
+      vcd.incrementTime(10)
     }
   }
   def cycleMemories(): Unit = {
