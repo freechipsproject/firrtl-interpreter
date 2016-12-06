@@ -1003,6 +1003,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
       catch {
         case ie: InterpreterException =>
           console.println(s"Interpreter Exception occurred: ${ie.getMessage}")
+          ie.printStackTrace()
         case e: NullPointerException =>
           error(s"Null pointer exception, please file an issue\n ${e.getMessage}")
           e.printStackTrace()

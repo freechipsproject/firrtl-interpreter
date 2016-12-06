@@ -437,7 +437,7 @@ case class VCD(
            timeScale: String,
            scope: String
 
-         ) {
+         ) extends LazyLogging {
   var currentIdNumber = 0
   var timeStamp = -1L
   val lastValues = new mutable.HashMap[String, Change]
@@ -483,35 +483,43 @@ case class VCD(
     }
   }
 
-  def addWireToScope(wire: Wire): Unit = {
-    def addIfNotPresent(scope: Scope): Unit = {
+  def addWire(wireName: String, width: Int): Unit = {
+    def addWireToScope(wire: Wire, scope: Scope): Unit = {
       if(!scope.wires.contains(wire)) scope.wires += wire
     }
-    wire.name.split("""\.""").toList match {
-      case wireName :: Nil =>
-        addIfNotPresent(scopeRoot)
-      case moduleName :: tail =>
-        def findAndAdd(scope: Scope): Unit = {
-          if(scope.name == moduleName) {
-            addIfNotPresent(scope)
-          }
-          else {
-            for(childScope <- scope.subScopes) {
-              findAndAdd(childScope)
-            }
-          }
-        }
-        findAndAdd(scopeRoot)
-      case _ =>
-        // shouldn't get here
-    }
-  }
 
-  def addWire(wireName: String, width: Int): Unit = {
-    val wire = Wire(wireName, getIdString(), width)
-    addWireToScope(wire)
-    wires(wire.name) = wire
-    incrementId()
+    def findScope(currentScope: Scope, scopeList: List[String]): Option[Scope] = {
+      scopeList match {
+        case name :: tail =>
+          currentScope.subScopes.find(_.name == name) match {
+            case Some(scope) =>
+              findScope(scope, tail)
+            case None =>
+              val newScope = Scope(name)
+              currentScope.subScopes += newScope
+              findScope(newScope, tail)
+          }
+        case Nil =>
+          Some(currentScope)
+      }
+    }
+
+    wireName.split("""\.""").reverse.toList match {
+      case name :: reversedScopes =>
+        findScope(scopeRoot, reversedScopes.reverse) match {
+          case Some(scope) =>
+            if(! wires.contains(wireName)) {
+              val newWire = Wire(name, getIdString(), width)
+              incrementId()
+              addWireToScope(newWire, scope)
+              wires(wireName) = newWire
+            }
+          case None =>
+            logger.error(s"Could not find scope for $wireName")
+        }
+      case Nil =>
+        logger.error(s"Can not parse found wire $wireName")
+    }
   }
 
   def wireChanged(wireName: String, value: BigInt, width: Int = 1): Unit = {
@@ -538,7 +546,7 @@ case class VCD(
   }
 
   def incrementTime(increment: Int = 1) {
-    timeStamp += 1
+    timeStamp += increment
   }
 
   def raiseClock: Unit = {
