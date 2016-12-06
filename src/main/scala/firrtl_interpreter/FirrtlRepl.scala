@@ -315,19 +315,14 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
           ))
         }
         def run(args: Array[String]): Unit = {
-          currentScript match {
-            case Some(script) =>
-              getOneArg("firrtl_interpreter.vcd [fileName|done]",
-                argOption = Some("out.firrtl_interpreter.vcd")) match {
-                case Some("done")   =>
-                  interpreter.disableVCD()
-                case Some(fileName) =>
-                  interpreter.makeVCDLogger(fileName)
-                case _ =>
-                  interpreter.disableVCD()
-              }
+          getOneArg("firrtl_interpreter.vcd [fileName|done]",
+            argOption = Some("out.firrtl_interpreter.vcd")) match {
+            case Some("done")   =>
+              interpreter.disableVCD()
+            case Some(fileName) =>
+              interpreter.makeVCDLogger(fileName)
             case _ =>
-              error(s"No current script")
+              interpreter.disableVCD()
           }
         }
       },
@@ -1008,9 +1003,10 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
       catch {
         case ie: InterpreterException =>
           console.println(s"Interpreter Exception occurred: ${ie.getMessage}")
+          ie.printStackTrace()
         case e: NullPointerException =>
-          error(s"repl error ${e.getMessage}")
-          done = true
+          error(s"Null pointer exception, please file an issue\n ${e.getMessage}")
+          e.printStackTrace()
         case e: Exception =>
           console.println(s"Exception occurred: ${e.getMessage}")
           e.printStackTrace()

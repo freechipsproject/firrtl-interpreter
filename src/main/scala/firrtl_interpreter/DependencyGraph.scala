@@ -83,6 +83,7 @@ object DependencyGraph extends SimpleLogger {
         log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
         processModule(newPrefix, subModule, dependencyGraph)
         dependencyGraph.addSourceInfo(newPrefix, info)
+        dependencyGraph.addInstanceName(instanceName, moduleName)
         s
       case DefNode(info, name, expression) =>
         log(s"declaration:DefNode:$name:${expression.serialize} ${renameExpression(expression).serialize}")
@@ -276,6 +277,7 @@ class DependencyGraph(val circuit: Circuit,
   val stops            = new ArrayBuffer[Stop]
   val prints           = new ArrayBuffer[Print]
   val sourceInfo       = new mutable.HashMap[String, String]
+  val instanceNames    = new mutable.HashMap[String, String]
 
   val inputPorts       = new mutable.HashSet[String]
   val outputPorts      = new mutable.HashSet[String]
@@ -324,6 +326,10 @@ class DependencyGraph(val circuit: Circuit,
       case f: FileInfo => sourceInfo(name) = f.toString
       case _ => // I don't know what to do with other annotations
     }
+  }
+
+  def addInstanceName(instanceName: String, moduleName: String): Unit = {
+    instanceNames(instanceName) = moduleName
   }
 
   def hasInput(name: String): Boolean = inputPorts.contains(name)

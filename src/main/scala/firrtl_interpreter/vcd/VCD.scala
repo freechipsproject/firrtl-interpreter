@@ -437,12 +437,12 @@ case class VCD(
            timeScale: String,
            scope: String
 
-         ) {
+         ) extends LazyLogging {
   var currentIdNumber = 0
   var timeStamp = -1L
   val lastValues = new mutable.HashMap[String, Change]
   val valuesAtTime = new mutable.HashMap[Long, mutable.HashSet[Change]]
-  var scopeRoot = Scope("")
+  var scopeRoot = Scope(scope)
   val wires = new mutable.HashMap[String, Wire]
   var aliasedWires = new mutable.HashMap[String, mutable.HashSet[Wire]] {
     override def default(key: String): mutable.HashSet[Wire] = {
@@ -484,9 +484,42 @@ case class VCD(
   }
 
   def addWire(wireName: String, width: Int): Unit = {
-    val wire = Wire(wireName, getIdString(), width)
-    wires(wire.name) = wire
-    incrementId()
+    def addWireToScope(wire: Wire, scope: Scope): Unit = {
+      if(!scope.wires.contains(wire)) scope.wires += wire
+    }
+
+    def findScope(currentScope: Scope, scopeList: List[String]): Option[Scope] = {
+      scopeList match {
+        case name :: tail =>
+          currentScope.subScopes.find(_.name == name) match {
+            case Some(scope) =>
+              findScope(scope, tail)
+            case None =>
+              val newScope = Scope(name)
+              currentScope.subScopes += newScope
+              findScope(newScope, tail)
+          }
+        case Nil =>
+          Some(currentScope)
+      }
+    }
+
+    wireName.split("""\.""").reverse.toList match {
+      case name :: reversedScopes =>
+        findScope(scopeRoot, reversedScopes.reverse) match {
+          case Some(scope) =>
+            if(! wires.contains(wireName)) {
+              val newWire = Wire(name, getIdString(), width)
+              incrementId()
+              addWireToScope(newWire, scope)
+              wires(wireName) = newWire
+            }
+          case None =>
+            logger.error(s"Could not find scope for $wireName")
+        }
+      case Nil =>
+        logger.error(s"Can not parse found wire $wireName")
+    }
   }
 
   def wireChanged(wireName: String, value: BigInt, width: Int = 1): Unit = {
@@ -513,7 +546,15 @@ case class VCD(
   }
 
   def incrementTime(increment: Int = 1) {
-    timeStamp += 1
+    timeStamp += increment
+  }
+
+  def raiseClock: Unit = {
+    wireChanged("clock", BigInt(1), 1)
+  }
+
+  def lowerClock: Unit = {
+    wireChanged("clock", BigInt(0), 1)
   }
 
 
@@ -618,4 +659,7 @@ case class Change(wire: Wire, value: BigInt) {
 case class Scope(name: String, parent: Option[Scope] = None) {
   val subScopes = new ArrayBuffer[Scope]()
   val wires = new ArrayBuffer[Wire]()
+  def addScope(subScopeName: String): Unit = {
+    subScopes += Scope(subScopeName)
+  }
 }
