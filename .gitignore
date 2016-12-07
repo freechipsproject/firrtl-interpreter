@@ -253,3 +253,5 @@ hs_err_pid*
 
 /src/main/scala/firrtl_interpreter/playground.sc
 /*.firrtl_interpreter.vcd
+
+/lib
