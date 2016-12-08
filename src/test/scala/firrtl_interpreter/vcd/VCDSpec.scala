@@ -56,12 +56,12 @@ class VCDSpec extends FlatSpec with Matchers {
       vcd.incrementTime()
     }
 
-    vcd.valuesAtTime(0).size should be (3)
-    vcd.valuesAtTime(1).size should be (1)
-    vcd.valuesAtTime(2).size should be (2)
-    vcd.valuesAtTime(3).size should be (1)
-    vcd.valuesAtTime(4).size should be (3)
-    vcd.valuesAtTime(5).size should be (1)
+    vcd.valuesAtTime(1).size should be (3)
+    vcd.valuesAtTime(2).size should be (1)
+    vcd.valuesAtTime(3).size should be (2)
+    vcd.valuesAtTime(4).size should be (1)
+    vcd.valuesAtTime(5).size should be (3)
+    vcd.valuesAtTime(6).size should be (1)
 
     println(vcd.serialize)
   }

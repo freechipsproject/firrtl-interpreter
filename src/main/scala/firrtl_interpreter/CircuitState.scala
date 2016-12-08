@@ -58,8 +58,9 @@ case class CircuitState(
 
   var nameToConcreteValue = mutable.HashMap((inputPorts ++ outputPorts ++ registers).toSeq:_*)
 
-  var stateCounter = 0
-  var isStale      = true
+  var stateCounter: Int  = 0
+  var isStale: Boolean   = true
+  var clockHigh: Boolean = false
 
   var vcdLoggerOption = Option.empty[VCD]
   var vcdOutputFileName = ""
@@ -82,9 +83,15 @@ case class CircuitState(
     newState.rhsOutputs ++= rhsOutputs
     newState.stateCounter = stateCounter
     newState.isStale = isStale
+    newState.clockHigh = clockHigh
     newState
   }
-  def makeVCDLogger(dependencyGraph: DependencyGraph, fileName: String = "out.firrtl_interpreter.vcd"): Unit = {
+  def makeVCDLogger(
+      dependencyGraph: DependencyGraph,
+      circuitState: CircuitState,
+      fileName: String = "out.firrtl_interpreter.vcd",
+      showUnderscored: Boolean = false): Unit = {
+
     val vcd = VCD(dependencyGraph.circuit.main)
     vcdLoggerOption = Some(vcd)
     vcdOutputFileName = fileName
@@ -93,6 +100,10 @@ case class CircuitState(
       if(instanceName != dependencyGraph.circuit.main) {
         vcd.scopeRoot.addScope(instanceName)
       }
+    }
+
+    for((name, concreteValue) <- circuitState.nameToConcreteValue) {
+      vcd.wireChanged(name, concreteValue.value, concreteValue.width)
     }
   }
   def writeVCD(): Unit = {
@@ -111,10 +122,32 @@ case class CircuitState(
     * associated values cleared
     */
   def prepareForDependencyResolution(): Unit = {
-    vcdLoggerOption.foreach { vcd => vcd.incrementTime() }
     nameToConcreteValue = mutable.HashMap((inputPorts ++ outputPorts ++ registers).toSeq:_*)
     ephemera.clear()
     rhsOutputs.clear()
+  }
+
+  def vcdRaiseClock(): Unit = {
+    if(! clockHigh) {
+      vcdLoggerOption.foreach { vcd =>
+        vcd.timeStamp += 1
+        vcd.raiseClock()
+      }
+      clockHigh = true
+    }
+  }
+  def vcdLowerClock(): Unit = {
+    if(clockHigh) {
+      vcdLoggerOption.foreach { vcd =>
+        vcd.timeStamp += 1
+        vcd.lowerClock()
+      }
+      clockHigh = false
+    }
+  }
+  def vcdIncrementTime(n: Int): Unit = vcdLoggerOption.foreach { _.incrementTime(n) }
+  def vcdWireChangedwire(key: String, concrete: Concrete): Unit = {
+    vcdLoggerOption.foreach { _.wireChanged(key, concrete.value, concrete.width) }
   }
   /**
     * prepare this cycle
@@ -123,41 +156,35 @@ case class CircuitState(
     * cycle all memories
     */
   def cycle(): Unit = {
-    vcdLoggerOption.foreach { vcd =>
-      vcd.raiseClock
-      vcd.incrementTime(10)
-    }
+    vcdRaiseClock()
+
     registers.keys.foreach { key =>
-      registers(key) = nextRegisters(key)
+      val nextValue = nextRegisters(key)
+      vcdWireChangedwire(key, nextValue)
+      registers(key) = nextValue
     }
-//    nextRegisters.clear()
-//    ephemera.clear()
+
     cycleMemories()
+
     nameToConcreteValue = mutable.HashMap((inputPorts ++ outputPorts ++ registers).toSeq:_*)
     isStale = true
 
     stateCounter += 1
-
-    vcdLoggerOption.foreach { vcd =>
-      vcd.lowerClock
-      vcd.incrementTime(10)
-    }
   }
   def cycleMemories(): Unit = {
     memories.values.foreach { memory => memory.cycle() }
   }
-  def setValue(key: String, concreteValue: Concrete, registerPoke: Boolean = false): Concrete = {
-    vcdLoggerOption.foreach { vcd =>
-      vcd.wireChanged(key, concreteValue.value, concreteValue.width)
-    }
 
+  def setValue(key: String, concreteValue: Concrete, registerPoke: Boolean = false): Concrete = {
     if(isInput(key)) {
       inputPorts(key) = concreteValue
       nameToConcreteValue(key) = concreteValue
+      vcdWireChangedwire(key, concreteValue)
     }
     else if(isOutput(key)) {
       outputPorts(key) = concreteValue
       nameToConcreteValue(key) = concreteValue
+      vcdWireChangedwire(key, concreteValue)
     }
     else if(registers.contains(key)) {
       if(registerPoke) {
@@ -165,7 +192,7 @@ case class CircuitState(
       }
       else {
         nextRegisters(key) = concreteValue
-        // we continue to use the initial values of registers when they appear on RHS of an expression
+        // registers are logged to VCD during clock postive edge in #cycle()
       }
     }
     else if(isMemory(key)) {
@@ -179,6 +206,7 @@ case class CircuitState(
     else if(validNames.contains(key)) {
       ephemera(key) = concreteValue
       nameToConcreteValue(key) = concreteValue
+      vcdWireChangedwire(key, concreteValue)
     }
     else {
       throw InterpreterException(s"Error: setValue($key, $concreteValue) $key is not an element of this circuit")
@@ -188,9 +216,6 @@ case class CircuitState(
   }
 
   def setInput(key: String, value: BigInt): Concrete = {
-    if(!isInput(key)) {
-
-    }
     val concreteValue = TypeInstanceFactory(inputPorts(key), value)
     inputPorts(key) = concreteValue
     nameToConcreteValue(key) = concreteValue

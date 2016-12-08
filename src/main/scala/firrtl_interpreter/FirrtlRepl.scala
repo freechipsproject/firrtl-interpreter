@@ -320,7 +320,8 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
             case Some("done")   =>
               interpreter.disableVCD()
             case Some(fileName) =>
-              interpreter.makeVCDLogger(fileName)
+              interpreter.makeVCDLogger(
+                fileName, showUnderscored = optionsManager.interpreterOptions.vcdShowUnderscored)
             case _ =>
               interpreter.disableVCD()
           }
@@ -902,7 +903,9 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
       new Command("quit") {
         def usage: (String, String) = ("quit", "exit the interpreter")
         def run(args: Array[String]): Unit = {
-          history.removeLast()
+          if(! history.isEmpty) {
+            history.removeLast()
+          }
           done = true
         }
       }
