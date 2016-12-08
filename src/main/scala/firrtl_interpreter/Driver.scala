@@ -6,6 +6,7 @@ import firrtl.ExecutionOptionsManager
 
 case class InterpreterOptions(
     writeVCD:          Boolean              = false,
+    vcdShowUnderscored:Boolean              = false,
     setVerbose:        Boolean              = false,
     setOrderedExec:    Boolean              = false,
     allowCycles:       Boolean              = false,
@@ -39,6 +40,13 @@ trait HasInterpreterOptions {
       interpreterOptions = interpreterOptions.copy(writeVCD = true)
     }
     .text("writes vcd execution log, filename will be base on top")
+
+  parser.opt[Unit]("fint-vcd-show-underscored-vars")
+    .abbr("fivsuv")
+    .foreach { _ =>
+      interpreterOptions = interpreterOptions.copy(vcdShowUnderscored = true)
+    }
+    .text("vcd output by default does not show var that start with underscore, this overrides that")
 
   parser.opt[Unit]("fint-verbose")
     .abbr("fiv")

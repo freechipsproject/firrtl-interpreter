@@ -417,12 +417,36 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     println(evaluationStack.stackListing)
   }
 
+  /**
+    * when resolving registers dependency, consider the resetCondition
+    * to be the dependency if appropriate
+    * @param key  name of register
+    * @return     new concrete value for register
+    */
+  def resolveRegister(key: String): Concrete = {
+    val registerDef = dependencyGraph.registers(key)
+    val resetCondition = evaluate(registerDef.reset)
+    if(resetCondition.value > 0 ) {
+      val resetValue = {
+        evaluate(registerDef.init).forceWidth(typeToWidth(dependencyGraph.nameToType(registerDef.name)))
+      }
+      resetValue
+    }
+    else {
+      val expression = dependencyGraph.nameToExpression(key)
+      evaluate(expression, Some(key))
+    }
+
+  }
   private def resolveDependency(key: String): Concrete = {
     resolveDepth += 1
 
     val value = timer(key) {
       if (circuitState.isInput(key)) {
         circuitState.getValue(key).get
+      }
+      else if(circuitState.isRegister(key)) {
+        resolveRegister(key)
       }
       else if (dependencyGraph.nameToExpression.contains(key)) {
         val expression = dependencyGraph.nameToExpression(key)
@@ -466,19 +490,6 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     if(useTopologicalSortedKeys && ! keyOrderInitialized) {
       println(s"Key order ${orderedKeysToResolve.mkString("\n")}")
       keyOrderInitialized = true
-    }
-  }
-
-  def processRegisterResets(): Unit = {
-    for(registerDef <- dependencyGraph.registers) {
-      val resetCondition = evaluate(registerDef.reset)
-      if(resetCondition.value > 0 ) {
-        val resetValue = {
-          evaluate(registerDef.init).forceWidth(typeToWidth(dependencyGraph.nameToType(registerDef.name)))
-        }
-        // println(s"Register ${registerDef.name} reset to $resetValue")
-        circuitState.nextRegisters(registerDef.name) = resetValue
-      }
     }
   }
 

@@ -58,8 +58,8 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
   var circuitState = CircuitState(dependencyGraph)
   println("Circuit state created")
 
-  def makeVCDLogger(fileName: String): Unit = {
-    circuitState.makeVCDLogger(dependencyGraph, fileName)
+  def makeVCDLogger(fileName: String, showUnderscored: Boolean): Unit = {
+    circuitState.makeVCDLogger(dependencyGraph, circuitState, fileName, showUnderscored)
   }
   def disableVCD(): Unit = {
     circuitState.disableVCD()
@@ -102,6 +102,7 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
 
   def setValueWithBigInt(
       name: String, value: BigInt, force: Boolean = true, registerPoke: Boolean = false): Concrete = {
+
     if(!force) {
       assert(circuitState.isInput(name),
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
@@ -139,13 +140,14 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
   def cycle(showState: Boolean = false): Unit = {
     if(checkStopped("cycle")) return
 
+    circuitState.vcdRaiseClock()
+
     if(circuitState.isStale) {
       log("interpreter cycle() called, state is stale, re-evaluate Circuit")
       log(circuitState.prettyString())
 
       log(s"process reset")
       evaluateCircuit()
-      evaluator.processRegisterResets()
     }
     else {
       log(s"interpreter cycle() called, state is fresh")
@@ -175,6 +177,8 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
 
     //    println(s"FirrtlTerp: cycle complete ${"="*80}\n${sourceState.prettyString()}")
     if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${circuitState.prettyString()}")
+
+    circuitState.vcdLowerClock()
   }
 
   def doCycles(n: Int): Unit = {

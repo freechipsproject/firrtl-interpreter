@@ -115,7 +115,7 @@ object DependencyGraph extends SimpleLogger {
         dependencyGraph.registerNames += expandedName
         dependencyGraph.recordName(expandedName)
         dependencyGraph.recordType(expandedName, tpe)
-        dependencyGraph.registers += renamedDefRegister
+        dependencyGraph.registers(expandedName) = renamedDefRegister
         dependencyGraph.addSourceInfo(expandedName, info)
         s
       case defMemory: DefMemory =>
@@ -270,7 +270,7 @@ class DependencyGraph(val circuit: Circuit,
   val validNames       = new mutable.HashSet[String]
   val nameToType       = new mutable.HashMap[String, Type]
   val registerNames    = new mutable.HashSet[String]
-  val registers        = new ArrayBuffer[DefRegister]
+  val registers        = new mutable.HashMap[String, DefRegister]
   val memories         = new mutable.HashMap[String, Memory]
   val memoryKeys       = new mutable.HashMap[String, Memory]
   val memoryOutputKeys = new mutable.HashMap[String, Seq[String]]

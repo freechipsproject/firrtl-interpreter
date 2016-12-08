@@ -37,7 +37,10 @@ class InterpretiveTester(
   if(interpreterOptions.writeVCD) {
     optionsManager.setTopNameIfNotSet(interpreter.loweredAst.main)
     optionsManager.makeTargetDir()
-    interpreter.makeVCDLogger(interpreterOptions.vcdOutputFileName(optionsManager))
+    interpreter.makeVCDLogger(
+      interpreterOptions.vcdOutputFileName(optionsManager),
+      interpreterOptions.vcdShowUnderscored
+    )
   }
 
   def setVerbose(value: Boolean = true): Unit = {

@@ -52,7 +52,8 @@ object VCD extends LazyLogging {
       VCD.Version,
       comment,
       timeScale,
-      moduleName
+      moduleName,
+      ignoreUnderscoredNames = true
     )
   }
 
@@ -374,7 +375,7 @@ object VCD extends LazyLogging {
 
     val vcd = VCD(
       dateHeader.toString().trim, versionHeader.toString().trim,
-      commentHeader.toString().trim, timeScaleHeader.toString().trim, "")
+      commentHeader.toString().trim, timeScaleHeader.toString().trim, "", ignoreUnderscoredNames = true)
 
     vcd.wires ++= wires
     vcd.valuesAtTime ++= valuesAtTime
@@ -435,11 +436,11 @@ case class VCD(
            version: String,
            comment: String,
            timeScale: String,
-           scope: String
-
+           scope: String,
+           ignoreUnderscoredNames: Boolean
          ) extends LazyLogging {
   var currentIdNumber = 0
-  var timeStamp = -1L
+  var timeStamp = 0L
   val lastValues = new mutable.HashMap[String, Change]
   val valuesAtTime = new mutable.HashMap[Long, mutable.HashSet[Change]]
   var scopeRoot = Scope(scope)
@@ -492,8 +493,8 @@ case class VCD(
       scopeList match {
         case name :: tail =>
           currentScope.subScopes.find(_.name == name) match {
-            case Some(scope) =>
-              findScope(scope, tail)
+            case Some(subScope) =>
+              findScope(subScope, tail)
             case None =>
               val newScope = Scope(name)
               currentScope.subScopes += newScope
@@ -507,11 +508,11 @@ case class VCD(
     wireName.split("""\.""").reverse.toList match {
       case name :: reversedScopes =>
         findScope(scopeRoot, reversedScopes.reverse) match {
-          case Some(scope) =>
+          case Some(subScope) =>
             if(! wires.contains(wireName)) {
               val newWire = Wire(name, getIdString(), width)
               incrementId()
-              addWireToScope(newWire, scope)
+              addWireToScope(newWire, subScope)
               wires(wireName) = newWire
             }
           case None =>
@@ -523,6 +524,7 @@ case class VCD(
   }
 
   def wireChanged(wireName: String, value: BigInt, width: Int = 1): Unit = {
+    if(ignoreUnderscoredNames && wireName.startsWith("_")) return
 
     def updateInfo(): Unit = {
       val wire = wires(wireName)
@@ -549,11 +551,11 @@ case class VCD(
     timeStamp += increment
   }
 
-  def raiseClock: Unit = {
+  def raiseClock(): Unit = {
     wireChanged("clock", BigInt(1), 1)
   }
 
-  def lowerClock: Unit = {
+  def lowerClock(): Unit = {
     wireChanged("clock", BigInt(0), 1)
   }
 
