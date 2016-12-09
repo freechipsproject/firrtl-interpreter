@@ -2,6 +2,7 @@
 
 package firrtl_interpreter.vcd
 
+import firrtl_interpreter.{InterpreterOptionsManager, InterpretiveTester}
 import org.scalatest.{Matchers, FlatSpec}
 
 // scalastyle:off magic.number
@@ -72,5 +73,43 @@ class VCDSpec extends FlatSpec with Matchers {
     val vcdFile = VCD.read("src/test/resources/GCD.vcd")
 
     vcdFile.date should be ("2016-10-13T16:31+0000")
+  }
+
+  behavior of "vcd log containing negative numbers"
+
+  it should "work correctly and be runnable from vcd output file" in  {
+    val input =
+      """
+        |circuit Adder :
+        |  module Adder :
+        |    input clock : Clock
+        |    input a : SInt<8>
+        |    input b : SInt<8>
+        |    output c : SInt<10>
+        |
+        |    c <= add(a, b)
+      """.stripMargin
+
+    val manager = new InterpreterOptionsManager {
+      interpreterOptions = interpreterOptions.copy(writeVCD = true)
+    }
+    val interpreter = new InterpretiveTester(input, manager)
+    interpreter.poke("a", -1)
+    interpreter.peek("a") should be (BigInt(-1))
+    interpreter.poke("b", -7)
+    interpreter.peek("b") should be (BigInt(-7))
+
+    interpreter.step(1)
+    interpreter.peek("c") should be (BigInt(-8))
+
+    interpreter.poke("a", 255)
+    interpreter.peek("a") should be (BigInt(-1))
+    interpreter.poke("b", 249)
+    interpreter.peek("b") should be (BigInt(-7))
+
+    interpreter.step(1)
+    interpreter.peek("c") should be (BigInt(-8))
+    interpreter.report()
+
   }
 }
