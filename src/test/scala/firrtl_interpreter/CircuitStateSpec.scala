@@ -69,8 +69,8 @@ class CircuitStateSpec extends FlatSpec with Matchers {
     c.getValue("wire0").get.poisoned should be (true)
     c.isStale = false
     c.cycle()
-    c.nextRegisters.size should be (0)
-    c.ephemera.size should be (0)
+    c.nextRegisters.size should be (2)
+    c.ephemera.size should be (1)
   }
 
   it should "have mutable type instances, distinct in copy" in {

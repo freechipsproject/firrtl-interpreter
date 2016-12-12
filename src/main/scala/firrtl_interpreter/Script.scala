@@ -42,7 +42,18 @@ class Script(val fileName: String, val lines: Array[String]) {
   def length: Int = lines.length
 
   def setLinesToRun(n: Int): Unit = {
-    linesLeftToRun = n.max((lines.length - currentLine) + 1)
+    linesLeftToRun = n.min((lines.length - currentLine) + 1)
+  }
+
+  def setSkipLines(n: Int): Unit = {
+    for(i <- 0 until n) {
+      getNextLineOption
+    }
+  }
+
+  def setLine(n: Int): Unit = {
+    reset()
+    currentLine = n - 1
   }
 
   def runRemaining(): Unit = {
@@ -55,7 +66,7 @@ class Script(val fileName: String, val lines: Array[String]) {
 
   def reset(): Unit = {
     currentLine = -1
-    linesLeftToRun = lines.length
+    linesLeftToRun = 0
   }
 
   override def toString: String = {

@@ -41,6 +41,7 @@ object DependencyGraph extends SimpleLogger {
       dependencyGraph.numberOfNodes += 1
       val result = expression match {
         case Mux(condition, trueExpression, falseExpression, tpe) =>
+          dependencyGraph.numberOfMuxes += 1
           Mux(
             renameExpression(condition),
             renameExpression(trueExpression),
@@ -82,6 +83,7 @@ object DependencyGraph extends SimpleLogger {
         log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
         processModule(newPrefix, subModule, dependencyGraph)
         dependencyGraph.addSourceInfo(newPrefix, info)
+        dependencyGraph.addInstanceName(instanceName, moduleName)
         s
       case DefNode(info, name, expression) =>
         log(s"declaration:DefNode:$name:${expression.serialize} ${renameExpression(expression).serialize}")
@@ -113,7 +115,7 @@ object DependencyGraph extends SimpleLogger {
         dependencyGraph.registerNames += expandedName
         dependencyGraph.recordName(expandedName)
         dependencyGraph.recordType(expandedName, tpe)
-        dependencyGraph.registers += renamedDefRegister
+        dependencyGraph.registers(expandedName) = renamedDefRegister
         dependencyGraph.addSourceInfo(expandedName, info)
         s
       case defMemory: DefMemory =>
@@ -192,12 +194,12 @@ object DependencyGraph extends SimpleLogger {
         processPorts(module)
         processDependencyStatements(modulePrefix, module.body, dependencyGraph)
       case extModule: ExtModule => // Look to see if we have an implementation for this
-        println(s"got external module ${extModule.name} instance $modulePrefix")
+        log(s"got external module ${extModule.name} instance $modulePrefix")
         processPorts(extModule)
         /* use exists while looking for the right factory, short circuits iteration when found */
-        println(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
+        log(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
         dependencyGraph.blackBoxFactories.exists { factory =>
-          println("Found an existing factory")
+          log("Found an existing factory")
           factory.createInstance(modulePrefix, extModule.name) match {
             case Some(implementation) =>
               processExternalInstance(extModule, modulePrefix, implementation, dependencyGraph)
@@ -268,13 +270,14 @@ class DependencyGraph(val circuit: Circuit,
   val validNames       = new mutable.HashSet[String]
   val nameToType       = new mutable.HashMap[String, Type]
   val registerNames    = new mutable.HashSet[String]
-  val registers        = new ArrayBuffer[DefRegister]
+  val registers        = new mutable.HashMap[String, DefRegister]
   val memories         = new mutable.HashMap[String, Memory]
   val memoryKeys       = new mutable.HashMap[String, Memory]
   val memoryOutputKeys = new mutable.HashMap[String, Seq[String]]
   val stops            = new ArrayBuffer[Stop]
   val prints           = new ArrayBuffer[Print]
   val sourceInfo       = new mutable.HashMap[String, String]
+  val instanceNames    = new mutable.HashMap[String, String]
 
   val inputPorts       = new mutable.HashSet[String]
   val outputPorts      = new mutable.HashSet[String]
@@ -284,6 +287,7 @@ class DependencyGraph(val circuit: Circuit,
 
   var numberOfStatements = 0
   var numberOfNodes = 0
+  var numberOfMuxes = 0
 
   def update(key: String, e: Expression): Unit = nameToExpression(key) = e
   def apply(key: String): Option[Expression] = {
@@ -307,11 +311,25 @@ class DependencyGraph(val circuit: Circuit,
     newMemory
   }
 
+  def getInfo: String = {
+    f"""
+       |Circuit Info:
+       |  Statements:      $numberOfStatements%11d
+       |  Nodes:           $numberOfNodes%11d
+       |  Muxes:           $numberOfMuxes%11d
+       |  Expressions:     ${nameToExpression.size}%11d
+     """.stripMargin
+  }
+
   def addSourceInfo(name: String, info: Info): Unit = {
     info match {
       case f: FileInfo => sourceInfo(name) = f.toString
       case _ => // I don't know what to do with other annotations
     }
+  }
+
+  def addInstanceName(instanceName: String, moduleName: String): Unit = {
+    instanceNames(instanceName) = moduleName
   }
 
   def hasInput(name: String): Boolean = inputPorts.contains(name)

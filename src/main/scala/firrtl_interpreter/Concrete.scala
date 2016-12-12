@@ -153,7 +153,10 @@ trait Concrete {
       val shift = thatValue.toInt
       assert(shift >= 0, s"ERROR:$this >> $that ${that.value} must be >= 0")
       assert(shift < this.width, s"ERROR:$this >> $that ${that.value} must be < ${this.width}")
-      ConcreteUInt(this.value >> shift, this.width)
+      this match {
+        case _: ConcreteUInt => ConcreteUInt(this.value >> shift, this.width)
+        case _: ConcreteSInt => ConcreteSInt(this.value >> shift, this.width)
+      }
     case _ => throw new InterpreterException(s"Cannot shift $this >> $that where $that is not a UInt parameter")
   }
   def >>(that: BigInt): Concrete = >>(that.toInt)
@@ -283,7 +286,7 @@ trait Concrete {
   }
   def showValue: String = {
     def showPoison: String = if(poisoned) "☠" else ""
-    s"$showPoison$value$showPoison"
+    s"$showPoison $value$showPoison"
   }
 }
 object Concrete {

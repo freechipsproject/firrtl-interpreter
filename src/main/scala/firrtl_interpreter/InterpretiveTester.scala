@@ -30,12 +30,17 @@ class InterpretiveTester(
 
   val blackBoxFactories = optionsManager.interpreterOptions.blackBoxFactories
 
+  interpreter.evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
+
   setVerbose(interpreterOptions.setVerbose)
 
   if(interpreterOptions.writeVCD) {
     optionsManager.setTopNameIfNotSet(interpreter.loweredAst.main)
     optionsManager.makeTargetDir()
-    interpreter.makeVCDLogger(interpreterOptions.vcdOutputFileName(optionsManager))
+    interpreter.makeVCDLogger(
+      interpreterOptions.vcdOutputFileName(optionsManager),
+      interpreterOptions.vcdShowUnderscored
+    )
   }
 
   def setVerbose(value: Boolean = true): Unit = {
@@ -57,7 +62,8 @@ class InterpretiveTester(
     if(interpreter.checkStopped(s"poke($name, $value)")) return
 
     try {
-      interpreter.setValueWithBigInt(name, value)
+      val isRegister = interpreter.circuitState.registers.contains(name)
+      interpreter.setValueWithBigInt(name, value, registerPoke = isRegister)
     }
     catch {
       case ie: InterpreterException =>
@@ -78,7 +84,8 @@ class InterpretiveTester(
     if(interpreter.checkStopped(s"poke($name, $value)")) return
 
     try {
-      interpreter.circuitState.setValue(name, value)
+      val isRegister = interpreter.circuitState.registers.contains(name)
+      interpreter.circuitState.setValue(name, value, registerPoke = isRegister)
     }
     catch {
       case ie: InterpreterException =>

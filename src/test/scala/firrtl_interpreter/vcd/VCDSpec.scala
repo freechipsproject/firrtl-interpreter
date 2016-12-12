@@ -47,6 +47,8 @@ class VCDSpec extends FlatSpec with Matchers {
     vcd.addWire("carol", 16)
     vcd.addWire("ted", 3)
 
+    // time starts at -1 to support initialized values
+    vcd.incrementTime()
     for(i <- 0 to 10) {
       vcd.wireChanged("bob", i)
       vcd.wireChanged("carol", i / 2)
@@ -54,13 +56,21 @@ class VCDSpec extends FlatSpec with Matchers {
       vcd.incrementTime()
     }
 
-    vcd.valuesAtTime(0).size should be (3)
-    vcd.valuesAtTime(1).size should be (1)
-    vcd.valuesAtTime(2).size should be (2)
-    vcd.valuesAtTime(3).size should be (1)
-    vcd.valuesAtTime(4).size should be (3)
-    vcd.valuesAtTime(5).size should be (1)
+    vcd.valuesAtTime(1).size should be (3)
+    vcd.valuesAtTime(2).size should be (1)
+    vcd.valuesAtTime(3).size should be (2)
+    vcd.valuesAtTime(4).size should be (1)
+    vcd.valuesAtTime(5).size should be (3)
+    vcd.valuesAtTime(6).size should be (1)
 
     println(vcd.serialize)
+  }
+
+  behavior of "VCD reader"
+
+  it should "be able to read a file" in {
+    val vcdFile = VCD.read("src/test/resources/GCD.vcd")
+
+    vcdFile.date should be ("2016-10-13T16:31+0000")
   }
 }

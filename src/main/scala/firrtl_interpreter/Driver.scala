@@ -6,11 +6,15 @@ import firrtl.ExecutionOptionsManager
 
 case class InterpreterOptions(
     writeVCD:          Boolean              = false,
+    vcdShowUnderscored:Boolean              = false,
     setVerbose:        Boolean              = false,
     setOrderedExec:    Boolean              = false,
     allowCycles:       Boolean              = false,
     randomSeed:        Long                 = System.currentTimeMillis(),
-    blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty)
+    blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty,
+    maxExecutionDepth: Long                 = ExpressionExecutionStack.defaultMaxExecutionDepth,
+    showFirrtlAtLoad:  Boolean              = false,
+    lowCompileAtLoad:  Boolean              = true)
   extends firrtl.ComposableOptions {
 
   def vcdOutputFileName(optionsManager: ExecutionOptionsManager): String = {
@@ -36,6 +40,13 @@ trait HasInterpreterOptions {
       interpreterOptions = interpreterOptions.copy(writeVCD = true)
     }
     .text("writes vcd execution log, filename will be base on top")
+
+  parser.opt[Unit]("fint-vcd-show-underscored-vars")
+    .abbr("fivsuv")
+    .foreach { _ =>
+      interpreterOptions = interpreterOptions.copy(vcdShowUnderscored = true)
+    }
+    .text("vcd output by default does not show var that start with underscore, this overrides that")
 
   parser.opt[Unit]("fint-verbose")
     .abbr("fiv")
@@ -66,7 +77,27 @@ trait HasInterpreterOptions {
     }
     .text("seed used for random numbers generated for tests and poison values, default is current time in ms")
 
+  parser.opt[Long]("fint-max-execution-depth")
+    .abbr("fimed")
+    .valueName("<long-value>")
+    .foreach { x =>
+      interpreterOptions = interpreterOptions.copy(maxExecutionDepth = x)
+    }
+    .text("depth of stack used to evaluate expressions")
 
+  parser.opt[Unit]("show-firrtl-at-load")
+    .abbr("fisfas")
+    .foreach { _ =>
+      interpreterOptions = interpreterOptions.copy(showFirrtlAtLoad = true)
+    }
+    .text("compiled low firrtl at firrtl load time")
+
+  parser.opt[Unit]("run-lower-compiler-on-load")
+    .abbr("filcol")
+    .foreach { _ =>
+      interpreterOptions = interpreterOptions.copy(lowCompileAtLoad = true)
+    }
+    .text("run lowering compuler when firrtl file is loaded")
 }
 
 object Driver {
@@ -93,3 +124,5 @@ object Driver {
     }
   }
 }
+
+class InterpreterOptionsManager extends ExecutionOptionsManager("firrtl-interpreter") with HasInterpreterOptions

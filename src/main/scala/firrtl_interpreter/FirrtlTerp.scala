@@ -5,16 +5,10 @@ package firrtl_interpreter
 import firrtl_interpreter.real.DspRealFactory
 import firrtl.ir._
 
-import scala.collection.mutable.ArrayBuffer
-
-// TODO: Add poison concept/multi-state
-// TODO: try inlining pass
-// TODO: Implement VCD parser and emitter (https://github.com/impedimentToProgress/ProcessVCD.git)?
+// TODO: consider adding x-state
 // TODO: Support forced values on nodes (don't recompute them if forced)
 // TODO: How do zero width wires affect interpreter
 // TODO: Figure out what to do about clock
-// TODO: Check for loops in dependency graph during evaluation
-// TODO: Get official Firrtl to LoFirrtl transformer
 
 /**
   * This is the Firrtl interpreter.  It is the top level control engine
@@ -29,18 +23,24 @@ import scala.collection.mutable.ArrayBuffer
   *
   * @param ast the circuit to be simulated
   */
-class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) extends SimpleLogger {
+class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) extends SimpleLogger {
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
   def stopResult: Int  = lastStopResult.get
 
-  val loweredAst = ToLoFirrtl.lower(ast)
-  println("LoFirrtl" + "="*120)
-  println(loweredAst.serialize)
+  val loweredAst = if(interpreterOptions.lowCompileAtLoad) ToLoFirrtl.lower(ast) else ast
+
+  if(interpreterOptions.showFirrtlAtLoad) {
+    println("LoFirrtl" + "=" * 120)
+    println(loweredAst.serialize)
+  }
+
+  val blackBoxFactories = interpreterOptions.blackBoxFactories
 
   /**
     * turns on evaluator debugging. Can make output quite
     * verbose.
+    *
     * @param value  The desired verbose setting
     */
   override def setVerbose(value: Boolean): Unit = {
@@ -48,7 +48,7 @@ class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq
     evaluator.setVerbose(value)
   }
 
-  val dependencyGraph    = DependencyGraph(loweredAst, this)
+  val dependencyGraph = DependencyGraph(loweredAst, this)
   /**
     * Once a stop has occured, the intepreter will not allow pokes until
     * the stop has been cleared
@@ -58,8 +58,8 @@ class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq
   var circuitState = CircuitState(dependencyGraph)
   println("Circuit state created")
 
-  def makeVCDLogger(fileName: String): Unit = {
-    circuitState.makeVCDLogger(dependencyGraph, fileName)
+  def makeVCDLogger(fileName: String, showUnderscored: Boolean): Unit = {
+    circuitState.makeVCDLogger(dependencyGraph, circuitState, fileName, showUnderscored)
   }
   def disableVCD(): Unit = {
     circuitState.disableVCD()
@@ -72,7 +72,10 @@ class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq
     dependencyGraph = dependencyGraph,
     circuitState = circuitState
   )
+  evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
   val timer = evaluator.timer
+
+  setVerbose(interpreterOptions.setVerbose)
 
   def getValue(name: String): Concrete = {
     assert(dependencyGraph.validNames.contains(name),
@@ -97,14 +100,16 @@ class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq
     circuitState.setValue(name, value)
   }
 
-  def setValueWithBigInt(name: String, value: BigInt, force: Boolean = true): Concrete = {
+  def setValueWithBigInt(
+      name: String, value: BigInt, force: Boolean = true, registerPoke: Boolean = false): Concrete = {
+
     if(!force) {
       assert(circuitState.isInput(name),
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
     }
     val concreteValue = TypeInstanceFactory(dependencyGraph.nameToType(name), value)
 
-    circuitState.setValue(name, concreteValue)
+    circuitState.setValue(name, concreteValue, registerPoke = registerPoke)
   }
 
   def hasInput(name: String): Boolean  = dependencyGraph.hasInput(name)
@@ -135,13 +140,14 @@ class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq
   def cycle(showState: Boolean = false): Unit = {
     if(checkStopped("cycle")) return
 
+    circuitState.vcdRaiseClock()
+
     if(circuitState.isStale) {
       log("interpreter cycle() called, state is stale, re-evaluate Circuit")
       log(circuitState.prettyString())
 
       log(s"process reset")
       evaluateCircuit()
-      evaluator.processRegisterResets()
     }
     else {
       log(s"interpreter cycle() called, state is fresh")
@@ -171,6 +177,8 @@ class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq
 
     //    println(s"FirrtlTerp: cycle complete ${"="*80}\n${sourceState.prettyString()}")
     if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${circuitState.prettyString()}")
+
+    circuitState.vcdLowerClock()
   }
 
   def doCycles(n: Int): Unit = {
@@ -188,12 +196,13 @@ class FirrtlTerp(ast: Circuit, val blackBoxFactories: Seq[BlackBoxFactory] = Seq
 
 object FirrtlTerp {
   val blackBoxFactory = new DspRealFactory
+
   def apply(input: String,
             verbose: Boolean = false,
             blackBoxFactories: Seq[BlackBoxFactory] = Seq(blackBoxFactory)): FirrtlTerp = {
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
-    val interpreter = new FirrtlTerp(ast, blackBoxFactories = blackBoxFactories)
-    interpreter.setVerbose(verbose)
+    val options = new InterpreterOptions(blackBoxFactories = blackBoxFactories, setVerbose = verbose)
+    val interpreter = new FirrtlTerp(ast, options)
 
     try {
       interpreter.evaluateCircuit()
@@ -203,5 +212,9 @@ object FirrtlTerp {
         println(s"Error: InterpreterExecption(${ie.getMessage} during warmup evaluation")
     }
     interpreter
+  }
+
+  def apply(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]): FirrtlTerp = {
+    apply(ast, blackBoxFactories = blackBoxFactories)
   }
 }

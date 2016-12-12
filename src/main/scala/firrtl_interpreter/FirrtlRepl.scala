@@ -4,6 +4,7 @@ package firrtl_interpreter
 import java.io.File
 
 import firrtl.ExecutionOptionsManager
+import firrtl_interpreter.vcd.VCD
 
 import scala.collection.mutable.ArrayBuffer
 import scala.tools.jline.console.ConsoleReader
@@ -22,7 +23,7 @@ abstract class Command(val name: String) {
   }
 }
 
-class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with HasInterpreterOptions) {
+class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig with HasInterpreterOptions) {
   val replConfig = optionsManager.replConfig
   val interpreterOptions = optionsManager.interpreterOptions
 
@@ -50,13 +51,17 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
   var inScript = false
   val scriptFactory = ScriptFactory(this)
   var currentScript: Option[Script] = None
-  val intPattern = """(-?\d+)""".r
+  val IntPattern = """(-?\d+)""".r
+
+  var currentVcdScript: Option[VCD] = None
+  var replVcdController: Option[ReplVcdController] = None
 
   def loadSource(input: String): Unit = {
     currentInterpeterOpt = Some(FirrtlTerp(input, blackBoxFactories = interpreterOptions.blackBoxFactories))
     currentInterpeterOpt.foreach { _=>
       interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
       interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
+      interpreter.evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
       interpreter.setVerbose(interpreterOptions.setVerbose)
 
       console.println(s"Flags: $showFlags")
@@ -86,9 +91,36 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
     currentScript = scriptFactory(fileName)
     currentScript match {
       case Some(script) =>
-        console.println(s"loaded script file ${script.length} with ${script.fileName} lines")
+        console.println(s"loaded script file ${script.fileName} with ${script.length} lines")
       case _ =>
     }
+  }
+
+  def loadVcdScript(fileName: String): Unit = {
+    val dutName = currentInterpeterOpt match {
+      case Some(interpreter) => interpreter.ast.main
+      case None => ""
+    }
+    try {
+      currentVcdScript = Some(VCD.read(fileName, dutName))
+      replVcdController = Some(new ReplVcdController(this, this.interpreter, currentVcdScript.get))
+    }
+    catch {
+      case e: Exception =>
+        console.println(s"Failed to load vcd script $fileName, error: ${e.getMessage}")
+    }
+  }
+
+  def parseNumber(numberString: String): BigInt = {
+    def parseWithRadix(numString: String, radix: Int): BigInt = {
+      BigInt(numString, radix)
+    }
+
+    if(numberString.startsWith("0x"))     { parseWithRadix(numberString.drop(2), 16) }
+    else if(numberString.startsWith("h")) { parseWithRadix(numberString.drop(1), 16) }
+    else if(numberString.startsWith("o")) { parseWithRadix(numberString.drop(1), 8) }
+    else if(numberString.startsWith("b")) { parseWithRadix(numberString.drop(1), 2) }
+    else                                  { parseWithRadix(numberString, 10) }
   }
   // scalastyle:off number.of.methods
   object Commands {
@@ -107,19 +139,19 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
     def getTwoArgs(failureMessage: String,
                    arg1Option: Option[String] = None,
                    arg2Option: Option[String] = None
-                  ): Option[(String,String)] = {
+                  ): (Option[String],Option[String]) = {
       if(args.length == 3) {
-        Some(args(1), args(2))
+        (Some(args(1)), Some(args(2)))
       }
-      else if(args.length == 2 && arg2Option.isDefined) {
-        Some(args(1), arg2Option.get)
+      else if(args.length == 2) {
+        (Some(args(1)), arg2Option)
       }
-      else if(args.length == 1 && arg1Option.isDefined && arg2Option.isDefined) {
-        Some(arg1Option.get, arg2Option.get)
+      else if(args.length == 1) {
+        (arg1Option, arg2Option)
       }
       else {
         error(failureMessage)
-        None
+        (None, None)
       }
     }
     //noinspection ScalaStyle
@@ -173,37 +205,75 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
         }
       },
       new Command("run") {
-        def usage: (String, String) = ("run [linesToRun|all|reset]", "run loaded script")
+        def usage: (String, String) = ("run [linesToRun|all|list|reset]", "run loaded script")
         override def completer: Option[ArgumentCompleter] = {
           Some(new ArgumentCompleter(
             new StringsCompleter({"run"}),
             new StringsCompleter(jlist(Seq("all", "reset", "list")))
           ))
         }
+        def handleList(script: Script, listArg: Option[String]): Unit = {
+          val (min, max) = listArg match {
+            case Some(IntPattern(intString)) =>
+              val windowHalfSize = intString.toInt
+              (script.currentLine + 1 - windowHalfSize, script.currentLine + 2 + windowHalfSize)
+            case Some(other) =>
+              console.println(s"run list parameter=$other, parameter must be an positive integer")
+              (0, 0)
+            case _ =>
+              (0, script.length)
+          }
+          console.println(
+            script.lines.zipWithIndex.flatMap { case (line, index) =>
+              if(index >= min && index < max) {
+                if (index == script.currentLine + 1) {
+                  Some(Console.GREEN + f"$index%3d $line" + Console.RESET)
+                }
+                else {
+                  Some(f"$index%3d $line")
+                }
+              }
+              else {
+                None
+              }
+            }.mkString("\n")
+          )
+        }
         // scalastyle:off cyclomatic.complexity
         def run(args: Array[String]): Unit = {
           currentScript match {
             case Some(script) =>
-              getOneArg("run [linesToRun|all|reset|list]", argOption = Some("all")) match {
-                case Some("all")   =>
+              getTwoArgs("run [lines|skip [n]|set n|all|reset|list [n]], default is 1 => run 1 line",
+                arg1Option = Some("1"), arg2Option = None) match {
+                case (Some("all"), _)   =>
                   console.println("run all")
                   if(script.atEnd) { script.reset() }
                   else { script.runRemaining() }
-                case Some("reset") => script.reset()
-                  console.println("run reset")
-                case Some("list") =>
-                  console.println(
-                    script.lines.zipWithIndex.map { case (line, index) =>
-                      f"$index%3d $line"
-                    }.mkString("\n")
-                  )
-                case Some(intPattern(intString)) =>
-                  console.println(s"run $intString")
+                case (Some("reset"), _) =>
+                  script.reset()
+                  handleList(script, Some("2"))
+                case (Some("list"), listArg) =>
+                  handleList(script, listArg)
+                case (Some("skip"), listArg) =>
+                  val skip = listArg match {
+                    case Some(IntPattern(intString)) => intString.toInt
+                    case _ => 1
+                  }
+                  script.setSkipLines(skip)
+                case (Some("set"), listArg) =>
+                  listArg match {
+                    case Some(IntPattern(intString)) =>
+                      script.setLine(intString.toInt)
+                      handleList(script, Some("2"))
+                    case _ =>
+                      console.println("must specify set line number")
+                  }
+                case (Some(IntPattern(intString)), _) =>
                   val linesToRun = intString.toInt
                   script.setLinesToRun(linesToRun)
-                case None =>
+                case (None, None) =>
                   script.runRemaining()
-                case Some(arg) =>
+                case (Some(arg), _) =>
                   error(s"unrecognized run_argument $arg")
               }
             case _ =>
@@ -214,27 +284,95 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
 
       },
       new Command("vcd") {
-        def usage: (String, String) = ("firrtl_interpreter.vcd fileName|[done]", "firrtl_interpreter.vcd loaded script")
+        def usage: (String, String) = ("vcd [run|list|test|help]", "control vcd input file")
         override def completer: Option[ArgumentCompleter] = {
           Some(new ArgumentCompleter(
             new StringsCompleter({"vcd"}),
+            new ArgumentCompleter(
+              new ArgumentCompleter(
+                new StringsCompleter(jlist(Seq("run", "inputs", "list", "test")))
+              ),
+              new ArgumentCompleter(
+                new StringsCompleter({"load"}),
+                new FileNameCompleter
+              )
+            )
+          ))
+        }
+        def run(args: Array[String]): Unit = {
+          replVcdController match {
+            case Some(controller) => controller.processListCommand(args)
+            case _ => error(s"No current script")
+          }
+        }
+      },
+      new Command("record-vcd") {
+        def usage: (String, String) = ("record-vcd [<fileName>]|[done]", "firrtl_interpreter.vcd loaded script")
+        override def completer: Option[ArgumentCompleter] = {
+          Some(new ArgumentCompleter(
+            new StringsCompleter({"record-vcd"}),
             new FileNameCompleter
           ))
         }
         def run(args: Array[String]): Unit = {
-          currentScript match {
-            case Some(script) =>
-              getOneArg("firrtl_interpreter.vcd [fileName|done]",
-                argOption = Some("out.firrtl_interpreter.vcd")) match {
-                case Some("done")   =>
-                  interpreter.disableVCD()
-                case Some(fileName) =>
-                  interpreter.makeVCDLogger(fileName)
-                case _ =>
-                  interpreter.disableVCD()
+          getOneArg("firrtl_interpreter.vcd [fileName|done]",
+            argOption = Some("out.firrtl_interpreter.vcd")) match {
+            case Some("done")   =>
+              interpreter.disableVCD()
+            case Some(fileName) =>
+              interpreter.makeVCDLogger(
+                fileName, showUnderscored = optionsManager.interpreterOptions.vcdShowUnderscored)
+            case _ =>
+              interpreter.disableVCD()
+          }
+        }
+      },
+      new Command("type") {
+        private def peekableThings = interpreter.circuitState.validNames.toSeq
+        def usage: (String, String) = ("type regex", "show the current type of things matching the regex")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpeterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({
+                "type"
+              }),
+              new StringsCompleter(jlist(peekableThings))
+            ))
+          }
+        }
+        //scalastyle:off cyclomatic.complexity
+        def run(args: Array[String]): Unit = {
+          getOneArg("type regex") match {
+            case Some((peekRegex)) =>
+              try {
+                val portRegex = peekRegex.r
+                val numberOfThingsPeeked = peekableThings.sorted.count { settableThing =>
+                  portRegex.findFirstIn(settableThing) match {
+                    case Some(foundPort) =>
+                      try {
+                        val value = interpreter.getValue(settableThing)
+                        console.println(s"type $settableThing $value")
+                        true
+                      }
+                      catch { case _: Exception => false}
+                    case _ =>
+                      false
+                  }
+                }
+                if(numberOfThingsPeeked == 0) {
+                  console.println(s"Sorry now settable ports matched regex $peekRegex")
+                }
+              }
+              catch {
+                case e: Exception =>
+                  error(s"exception ${e.getMessage} $e")
+                case a: AssertionError =>
+                  error(s"exception ${a.getMessage}")
               }
             case _ =>
-              error(s"No current script")
           }
         }
       },
@@ -249,22 +387,67 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
               new StringsCompleter({
                 "poke"
               }),
-              new StringsCompleter(jlist(interpreter.dependencyGraph.inputPorts.toSeq))
+              new StringsCompleter(
+                jlist(interpreter.dependencyGraph.inputPorts.toSeq ++ interpreter.dependencyGraph.registerNames)
+              )
             ))
           }
         }
         def run(args: Array[String]): Unit = {
           getTwoArgs("poke inputPortName value") match {
-            case Some((portName, valueString)) =>
+            case (Some(portName), Some(valueString)) =>
               try {
-                if(valueString.startsWith("0x")) {
-                  val hexValue = BigInt(valueString.drop(2), 16)
-                  interpreter.setValueWithBigInt(portName, hexValue)
+                val numberValue = parseNumber(valueString)
+                interpreter.setValueWithBigInt(portName, numberValue)
+              }
+              catch {
+                case e: Exception =>
+                  error(s"exception ${e.getMessage} $e")
+              }
+            case _ =>
+          }
+        }
+      },
+      new Command("rpoke") {
+        private def settableThings = {
+          interpreter.dependencyGraph.inputPorts.toSeq ++ interpreter.dependencyGraph.registerNames
+        }
+        def usage: (String, String) = ("rpoke regex value", "poke value into ports that match regex")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpeterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({
+                "rpoke"
+              }),
+              new StringsCompleter(jlist(settableThings))
+            ))
+          }
+        }
+        def run(args: Array[String]): Unit = {
+          getTwoArgs("rpoke regex value") match {
+            case (Some(pokeRegex), Some(valueString)) =>
+              try {
+                val pokeValue = parseNumber(valueString)
+                val portRegex = pokeRegex.r
+                val setThings = settableThings.flatMap { settableThing =>
+                  portRegex.findFirstIn(settableThing) match {
+                    case Some(foundPort) =>
+                      interpreter.setValueWithBigInt(settableThing, pokeValue)
+                      Some(settableThing)
+                    case _ => None
+                  }
+                }
+                if(setThings.nonEmpty) {
+                  console.println(s"poking value $pokeValue into ${setThings.toList.sorted.mkString(", ")}")
                 }
                 else {
-                  val value = valueString.toInt
-                  interpreter.setValueWithBigInt(portName, value)
+                  console.println(s"Sorry now settable ports matched regex $pokeRegex")
                 }
+
+
               }
               catch {
                 case e: Exception =>
@@ -294,11 +477,62 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
             case Some(componentName) =>
               try {
                 val value = interpreter.getValue(componentName)
-                console.println(s"peek $componentName $value")
+                console.println(s"peek $componentName ${value.showValue}")
+              }
+              catch {
+                case e: Exception =>
+                  error(s"exception ${e.getMessage}")
+                case a: AssertionError =>
+                  error(s"exception ${a.getMessage}")
+              }
+            case _ =>
+          }
+        }
+      },
+      new Command("rpeek") {
+        private def peekableThings = interpreter.circuitState.validNames.toSeq
+        def usage: (String, String) = ("rpeek regex", "show the current value of things matching the regex")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpeterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({
+                "rpeek"
+              }),
+              new StringsCompleter(jlist(peekableThings))
+            ))
+          }
+        }
+        //scalastyle:off cyclomatic.complexity
+        def run(args: Array[String]): Unit = {
+          getOneArg("rpeek regex") match {
+            case Some((peekRegex)) =>
+              try {
+                val portRegex = peekRegex.r
+                val numberOfThingsPeeked = peekableThings.sorted.count { settableThing =>
+                  portRegex.findFirstIn(settableThing) match {
+                    case Some(foundPort) =>
+                      try {
+                        val value = interpreter.getValue(settableThing)
+                        console.println(s"rpeek $settableThing ${value.showValue}")
+                        true
+                      }
+                      catch { case _: Exception => false}
+                    case _ =>
+                      false
+                  }
+                }
+                if(numberOfThingsPeeked == 0) {
+                  console.println(s"Sorry now settable ports matched regex $peekRegex")
+                }
               }
               catch {
                 case e: Exception =>
                   error(s"exception ${e.getMessage} $e")
+                case a: AssertionError =>
+                  error(s"exception ${a.getMessage}")
               }
             case _ =>
           }
@@ -309,10 +543,71 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
           "randomize all inputs except reset)")
         def run(args: Array[String]): Unit = {
           for{
-            (inputPortName, value) <- interpreter.circuitState.inputPorts
-            if inputPortName != "reset"
+            (component, value) <- interpreter.circuitState.inputPorts ++
+              interpreter.circuitState.outputPorts ++
+              interpreter.circuitState.ephemera
           } {
-            interpreter.setValue(inputPortName, TypeInstanceFactory(value, randomBigInt(value.width)))
+            try {
+              val newValue = TypeInstanceFactory(value, poisoned = false)
+              interpreter.setValue(component, newValue)
+              console.println(s"setting $component to $newValue")
+            }
+            catch {
+              case e: Exception =>
+                console.println(s"Error randomize: setting $component to $value error ${e.getMessage}")
+            }
+          }
+          for((component, value) <- interpreter.circuitState.registers) {
+            try {
+              val newValue = TypeInstanceFactory(value, poisoned = false)
+              interpreter.circuitState.registers(component) = newValue
+              val newNextValue = TypeInstanceFactory(value, poisoned = false)
+              interpreter.circuitState.nextRegisters(component) = newNextValue
+              console.println(s"setting $component to $newValue")
+            }
+            catch {
+              case e: Exception =>
+                console.println(s"Error randomize: setting $component to $value error ${e.getMessage}")
+            }
+          }
+          for(memory <- interpreter.circuitState.memories.values) {
+            for(memoryIndex <- 0 until memory.dataStore.length) {
+              memory.dataStore.update(
+                memoryIndex,
+                TypeInstanceFactory(memory.dataStore.underlyingData.head, poisoned = false))
+            }
+          }
+          console.println(interpreter.circuitState.prettyString())
+        }
+      },
+      new Command("poison") {
+        def usage: (String, String) = ("poison",
+          "poison everything)")
+        def run(args: Array[String]): Unit = {
+          for{
+            (component, value) <- interpreter.circuitState.inputPorts ++
+              interpreter.circuitState.outputPorts ++
+              interpreter.circuitState.ephemera
+          } {
+            interpreter.setValue(component, TypeInstanceFactory(value))
+          }
+          for((component, value) <- interpreter.circuitState.registers) {
+            try {
+              val newValue = TypeInstanceFactory(value, poisoned = true)
+              interpreter.circuitState.registers(component) = newValue
+              val newNextValue = TypeInstanceFactory(value, poisoned = true)
+              interpreter.circuitState.nextRegisters(component) = newNextValue
+              console.println(s"setting $component to $newValue")
+            }
+            catch {
+              case e: Exception =>
+                console.println(s"Error poison: setting $component to $value error ${e.getMessage}")
+            }
+          }
+          for(memory <- interpreter.circuitState.memories.values) {
+            for(memoryIndex <- 0 until memory.dataStore.length) {
+              memory.dataStore.update(memoryIndex, TypeInstanceFactory(memory.dataType))
+            }
           }
           console.println(interpreter.circuitState.prettyString())
         }
@@ -320,6 +615,18 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
       new Command("reset") {
         def usage: (String, String) = ("reset [numberOfSteps]",
           "assert reset (if present) for numberOfSteps (default 1)")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpeterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({
+                "reset"
+              })
+            ))
+          }
+        }
         def run(args: Array[String]): Unit = {
           getOneArg("reset [numberOfSteps]", Some("1")) match {
             case Some(numberOfStepsString) =>
@@ -331,7 +638,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
                   interpreter.evaluateCircuit()
                 }
                 interpreter.setValueWithBigInt("reset", 0)
-                console.println(interpreter.circuitState.prettyString())
+                // console.println(interpreter.circuitState.prettyString())
               }
               catch {
                 case e: Exception =>
@@ -358,7 +665,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
                   }
                 }
                 if(! scriptRunning) {
-                  console.println(interpreter.circuitState.prettyString())
+                  // console.println(interpreter.circuitState.prettyString())
                   console.println(s"step $numberOfSteps in ${interpreter.timer.prettyLastTime("steps")}")
                 }
               }
@@ -409,6 +716,12 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
         def usage: (String, String) = ("show", "show the state of the circuit")
         def run(args: Array[String]): Unit = {
           console.println(interpreter.circuitState.prettyString())
+        }
+      },
+      new Command("info") {
+        def usage: (String, String) = ("info", "show information about the circuit")
+        def run(args: Array[String]): Unit = {
+          console.println(interpreter.dependencyGraph.getInfo)
         }
       },
       new Command("timing") {
@@ -590,7 +903,9 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
       new Command("quit") {
         def usage: (String, String) = ("quit", "exit the interpreter")
         def run(args: Array[String]): Unit = {
-          history.removeLast()
+          if(! history.isEmpty) {
+            history.removeLast()
+          }
           done = true
         }
       }
@@ -608,8 +923,14 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
     }
   }
 
+  /**
+    * gets the next line from either the current executing script or from the console.
+    * Strips comments from the line, may result in empty string, command parser is ok with that
+ *
+    * @return
+    */
   def getNextLine: String = {
-    currentScript match {
+    val rawLine = currentScript match {
       case Some(script) =>
         script.getNextLineOption match {
           case Some(line) =>
@@ -621,6 +942,12 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
       case _ =>
         console.readLine()
     }
+    if(rawLine == null) {
+      "quit"
+    }
+    else {
+      rawLine.split("#").head
+    }
   }
 
   def scriptRunning: Boolean = {
@@ -630,7 +957,7 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
     }
   }
 
-
+  //scalastyle:off method.length
   def run() {
     if(replConfig.firrtlSource.nonEmpty) {
       loadSource(replConfig.firrtlSource)
@@ -641,25 +968,35 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
     if(replConfig.scriptName.nonEmpty) {
       loadScript(replConfig.scriptName)
     }
-
+    if(replConfig.useVcdScript) {
+      loadVcdScript(optionsManager.getVcdFileName)
+    }
     buildCompletions()
 
     console.setPrompt("firrtl>> ")
 
+    if(replConfig.runScriptAtStart) {
+      currentScript match {
+        case Some(script) =>
+          script.reset()
+          script.runRemaining()
+        case None =>
+          console.println(s"Error: fr-run-script-at-startup set, with no script file")
+      }
+    }
+
     while (! done) {
       try {
-
-//        val line = console.readLine()
         val line = getNextLine
 
-        args = line.split(" ")
+        args = line.split(" +")
 
         if (args.length > 0) {
           if (Commands.commandMap.contains(args.head)) {
             Commands.commandMap(args.head).run(args.tail)
           }
           else {
-            error(s"unknown command $line, try help")
+            if(line.nonEmpty) error(s"unknown command $line, try help")
           }
         }
         else {
@@ -669,14 +1006,18 @@ class FirrtlRepl(optionsManager: ExecutionOptionsManager with HasReplConfig with
       catch {
         case ie: InterpreterException =>
           console.println(s"Interpreter Exception occurred: ${ie.getMessage}")
+          ie.printStackTrace()
         case e: NullPointerException =>
-          error(s"repl error ${e.getMessage}")
-          done = true
+          error(s"Null pointer exception, please file an issue\n ${e.getMessage}")
+          e.printStackTrace()
         case e: Exception =>
           console.println(s"Exception occurred: ${e.getMessage}")
+          e.printStackTrace()
       }
     }
+
     console.println(s"saving history ${history.size()}")
+    console.flush()
     history.flush()
     console.shutdown()
     terminal.restore()

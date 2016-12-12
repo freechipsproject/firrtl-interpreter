@@ -40,6 +40,8 @@ class PoisonSpec extends FreeSpec with Matchers {
     tester.poke("u_in", 17)
     tester.poke("s_in", Concrete.poisonedSInt(TestWidth))
 
+    println(s"peek should show little skulls for poison ${tester.peekConcrete("s_out").showValue}")
+
     tester.peekConcrete("s_out").toString should include ("P")
 
     tester.poke("u_in", TestWidth)
