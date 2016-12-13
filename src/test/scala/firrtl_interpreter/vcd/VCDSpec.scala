@@ -78,6 +78,7 @@ class VCDSpec extends FlatSpec with Matchers {
   behavior of "vcd log containing negative numbers"
 
   it should "work correctly and be runnable from vcd output file" in  {
+
     val input =
       """
         |circuit Adder :
@@ -111,5 +112,36 @@ class VCDSpec extends FlatSpec with Matchers {
     interpreter.peek("c") should be (BigInt(-8))
     interpreter.report()
 
+  }
+
+  behavior of "Using VCD output as a golden model test of a circuit"
+
+  it should "be able to create a VCD then replay the VCD testing inputs" in {
+    val stream = getClass.getResourceAsStream("/VcdAdder.fir")
+    val input = scala.io.Source.fromInputStream(stream).getLines().mkString("\n")
+
+    val manager = new InterpreterOptionsManager {
+      interpreterOptions = interpreterOptions.copy(writeVCD = true)
+    }
+
+    val interpreter = new InterpretiveTester(input, manager)
+    interpreter.step()
+    interpreter.poke("io_a", 3)
+    interpreter.poke("io_b", 5)
+    interpreter.peek("io_a") should be (BigInt(3))
+    interpreter.peek("io_b") should be (BigInt(5))
+
+    interpreter.step()
+    interpreter.peek("io_c") should be (BigInt(8))
+
+    //    interpreter.poke("io_a", -1)
+//    interpreter.poke("io_b", -7)
+//    interpreter.peek("io_a") should be (BigInt(-1))
+//    interpreter.peek("io_b") should be (BigInt(-7))
+//
+//    interpreter.step()
+//    interpreter.peek("io_c") should be (BigInt(-8))
+
+    interpreter.report()
   }
 }

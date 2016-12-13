@@ -371,7 +371,7 @@ case class ConcreteSInt(val value: BigInt, val width: Int, poisoned: Boolean = f
   }
 
   def forceWidth(newWidth: Int): ConcreteSInt = {
-    if(newWidth == width) this else ConcreteSInt(this.value, newWidth)
+    if(newWidth == width) this else ConcreteSInt(this.value, newWidth, poisoned)
   }
   def forceWidth(tpe: Type): ConcreteSInt = forceWidth(typeToWidth(tpe))
   override def toString: String = s"$value.${poisonString}S<$width>"

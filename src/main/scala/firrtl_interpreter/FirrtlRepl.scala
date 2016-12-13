@@ -42,9 +42,9 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
   history.load(historyFile)
   console.setHistory(history)
 
-  var currentInterpeterOpt: Option[FirrtlTerp] = None
+  var currentInterpreterOpt: Option[FirrtlTerp] = None
 
-  def interpreter: FirrtlTerp = currentInterpeterOpt.get
+  def interpreter: FirrtlTerp = currentInterpreterOpt.get
   var args = Array.empty[String]
   var done = false
 
@@ -57,8 +57,8 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
   var replVcdController: Option[ReplVcdController] = None
 
   def loadSource(input: String): Unit = {
-    currentInterpeterOpt = Some(FirrtlTerp(input, blackBoxFactories = interpreterOptions.blackBoxFactories))
-    currentInterpeterOpt.foreach { _=>
+    currentInterpreterOpt = Some(FirrtlTerp(input, blackBoxFactories = interpreterOptions.blackBoxFactories))
+    currentInterpreterOpt.foreach { _=>
       interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
       interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
       interpreter.evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
@@ -97,7 +97,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
   }
 
   def loadVcdScript(fileName: String): Unit = {
-    val dutName = currentInterpeterOpt match {
+    val dutName = currentInterpreterOpt match {
       case Some(interpreter) => interpreter.ast.main
       case None => ""
     }
@@ -331,7 +331,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
         private def peekableThings = interpreter.circuitState.validNames.toSeq
         def usage: (String, String) = ("type regex", "show the current type of things matching the regex")
         override def completer: Option[ArgumentCompleter] = {
-          if(currentInterpeterOpt.isEmpty) {
+          if(currentInterpreterOpt.isEmpty) {
             None
           }
           else {
@@ -379,7 +379,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
       new Command("poke") {
         def usage: (String, String) = ("poke inputPortName value", "set an input port to the given integer value")
         override def completer: Option[ArgumentCompleter] = {
-          if(currentInterpeterOpt.isEmpty) {
+          if(currentInterpreterOpt.isEmpty) {
             None
           }
           else {
@@ -414,7 +414,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
         }
         def usage: (String, String) = ("rpoke regex value", "poke value into ports that match regex")
         override def completer: Option[ArgumentCompleter] = {
-          if(currentInterpeterOpt.isEmpty) {
+          if(currentInterpreterOpt.isEmpty) {
             None
           }
           else {
@@ -460,7 +460,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
       new Command("peek") {
         def usage: (String, String) = ("peek componentName", "show the current value of the named circuit component")
         override def completer: Option[ArgumentCompleter] = {
-          if(currentInterpeterOpt.isEmpty) {
+          if(currentInterpreterOpt.isEmpty) {
             None
           }
           else {
@@ -493,7 +493,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
         private def peekableThings = interpreter.circuitState.validNames.toSeq
         def usage: (String, String) = ("rpeek regex", "show the current value of things matching the regex")
         override def completer: Option[ArgumentCompleter] = {
-          if(currentInterpeterOpt.isEmpty) {
+          if(currentInterpreterOpt.isEmpty) {
             None
           }
           else {
@@ -616,7 +616,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
         def usage: (String, String) = ("reset [numberOfSteps]",
           "assert reset (if present) for numberOfSteps (default 1)")
         override def completer: Option[ArgumentCompleter] = {
-          if(currentInterpeterOpt.isEmpty) {
+          if(currentInterpreterOpt.isEmpty) {
             None
           }
           else {
@@ -727,7 +727,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
       new Command("timing") {
         def usage: (String, String) = ("timing [clear|bin]", "show the current timing state")
         override def completer: Option[ArgumentCompleter] = {
-          if(currentInterpeterOpt.isEmpty) {
+          if(currentInterpreterOpt.isEmpty) {
             None
           }
           else {
@@ -786,7 +786,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
         def usage: (String, String) = ("verbose [true|false|toggle]",
           "set evaluator verbose mode (default toggle) during dependency evaluation")
         override def completer: Option[ArgumentCompleter] = {
-          if(currentInterpeterOpt.isEmpty) {
+          if(currentInterpreterOpt.isEmpty) {
             None
           }
           else {
@@ -810,7 +810,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
         def usage: (String, String) = ("eval-all [true|false|toggle]",
           "set evaluator to execute un-needed branches (default toggle) during dependency evaluation")
         override def completer: Option[ArgumentCompleter] = {
-          if(currentInterpeterOpt.isEmpty) {
+          if(currentInterpreterOpt.isEmpty) {
             None
           }
           else {
@@ -834,7 +834,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
         def usage: (String, String) = ("allow-cycles [true|false|toggle]",
           "set evaluator allow combinational loops (could cause correctness problems")
         override def completer: Option[ArgumentCompleter] = {
-          if(currentInterpeterOpt.isEmpty) {
+          if(currentInterpreterOpt.isEmpty) {
             None
           }
           else {
@@ -859,7 +859,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
         def usage: (String, String) = ("ordered-exec [true|false|toggle]",
           "set evaluator execute circuit in dependency order, now recursive component evaluation")
         override def completer: Option[ArgumentCompleter] = {
-          if(currentInterpeterOpt.isEmpty) {
+          if(currentInterpreterOpt.isEmpty) {
             None
           }
           else {

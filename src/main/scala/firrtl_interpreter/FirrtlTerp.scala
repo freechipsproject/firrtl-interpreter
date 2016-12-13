@@ -8,7 +8,6 @@ import firrtl.ir._
 // TODO: consider adding x-state
 // TODO: Support forced values on nodes (don't recompute them if forced)
 // TODO: How do zero width wires affect interpreter
-// TODO: Figure out what to do about clock
 
 /**
   * This is the Firrtl interpreter.  It is the top level control engine
@@ -112,7 +111,7 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
   def makeConcreteValue(name: String, value: BigInt, poisoned: Boolean = false): Concrete = {
     circuitState.getValue(name) match {
       case Some(currentValue) =>
-        TypeInstanceFactory.makeSimilar(currentValue, value, poisoned = false)
+        TypeInstanceFactory.makeSimilar(currentValue, value, poisoned = poisoned)
       case None =>
         TypeInstanceFactory(dependencyGraph.nameToType(name), value, poisoned = poisoned)
     }
@@ -231,8 +230,19 @@ object FirrtlTerp {
     val options = new InterpreterOptions(blackBoxFactories = blackBoxFactories, setVerbose = verbose)
     val interpreter = new FirrtlTerp(ast, options)
 
+    /* run the circuit once to get the circuit state fully populated. Evaluate all makes sure both
+    branches of muxes get computed, while we are at we can compute the sort key order
+     */
     try {
+      val saveUseTopologicalSortedKeys = interpreter.evaluator.useTopologicalSortedKeys
+      val saveEvaluateAll = interpreter.evaluator.evaluateAll
+
+      interpreter.evaluator.evaluateAll = true
+      interpreter.evaluator.useTopologicalSortedKeys = true
       interpreter.evaluateCircuit()
+
+      interpreter.evaluator.useTopologicalSortedKeys = saveUseTopologicalSortedKeys
+      interpreter.evaluator.evaluateAll = saveEvaluateAll
     }
     catch {
       case ie: InterpreterException =>
