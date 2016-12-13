@@ -120,12 +120,10 @@ class VcdReplayTester(
 
   def setInputs(timeIndex: Int): Unit = {
     vcd.valuesAtTime(timeStamps(timeIndex)).foreach { change =>
-      if (vcdTesterOptions.testAliasedWires) {
-        vcd.wiresFor(change).foreach { wire =>
-          val fullName = change.wire.fullName
-          if (inputs.contains(fullName) && interpreter.circuitState.isInput(fullName)) {
-            setValue(wire, change.value)
-          }
+      vcd.wiresFor(change).foreach { wire =>
+        val fullName = change.wire.fullName
+        if (inputs.contains(fullName) && interpreter.circuitState.isInput(fullName)) {
+          setValue(wire, change.value)
         }
       }
     }
