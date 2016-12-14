@@ -548,7 +548,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
               interpreter.circuitState.ephemera
           } {
             try {
-              val newValue = TypeInstanceFactory(value, poisoned = false)
+              val newValue = TypeInstanceFactory.makeRandomSimilar(value, poisoned = false)
               interpreter.setValue(component, newValue)
               console.println(s"setting $component to $newValue")
             }
@@ -559,9 +559,9 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
           }
           for((component, value) <- interpreter.circuitState.registers) {
             try {
-              val newValue = TypeInstanceFactory(value, poisoned = false)
+              val newValue = TypeInstanceFactory.makeRandomSimilar(value, poisoned = false)
               interpreter.circuitState.registers(component) = newValue
-              val newNextValue = TypeInstanceFactory(value, poisoned = false)
+              val newNextValue = TypeInstanceFactory.makeRandomSimilar(value, poisoned = false)
               interpreter.circuitState.nextRegisters(component) = newNextValue
               console.println(s"setting $component to $newValue")
             }
@@ -574,7 +574,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
             for(memoryIndex <- 0 until memory.dataStore.length) {
               memory.dataStore.update(
                 memoryIndex,
-                TypeInstanceFactory(memory.dataStore.underlyingData.head, poisoned = false))
+                TypeInstanceFactory.makeRandomSimilar(memory.dataStore.underlyingData.head, poisoned = false))
             }
           }
           console.println(interpreter.circuitState.prettyString())
@@ -589,13 +589,13 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
               interpreter.circuitState.outputPorts ++
               interpreter.circuitState.ephemera
           } {
-            interpreter.setValue(component, TypeInstanceFactory(value))
+            interpreter.setValue(component, TypeInstanceFactory.makeRandomSimilar(value, poisoned = true))
           }
           for((component, value) <- interpreter.circuitState.registers) {
             try {
-              val newValue = TypeInstanceFactory(value, poisoned = true)
+              val newValue = TypeInstanceFactory.makeRandomSimilar(value, poisoned = true)
               interpreter.circuitState.registers(component) = newValue
-              val newNextValue = TypeInstanceFactory(value, poisoned = true)
+              val newNextValue = TypeInstanceFactory.makeRandomSimilar(value, poisoned = true)
               interpreter.circuitState.nextRegisters(component) = newNextValue
               console.println(s"setting $component to $newValue")
             }

@@ -215,13 +215,6 @@ case class CircuitState(
     concreteValue
   }
 
-  def setInput(key: String, value: BigInt): Concrete = {
-    val concreteValue = TypeInstanceFactory(inputPorts(key), value)
-    inputPorts(key) = concreteValue
-    nameToConcreteValue(key) = concreteValue
-    concreteValue
-  }
-
   def getValue(key: String): Option[Concrete] = {
     nameToConcreteValue.get(key) match {
       case Some(value) => Some(value)

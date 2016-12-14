@@ -90,16 +90,42 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
     }
   }
 
-  def setValue(name: String, value: Concrete, force: Boolean = true): Concrete = {
+  def setValue(name: String, value: Concrete, force: Boolean = true, registerPoke: Boolean = false): Concrete = {
     if(!force) {
       assert(circuitState.isInput(name),
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
       if(checkStopped("setValue")) return Concrete.poisonedUInt(1)
     }
 
-    circuitState.setValue(name, value)
+    circuitState.setValue(name, value, registerPoke = registerPoke)
   }
 
+  /**
+    * Creates a concrete based on current circuit and the value and poisoned state
+    * It uses the type of any existing value for name and if it can't find that it
+    * looks up the type in the dependency graph
+    * this handles setting SInts with negative values, from positive bigInts when sized appropriately
+    * @param name  name of value to set
+    * @param value new value
+    * @return the concrete value that was derived from type and value
+    */
+  def makeConcreteValue(name: String, value: BigInt, poisoned: Boolean = false): Concrete = {
+    circuitState.getValue(name) match {
+      case Some(currentValue) =>
+        TypeInstanceFactory.makeSimilar(currentValue, value, poisoned = false)
+      case None =>
+        TypeInstanceFactory(dependencyGraph.nameToType(name), value, poisoned = poisoned)
+    }
+  }
+
+  /**
+    * Update the circuit state with the supplied information
+    * @param name  name of value to set
+    * @param value new value
+    * @param force allows setting components other than top level inputs
+    * @param registerPoke changes which side of a register is poked
+    * @return the concrete value that was derived from type and value
+    */
   def setValueWithBigInt(
       name: String, value: BigInt, force: Boolean = true, registerPoke: Boolean = false): Concrete = {
 
@@ -107,7 +133,8 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
       assert(circuitState.isInput(name),
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
     }
-    val concreteValue = TypeInstanceFactory(dependencyGraph.nameToType(name), value)
+
+    val concreteValue = makeConcreteValue(name, value, poisoned = false)
 
     circuitState.setValue(name, concreteValue, registerPoke = registerPoke)
   }
