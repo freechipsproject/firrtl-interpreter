@@ -38,7 +38,8 @@ object VCD extends LazyLogging {
 
   val VarSpec = """\s*(\w+)\s+(\d+)\s+(\S+)\s+([\S ]+)\s*""".r
   val ValueChangeScalar = """\s*(\d+)(\S+)\s*""".r
-  val ValueChangeVector = """\s*([rbh])([0-9\.]+)s*""".r
+  val ValueChangeVector = """\s*([rbh])([0-9\.]+)\s*""".r
+  val ValueChangeVectorX = """\s*([rbh]).*x.*\s*""".r
   val TimeStamp = """\s*#(\d+)\s*""".r
 
   def apply(moduleName: String, timeScale: String = "1ps", comment: String = ""): VCD = {
@@ -147,6 +148,8 @@ object VCD extends LazyLogging {
         this(key)
       }
     }
+
+    val initialValues = new mutable.HashSet[Change]
 
     def addScope(name: String): Unit = {
       currentScope match {
@@ -302,7 +305,6 @@ object VCD extends LazyLogging {
     }
 
     def processDump(): Unit = {
-      valuesAtTime(-1L)  // this initializes a primordial -1 time slot for initialization
       while(words.hasNext) {
         val nextWord = words.next
         // logger.debug(s"Process dump $nextWord at line ${words.currentLineNumber}")
@@ -310,7 +312,12 @@ object VCD extends LazyLogging {
           case ValueChangeScalar(value, varCode) =>
             if(wires.contains(varCode)) {
               logger.debug(s"Change scalar ${wires(varCode)} ${BigInt(value)} at line ${words.currentLineNumber}")
-              valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value))
+              if(currentTime < BigInt(0)) {
+                initialValues += Change(wires(varCode), BigInt(value))
+              }
+              else {
+                valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value))
+              }
             }
             else {
               logger.warn(
@@ -322,7 +329,31 @@ object VCD extends LazyLogging {
               if(wires.contains(varCode)) {
                 supportedVectorRadix.get(radixString) match {
                   case Some(radix) =>
-                    valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, radix))
+                    if(currentTime < BigInt(0)) {
+                      initialValues += Change(wires(varCode), BigInt(value, radix))
+                    }
+                    else {
+                      valuesAtTime(currentTime) += Change(wires(varCode), BigInt(value, radix))
+                    }
+                  case None =>
+                    logger.warn(
+                      s"Found change value for $varCode but " +
+                        s"radix $radixString not supported at line ${words.currentLineNumber}")
+                }
+              }
+            }
+          case ValueChangeVectorX(radixString) =>
+            if(words.hasNext) {
+              val varCode = words.next
+              if(wires.contains(varCode)) {
+                supportedVectorRadix.get(radixString) match {
+                  case Some(radix) =>
+                    if(currentTime < BigInt(0)) {
+                      initialValues += Change(wires(varCode), BigInt(-1))
+                    }
+                    else {
+                      valuesAtTime(currentTime) += Change(wires(varCode), BigInt(-1))
+                    }
                   case None =>
                     logger.warn(
                       s"Found change value for $varCode but " +
@@ -378,6 +409,7 @@ object VCD extends LazyLogging {
       commentHeader.toString().trim, timeScaleHeader.toString().trim, "", ignoreUnderscoredNames = true)
 
     vcd.wires ++= wires
+    vcd.initialValues ++= initialValues
     vcd.valuesAtTime ++= valuesAtTime
     vcd.aliasedWires = aliasedWires
     scopeRoot match {
@@ -443,6 +475,7 @@ case class VCD(
   var timeStamp = 0L
   val lastValues = new mutable.HashMap[String, Change]
   val valuesAtTime = new mutable.HashMap[Long, mutable.HashSet[Change]]
+  val initialValues = new mutable.HashSet[Change]
   var scopeRoot = Scope(scope)
   val wires = new mutable.HashMap[String, Wire]
   var aliasedWires = new mutable.HashMap[String, mutable.HashSet[Wire]] {
@@ -530,8 +563,14 @@ case class VCD(
       val wire = wires(wireName)
       val change = Change(wire, value)
       lastValues(wireName) = change
-      val changeSet = valuesAtTime.getOrElseUpdate(timeStamp, new mutable.HashSet[Change])
-      changeSet += change
+
+      if(timeStamp < 0) {
+        initialValues += change
+      }
+      else {
+        val changeSet = valuesAtTime.getOrElseUpdate(timeStamp, new mutable.HashSet[Change])
+        changeSet += change
+      }
     }
 
     if(! wires.contains(wireName)) {
@@ -559,6 +598,9 @@ case class VCD(
     wireChanged("clock", BigInt(0), 1)
   }
 
+  def wiresFor(change: Change): Set[Wire] = {
+    aliasedWires(change.wire.id) + change.wire
+  }
 
   def incrementId(): Unit = currentIdNumber += 1
 
@@ -577,10 +619,7 @@ case class VCD(
   }
 
   def serializeStartup: String = {
-    wires.values.map { wire =>
-      val dummyChange = Change(wire, 0)
-      dummyChange.serializeUninitialized
-    }.mkString("\n")
+    initialValues.map { _.serialize }.mkString("\n")
   }
 
   def serialize: String = {
@@ -607,8 +646,10 @@ case class VCD(
 
     doScope(scopeRoot)
     buffer.append(s"${VCD.EndDefinitionsDeclaration} ${VCD.End}\n")
-    buffer.append(s"${VCD.DumpVarsDeclaration}\n")
-    buffer.append(serializeStartup + s"\n${VCD.End}\n")
+    if(initialValues.nonEmpty) {
+      buffer.append(s"${VCD.DumpVarsDeclaration}\n")
+      buffer.append(serializeStartup + s"\n${VCD.End}\n")
+    }
     buffer.append(serializeChanges)
     buffer.toString()
   }
@@ -638,12 +679,17 @@ case class Wire(name: String, id: String, width: Int, path: Array[String] = Arra
 case class Change(wire: Wire, value: BigInt) {
   def serialize: String = {
     if(wire.width == 1) {
-      s"$value${wire.id}"
+      s"${if(value < 0) "x" else value.toString()}${wire.id}"
     }
     else {
-      "b" +
-        (wire.width - 1 to 0 by -1).map { index => if (value.testBit(index)) "1" else "0" }.mkString("") +
-        s" ${wire.id}"
+      if(value < 0) {
+        serializeUninitialized
+      }
+      else {
+        "b" +
+          (wire.width - 1 to 0 by -1).map { index => if (value.testBit(index)) "1" else "0" }.mkString("") +
+          s" ${wire.id}"
+      }
     }
   }
   def serializeUninitialized: String = {

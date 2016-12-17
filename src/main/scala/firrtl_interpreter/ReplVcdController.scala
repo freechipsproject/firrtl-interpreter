@@ -120,7 +120,6 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     def showProgress(message: => String): Unit = {
       if(runVerbose) console.println(message)
     }
-    showProgress(s"$now ${"-" * 20}")
     val stepped = stepOnPosEdgelock()
 
     vcd.valuesAtTime(timeStamps(currentTimeIndex)).foreach { change =>

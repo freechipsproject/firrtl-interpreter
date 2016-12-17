@@ -102,9 +102,16 @@ case class CircuitState(
       }
     }
 
+    vcd.timeStamp = -1
     for((name, concreteValue) <- circuitState.nameToConcreteValue) {
-      vcd.wireChanged(name, concreteValue.value, concreteValue.width)
+      if(concreteValue.poisoned) {
+        vcd.wireChanged(name, -1, concreteValue.width)
+      }
+      else {
+        vcd.wireChanged(name, concreteValue.value, concreteValue.width)
+      }
     }
+    vcd.timeStamp = 0
   }
   def writeVCD(): Unit = {
     vcdLoggerOption.foreach { _.write(vcdOutputFileName) }

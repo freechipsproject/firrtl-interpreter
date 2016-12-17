@@ -24,13 +24,14 @@ class InterpretiveTester(
 
   firrtl_interpreter.random.setSeed(optionsManager.interpreterOptions.randomSeed)
 
-  val interpreter        = FirrtlTerp(input)
+  val interpreter        = FirrtlTerp(input, blackBoxFactories = optionsManager.interpreterOptions.blackBoxFactories)
   val interpreterOptions = optionsManager.interpreterOptions
   val commonOptions      = optionsManager.commonOptions
 
-  val blackBoxFactories = optionsManager.interpreterOptions.blackBoxFactories
-
+  interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
+  interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
   interpreter.evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
+  interpreter.setVerbose(interpreterOptions.setVerbose)
 
   setVerbose(interpreterOptions.setVerbose)
 
