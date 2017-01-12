@@ -9,9 +9,10 @@ import firrtl_interpreter.vcd.VCD
 import scala.collection.mutable.ArrayBuffer
 import scala.tools.jline.console.ConsoleReader
 import scala.tools.jline.console.history.FileHistory
-import scala.tools.jline.TerminalFactory
+import scala.tools.jline.{Terminal, TerminalFactory}
 import scala.tools.jline.console.completer._
 import collection.JavaConverters._
+import scala.util.matching.Regex
 
 abstract class Command(val name: String) {
   def run(args: Array[String])
@@ -24,14 +25,14 @@ abstract class Command(val name: String) {
 }
 
 class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig with HasInterpreterOptions) {
-  val replConfig = optionsManager.replConfig
-  val interpreterOptions = optionsManager.interpreterOptions
+  val replConfig: ReplConfig = optionsManager.replConfig
+  val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
 
   firrtl_interpreter.random.setSeed(interpreterOptions.randomSeed)
 
-  val terminal = TerminalFactory.create()
+  val terminal: Terminal = TerminalFactory.create()
   val console = new ConsoleReader
-  val historyPath = "~/.firrtl_repl_history".replaceFirst("^~",System.getProperty("user.home"))
+  private val historyPath = "~/.firrtl_repl_history".replaceFirst("^~",System.getProperty("user.home"))
   val historyFile = new File(historyPath)
   if(! historyFile.exists()) {
     println(s"creating ${historyFile.getName}")
@@ -51,13 +52,13 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
   var inScript = false
   val scriptFactory = ScriptFactory(this)
   var currentScript: Option[Script] = None
-  val IntPattern = """(-?\d+)""".r
+  val IntPattern: Regex = """(-?\d+)""".r
 
   var currentVcdScript: Option[VCD] = None
   var replVcdController: Option[ReplVcdController] = None
 
   def loadSource(input: String): Unit = {
-    currentInterpreterOpt = Some(FirrtlTerp(input, blackBoxFactories = interpreterOptions.blackBoxFactories))
+    currentInterpreterOpt = Some(FirrtlTerp(input, interpreterOptions))
     currentInterpreterOpt.foreach { _=>
       interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
       interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
@@ -171,7 +172,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
       }
     }
 
-    val commands = ArrayBuffer.empty[Command]
+    val commands: ArrayBuffer[Command] = ArrayBuffer.empty[Command]
     commands ++= Seq(
       new Command("load") {
         def usage: (String, String) = ("load fileName", "load/replace the current firrtl file")
@@ -634,7 +635,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
                 interpreter.setValueWithBigInt("reset", 1)
                 val numberOfSteps = numberOfStepsString.toInt
                 for(stepNumber <- 0 until numberOfSteps) {
-                  interpreter.cycle(showState = false)
+                  interpreter.cycle()
                   interpreter.evaluateCircuit()
                 }
                 interpreter.setValueWithBigInt("reset", 0)
@@ -659,7 +660,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
                 interpreter.timer("steps") {
                   for (stepNumber <- 0 until numberOfSteps) {
                     interpreter.timer("step") {
-                      interpreter.cycle(showState = false)
+                      interpreter.cycle()
                       interpreter.evaluateCircuit()
                     }
                   }
@@ -799,7 +800,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
         def run(args: Array[String]): Unit = {
           getOneArg("verbose must be followed by true false or toggle", Some("toggle")) match {
             case Some("toggle") => interpreter.setVerbose(! interpreter.verbose)
-            case Some("true")   => interpreter.setVerbose(true)
+            case Some("true")   => interpreter.setVerbose()
             case Some("false")  => interpreter.setVerbose(false)
             case _ =>
           }
@@ -880,7 +881,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
           if(interpreter.evaluator.useTopologicalSortedKeys) {
             interpreter.setValueWithBigInt("reset", 1)
             interpreter.evaluator.evaluateAll = true
-            interpreter.cycle(showState = false)
+            interpreter.cycle()
             interpreter.evaluateCircuit()
             interpreter.setValueWithBigInt("reset", 0)
             interpreter.evaluator.evaluateAll = true
@@ -910,7 +911,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
         }
       }
     )
-    val commandMap = commands.map(command => command.name -> command).toMap
+    val commandMap: Map[String, Command] = commands.map(command => command.name -> command).toMap
   }
   //scalastyle:on
 
@@ -1048,11 +1049,9 @@ object FirrtlRepl {
   def main(args: Array[String]): Unit = {
     val optionsManager = new ExecutionOptionsManager("firrtl-repl") with HasReplConfig with HasInterpreterOptions
 
-    optionsManager.parse(args) match {
-      case true =>
-        val repl = new FirrtlRepl(optionsManager)
-        repl.run()
-      case _ =>
+    if(optionsManager.parse(args)) {
+      val repl = new FirrtlRepl(optionsManager)
+      repl.run()
     }
   }
 }
