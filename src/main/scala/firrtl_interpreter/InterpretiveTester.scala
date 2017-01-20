@@ -180,7 +180,7 @@ class InterpretiveTester(
           s"Success:"
       }
     }
-    s"test ${interpreter.loweredAst.modules.head.name} " +
+    s"test ${interpreter.loweredAst.main} " +
       s"$status $expectationsMet tests passed " +
       s"in ${interpreter.circuitState.stateCounter} cycles " +
       f"taking $elapsedSeconds%.6f seconds"
