@@ -3,10 +3,12 @@
 package firrtl_interpreter.vcd
 
 import firrtl_interpreter.{InterpreterOptionsManager, InterpretiveTester}
+import firrtl.util.BackendCompilationUtilities
+import java.io.File
 import org.scalatest.{Matchers, FlatSpec}
 
 // scalastyle:off magic.number
-class VCDSpec extends FlatSpec with Matchers {
+class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
   private def getVcd = {
     VCD("test_circuit")
   }
@@ -70,7 +72,10 @@ class VCDSpec extends FlatSpec with Matchers {
   behavior of "VCD reader"
 
   it should "be able to read a file" in {
-    val vcdFile = VCD.read("src/test/resources/GCD.vcd")
+    val tempFile = File.createTempFile("GCD", ".vcd")
+    tempFile.deleteOnExit()
+    copyResourceToFile("/GCD.vcd", tempFile)
+    val vcdFile = VCD.read(tempFile.getCanonicalPath)
 
     vcdFile.date should be ("2016-10-13T16:31+0000")
   }
