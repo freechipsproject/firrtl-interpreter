@@ -50,6 +50,34 @@ class InterpretiveTester(
 
   val startTime: Long = System.nanoTime()
 
+  /** Indicate a failure has occurred.  */
+  private var failureTime = -1L
+  private var failCode: Option[Int] = None
+  def fail(code: Int): Unit = {
+    if (failCode.isEmpty) {
+      failureTime = System.nanoTime()
+      failCode = Some(code)
+    }
+  }
+
+  /** Indicate failure due to an exception.
+    *
+    * @param ex exception causing the failure
+    * @param msg optional message to be printed
+    */
+  def fail(ex: Throwable, msg: Option[String ] = None): Nothing = {
+    msg match {
+      case Some(s) => println(s)
+      case _ =>
+    }
+    fail(2)
+    throw ex
+  }
+  def isOK: Boolean = failCode match {
+    case None | Some(0) => true
+    case _ => false
+  }
+
   /**
     * Pokes value to the port referenced by string
     * Warning: pokes to components other than input ports is currently
@@ -68,8 +96,7 @@ class InterpretiveTester(
     }
     catch {
       case ie: InterpreterException =>
-        println(s"Error: poke($name, $value)")
-        throw ie
+        fail(ie, Some(s"Error: poke($name, $value)"))
     }
   }
   /**
@@ -90,8 +117,7 @@ class InterpretiveTester(
     }
     catch {
       case ie: InterpreterException =>
-        println(s"Error: poke($name, $value)")
-        throw ie
+        fail(ie, Some(s"Error: poke($name, $value)"))
     }
   }
 
@@ -106,7 +132,8 @@ class InterpretiveTester(
     interpreter.getValue(name) match {
       case ConcreteUInt(value, _, _) => value
       case ConcreteSInt(value, _, _) => value
-      case _ => throw new InterpreterException(s"Error:peek($name) value not found")
+      case _ =>
+        fail(new InterpreterException(s"Error:peek($name) value not found"))
     }
   }
 
@@ -120,7 +147,8 @@ class InterpretiveTester(
 
     interpreter.getValue(name) match {
       case c: Concrete => c
-      case _ => throw new InterpreterException(s"Error:peek($name) value not found")
+      case _ =>
+        fail(new InterpreterException(s"Error:peek($name) value not found"))
     }
   }
 
@@ -134,7 +162,7 @@ class InterpretiveTester(
     def testValue(concrete: Concrete): Unit = {
       if (concrete.value != expectedValue) {
         if(! interpreter.verbose) interpreter.reEvaluate(name)
-        throw new InterpreterException (s"Error:expect($name, $expectedValue) got ${concrete.showValue}")
+          fail(new InterpreterException (s"Error:expect($name, $expectedValue) got ${concrete.showValue}"))
       }
     }
     if(interpreter.checkStopped(s"expect($name, $expectedValue)")) return
@@ -144,7 +172,7 @@ class InterpretiveTester(
       case value: ConcreteSInt  => testValue(value)
       case value: ConcreteClock => testValue(value)
       case _ =>
-        throw new InterpreterException(s"Error:expect($name, $expectedValue) value not found")
+        fail(new InterpreterException(s"Error:expect($name, $expectedValue) value not found"))
     }
     expectationsMet += 1
   }
@@ -177,7 +205,11 @@ class InterpretiveTester(
         case Some(stopResult) =>
           s"Failed: Stop result $stopResult:"
         case _ =>
-          s"Success:"
+          if (isOK) {
+            s"Success:"
+          } else {
+            s"Failed: Code ${failCode.get}"
+          }
       }
     }
     s"test ${interpreter.loweredAst.main} " +
@@ -191,5 +223,9 @@ class InterpretiveTester(
   def report(): Unit = {
     interpreter.writeVCD()
     println(reportString)
+  }
+
+  def finish: Boolean = {
+    isOK
   }
 }
