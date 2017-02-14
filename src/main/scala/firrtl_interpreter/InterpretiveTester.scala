@@ -70,6 +70,7 @@ class InterpretiveTester(
       case Some(s) => println(s)
       case _ =>
     }
+    fail(2)
     throw ex
   }
   def isOK: Boolean = failCode match {
@@ -161,7 +162,7 @@ class InterpretiveTester(
     def testValue(concrete: Concrete): Unit = {
       if (concrete.value != expectedValue) {
         if(! interpreter.verbose) interpreter.reEvaluate(name)
-        fail(new InterpreterException (s"Error:expect($name, $expectedValue) got ${concrete.showValue}"))
+          fail(new InterpreterException (s"Error:expect($name, $expectedValue) got ${concrete.showValue}"))
       }
     }
     if(interpreter.checkStopped(s"expect($name, $expectedValue)")) return
@@ -207,7 +208,7 @@ class InterpretiveTester(
           if (isOK) {
             s"Success:"
           } else {
-            s"Failed: ${failCode.get}"
+            s"Failed: Code ${failCode.get}"
           }
       }
     }
