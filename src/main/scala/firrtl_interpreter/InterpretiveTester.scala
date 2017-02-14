@@ -54,7 +54,7 @@ class InterpretiveTester(
   private var failureTime = -1L
   private var failCode: Option[Int] = None
   def fail(code: Int): Unit = {
-    if (failCode == None) {
+    if (failCode.isEmpty) {
       failureTime = System.nanoTime()
       failCode = Some(code)
     }
@@ -72,7 +72,7 @@ class InterpretiveTester(
     }
     throw ex
   }
-  def isOK = failCode match {
+  def isOK: Boolean = failCode match {
     case None | Some(0) => true
     case _ => false
   }
@@ -131,9 +131,8 @@ class InterpretiveTester(
     interpreter.getValue(name) match {
       case ConcreteUInt(value, _, _) => value
       case ConcreteSInt(value, _, _) => value
-      case _ => {
+      case _ =>
         fail(new InterpreterException(s"Error:peek($name) value not found"))
-      }
     }
   }
 
