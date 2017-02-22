@@ -8,7 +8,6 @@ import firrtl.ir._
 // TODO: consider adding x-state
 // TODO: Support forced values on nodes (don't recompute them if forced)
 // TODO: How do zero width wires affect interpreter
-// TODO: Figure out what to do about clock
 
 /**
   * This is the Firrtl interpreter.  It is the top level control engine
@@ -28,14 +27,14 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
   def stopped: Boolean = lastStopResult.nonEmpty
   def stopResult: Int  = lastStopResult.get
 
-  val loweredAst = if(interpreterOptions.lowCompileAtLoad) ToLoFirrtl.lower(ast) else ast
+  val loweredAst: Circuit = if(interpreterOptions.lowCompileAtLoad) ToLoFirrtl.lower(ast) else ast
 
   if(interpreterOptions.showFirrtlAtLoad) {
     println("LoFirrtl" + "=" * 120)
     println(loweredAst.serialize)
   }
 
-  val blackBoxFactories = interpreterOptions.blackBoxFactories
+  val blackBoxFactories: Seq[BlackBoxFactory] = interpreterOptions.blackBoxFactories
 
   /**
     * turns on evaluator debugging. Can make output quite
@@ -73,7 +72,7 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
     circuitState = circuitState
   )
   evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
-  val timer = evaluator.timer
+  val timer: Timer = evaluator.timer
 
   setVerbose(interpreterOptions.setVerbose)
 
@@ -90,16 +89,42 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
     }
   }
 
-  def setValue(name: String, value: Concrete, force: Boolean = true): Concrete = {
+  def setValue(name: String, value: Concrete, force: Boolean = true, registerPoke: Boolean = false): Concrete = {
     if(!force) {
       assert(circuitState.isInput(name),
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
       if(checkStopped("setValue")) return Concrete.poisonedUInt(1)
     }
 
-    circuitState.setValue(name, value)
+    circuitState.setValue(name, value, registerPoke = registerPoke)
   }
 
+  /**
+    * Creates a concrete based on current circuit and the value and poisoned state
+    * It uses the type of any existing value for name and if it can't find that it
+    * looks up the type in the dependency graph
+    * this handles setting SInts with negative values, from positive bigInts when sized appropriately
+    * @param name  name of value to set
+    * @param value new value
+    * @return the concrete value that was derived from type and value
+    */
+  def makeConcreteValue(name: String, value: BigInt, poisoned: Boolean = false): Concrete = {
+    circuitState.getValue(name) match {
+      case Some(currentValue) =>
+        TypeInstanceFactory.makeSimilar(currentValue, value, poisoned = poisoned)
+      case None =>
+        TypeInstanceFactory(dependencyGraph.nameToType(name), value, poisoned = poisoned)
+    }
+  }
+
+  /**
+    * Update the circuit state with the supplied information
+    * @param name  name of value to set
+    * @param value new value
+    * @param force allows setting components other than top level inputs
+    * @param registerPoke changes which side of a register is poked
+    * @return the concrete value that was derived from type and value
+    */
   def setValueWithBigInt(
       name: String, value: BigInt, force: Boolean = true, registerPoke: Boolean = false): Concrete = {
 
@@ -107,7 +132,8 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
       assert(circuitState.isInput(name),
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
     }
-    val concreteValue = TypeInstanceFactory(dependencyGraph.nameToType(name), value)
+
+    val concreteValue = makeConcreteValue(name, value)
 
     circuitState.setValue(name, concreteValue, registerPoke = registerPoke)
   }
@@ -126,7 +152,7 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
   }
 
   def reEvaluate(name: String): Unit = {
-    setVerbose(true)
+    setVerbose()
     evaluateCircuit(Seq(name))
   }
 
@@ -197,15 +223,52 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
 object FirrtlTerp {
   val blackBoxFactory = new DspRealFactory
 
-  def apply(input: String,
-            verbose: Boolean = false,
-            blackBoxFactories: Seq[BlackBoxFactory] = Seq(blackBoxFactory)): FirrtlTerp = {
+  def apply(input: String, interpreterOptions: InterpreterOptions = InterpreterOptions()): FirrtlTerp = {
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
-    val options = new InterpreterOptions(blackBoxFactories = blackBoxFactories, setVerbose = verbose)
+    val interpreter = new FirrtlTerp(ast, interpreterOptions)
+
+    /* run the circuit once to get the circuit state fully populated. Evaluate all makes sure both
+    branches of muxes get computed, while we are at we can compute the sort key order
+     */
+    try {
+      val saveUseTopologicalSortedKeys = interpreter.evaluator.useTopologicalSortedKeys
+      val saveEvaluateAll = interpreter.evaluator.evaluateAll
+
+      interpreter.evaluator.evaluateAll = true
+      interpreter.evaluator.useTopologicalSortedKeys = true
+      interpreter.evaluateCircuit()
+
+      interpreter.evaluator.useTopologicalSortedKeys = saveUseTopologicalSortedKeys
+      interpreter.evaluator.evaluateAll = saveEvaluateAll
+    }
+    catch {
+      case ie: InterpreterException =>
+        println(s"Error: InterpreterExecption(${ie.getMessage} during warmup evaluation")
+    }
+    interpreter
+  }
+
+  @deprecated("This loses options passed in from the command line, use other appluy methods", since = "2017-01-12")
+  def apply(input: String,
+            verbose: Boolean,
+            blackBoxFactories: Seq[BlackBoxFactory]): FirrtlTerp = {
+    val ast = firrtl.Parser.parse(input.split("\n").toIterator)
+    val options = InterpreterOptions(blackBoxFactories = blackBoxFactories, setVerbose = verbose)
     val interpreter = new FirrtlTerp(ast, options)
 
+    /* run the circuit once to get the circuit state fully populated. Evaluate all makes sure both
+    branches of muxes get computed, while we are at we can compute the sort key order
+     */
     try {
+      val saveUseTopologicalSortedKeys = interpreter.evaluator.useTopologicalSortedKeys
+      val saveEvaluateAll = interpreter.evaluator.evaluateAll
+
+      interpreter.evaluator.evaluateAll = true
+      interpreter.evaluator.useTopologicalSortedKeys = true
       interpreter.evaluateCircuit()
+
+      interpreter.evaluator.useTopologicalSortedKeys = saveUseTopologicalSortedKeys
+      interpreter.evaluator.evaluateAll = saveEvaluateAll
     }
     catch {
       case ie: InterpreterException =>

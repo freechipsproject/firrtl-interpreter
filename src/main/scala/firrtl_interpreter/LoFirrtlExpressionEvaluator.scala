@@ -426,7 +426,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
   def resolveRegister(key: String): Concrete = {
     val registerDef = dependencyGraph.registers(key)
     val resetCondition = evaluate(registerDef.reset)
-    if(resetCondition.value > 0 ) {
+    val newValue = if(resetCondition.value > 0 ) {
       val resetValue = {
         evaluate(registerDef.init).forceWidth(typeToWidth(dependencyGraph.nameToType(registerDef.name)))
       }
@@ -436,7 +436,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
       val expression = dependencyGraph.nameToExpression(key)
       evaluate(expression, Some(key))
     }
-
+    newValue
   }
   private def resolveDependency(key: String): Concrete = {
     resolveDepth += 1
@@ -488,7 +488,9 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     }
 
     if(useTopologicalSortedKeys && ! keyOrderInitialized) {
-      println(s"Key order ${orderedKeysToResolve.mkString("\n")}")
+      if(verbose) {
+        println(s"Key order ${orderedKeysToResolve.mkString("\n")}")
+      }
       keyOrderInitialized = true
     }
   }

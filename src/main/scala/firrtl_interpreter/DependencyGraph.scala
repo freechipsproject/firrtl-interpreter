@@ -55,7 +55,7 @@ object DependencyGraph extends SimpleLogger {
           WSubIndex(renameExpression(subExpression), value, tpe, gender)
         case ValidIf(condition, value, tpe) => ValidIf(renameExpression(condition), renameExpression(value), tpe)
         case DoPrim(op, args, const, tpe) =>
-          DoPrim(op, args.map {case subExpression => renameExpression(subExpression)}, const, tpe)
+          DoPrim(op, args.map { subExpression => renameExpression(subExpression)}, const, tpe)
         case c: UIntLiteral => c
         case c: SIntLiteral => c
         case _ =>
@@ -67,7 +67,7 @@ object DependencyGraph extends SimpleLogger {
     dependencyGraph.numberOfStatements += 1
     s match {
       case block: Block =>
-        block.stmts.map { case subStatement =>
+        block.stmts.map { subStatement =>
           processDependencyStatements(modulePrefix, subStatement, dependencyGraph)
         }
         block
@@ -77,7 +77,7 @@ object DependencyGraph extends SimpleLogger {
           case (_: WSubField | _: WSubIndex) => dependencyGraph(expand(con.loc.serialize)) = renameExpression(con.expr)
         }
         con
-      case WDefInstance(info, instanceName, moduleName, tpe) =>
+      case WDefInstance(info, instanceName, moduleName, _) =>
         val subModule = findModule(moduleName, dependencyGraph.circuit)
         val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
         log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
@@ -133,7 +133,7 @@ object DependencyGraph extends SimpleLogger {
       case Print(info, stringLiteral, argExpressions, clkExpression, enableExpression) =>
         dependencyGraph.addPrint(Print(
           info, stringLiteral,
-          argExpressions.map { case expression => renameExpression(expression) },
+          argExpressions.map { expression => renameExpression(expression) },
           renameExpression(clkExpression),
           renameExpression(enableExpression)
         ))
@@ -198,14 +198,18 @@ object DependencyGraph extends SimpleLogger {
         processPorts(extModule)
         /* use exists while looking for the right factory, short circuits iteration when found */
         log(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
-        dependencyGraph.blackBoxFactories.exists { factory =>
+        val implementationFound = dependencyGraph.blackBoxFactories.exists { factory =>
           log("Found an existing factory")
-          factory.createInstance(modulePrefix, extModule.name) match {
+          factory.createInstance(modulePrefix, extModule.defname) match {
             case Some(implementation) =>
               processExternalInstance(extModule, modulePrefix, implementation, dependencyGraph)
               true
             case _ => false
           }
+        }
+        if(! implementationFound) {
+          println( s"""WARNING: external module "${extModule.defname}"($modulePrefix:${extModule.name})""" +
+              """was not matched with an implementation""")
         }
     }
   }
@@ -243,7 +247,7 @@ object DependencyGraph extends SimpleLogger {
     }
 
     log(s"For module ${module.name} dependencyGraph =")
-    dependencyGraph.nameToExpression.keys.toSeq.sorted foreach { case k =>
+    dependencyGraph.nameToExpression.keys.toSeq.sorted foreach { k =>
       val v = dependencyGraph.nameToExpression(k).serialize
       log(s"  $k -> (" + v.toString.take(MaxColumnWidth) + ")")
     }

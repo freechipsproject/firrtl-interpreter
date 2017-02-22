@@ -109,7 +109,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     needToStep
   }
 
-  //scalastyle:off method.length cyclomatic.complexity
+  //scalastyle:off method.length
   /**
     * Applies changes to circuit based on current vcd time step to current inputs.
     *
@@ -120,7 +120,6 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
     def showProgress(message: => String): Unit = {
       if(runVerbose) console.println(message)
     }
-    showProgress(s"$now ${"-" * 20}")
     val stepped = stepOnPosEdgelock()
 
     vcd.valuesAtTime(timeStamps(currentTimeIndex)).foreach { change =>
@@ -143,41 +142,21 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
           showProgress(s"poke $fullName $newValue $message")
 
           interpreter.setValueWithBigInt(fullName, newValue)
-          vcdCircuitState.setInput(fullName, newValue)
+          vcdCircuitState.setValue(fullName, interpreter.getValue(fullName))
+        }
+        else if(interpreter.circuitState.nameToConcreteValue.contains(fullName)) {
+          val isRegister = interpreter.circuitState.registers.contains(fullName)
+          val newConcreteValue = interpreter.makeConcreteValue(fullName, newValue)
+
+          if(currentTimeIndex == 0) {
+            /* if first time increment populate components other than inputs */
+            interpreter.setValue(fullName, newConcreteValue, registerPoke = isRegister)
+          }
+          vcdCircuitState.setValue(fullName, newConcreteValue, registerPoke = isRegister)
+          showProgress(s"recording: $fullName to ${newConcreteValue.value} $message")
         }
         else {
-          vcdCircuitState.getValue(fullName) match {
-            case Some(oldConcrete) =>
-              val newConcrete = TypeInstanceFactory.makeSimilar(oldConcrete, newValue, poisoned = false)
-              val isRegister = interpreter.circuitState.registers.contains(fullName)
-              //interpreter.setValueWithBigInt(fullName, newValue, registerPoke = isRegister)
-              //vcdCircuitState.setValue(fullName, newConcrete, registerPoke = isRegister)
-              if (currentTimeIndex < 1) {
-                showProgress(s"setting: $fullName to ${newConcrete.value} $message")
-                interpreter.setValueWithBigInt(fullName, newValue, registerPoke = isRegister)
-              }
-              else {
-                showProgress(s"recording: $fullName ${oldConcrete.value} to ${newConcrete.value} $message")
-              }
-              vcdCircuitState.setValue(fullName, newConcrete, registerPoke = isRegister)
-            case _ =>
-              if (vcdCircuitState.validNames.contains(fullName)) {
-                interpreter.dependencyGraph.nameToType.get(fullName).foreach { typ =>
-                  val newConcrete = TypeInstanceFactory(typ, newValue, poisoned = false)
-                  if (currentTimeIndex < 1) {
-                    showProgress(s"setting: $fullName to ${newConcrete.value} $message")
-                    interpreter.setValueWithBigInt(fullName, newValue)
-                  }
-                  else {
-                    showProgress(s"recording: $fullName to ${newConcrete.value} $message")
-                  }
-                  vcdCircuitState.setValue(fullName, newConcrete)
-                }
-              }
-              else {
-                // showProgress(s"Don't know how to process entry: change $fullName to $newValue")
-              }
-          }
+          // showProgress(s"Don't know how to process entry: change $fullName to $newValue")
         }
       }
     }

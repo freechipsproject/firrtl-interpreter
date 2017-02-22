@@ -38,13 +38,12 @@ class BlackBoxRealSpec extends FreeSpec with Matchers {
 
     "addition should work expand instances as found" in {
 
-
       val optionsManager = new ExecutionOptionsManager("interpreter") with HasInterpreterOptions {
         interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(new DspRealFactory), randomSeed = 0L)
       }
       val tester = new InterpretiveTester(adderInput, optionsManager)
       tester.interpreter.verbose = true
-      tester.interpreter.setVerbose(true)
+      tester.interpreter.setVerbose()
 
 
       tester.poke("io_a1_node", doubleToBigIntBits(1.5))
@@ -60,7 +59,7 @@ class BlackBoxRealSpec extends FreeSpec with Matchers {
       }
       val tester = new InterpretiveTester(adderInput, optionsManager)
       tester.interpreter.verbose = true
-      tester.interpreter.setVerbose(true)
+      tester.interpreter.setVerbose()
 
       tester.peekConcrete("io_a1_node").poisoned should be (true)
       tester.peekConcrete("io_a2_node").poisoned should be (true)
@@ -97,7 +96,7 @@ class BlackBoxRealSpec extends FreeSpec with Matchers {
     }
     val tester = new InterpretiveTester(input, optionsManager)
     tester.interpreter.verbose = true
-    tester.interpreter.setVerbose(true)
+    tester.interpreter.setVerbose()
 
 
     tester.poke("io_a_node", doubleToBigIntBits(3.14159))

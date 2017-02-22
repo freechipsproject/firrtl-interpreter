@@ -24,13 +24,14 @@ class InterpretiveTester(
 
   firrtl_interpreter.random.setSeed(optionsManager.interpreterOptions.randomSeed)
 
-  val interpreter        = FirrtlTerp(input)
-  val interpreterOptions = optionsManager.interpreterOptions
-  val commonOptions      = optionsManager.commonOptions
+  val interpreter: FirrtlTerp                = FirrtlTerp(input, optionsManager.interpreterOptions)
+  val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
+  val commonOptions: firrtl.CommonOptions    = optionsManager.commonOptions
 
-  val blackBoxFactories = optionsManager.interpreterOptions.blackBoxFactories
-
+  interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
+  interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
   interpreter.evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
+  interpreter.setVerbose(interpreterOptions.setVerbose)
 
   setVerbose(interpreterOptions.setVerbose)
 
@@ -47,7 +48,7 @@ class InterpretiveTester(
     interpreter.setVerbose(value)
   }
 
-  val startTime = System.nanoTime()
+  val startTime: Long = System.nanoTime()
 
   /**
     * Pokes value to the port referenced by string
@@ -179,7 +180,7 @@ class InterpretiveTester(
           s"Success:"
       }
     }
-    s"test ${interpreter.loweredAst.modules.head.name} " +
+    s"test ${interpreter.loweredAst.main} " +
       s"$status $expectationsMet tests passed " +
       s"in ${interpreter.circuitState.stateCounter} cycles " +
       f"taking $elapsedSeconds%.6f seconds"
