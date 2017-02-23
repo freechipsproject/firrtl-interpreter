@@ -16,9 +16,8 @@ class ConcreteSpec extends FlatSpec with Matchers {
 
   it should "not create numbers with wider than specified width" in {
     for(i <- IntWidthTestValuesGenerator(1, maxWidth)) {
-      for( trails <- 0 to 200) {
+      for( _ <- 0 to 200) {
         val x = randomBigInt(i)
-//        println(s"$i $x ${x.bitLength}")
         x.bitLength should be <= i
       }
     }
@@ -28,9 +27,8 @@ class ConcreteSpec extends FlatSpec with Matchers {
 
   it should "work up to a reasonable size" in {
     for(i <- IntWidthTestValuesGenerator(1, maxWidth)) {
-      for( trails <- 0 to 200) {
+      for( _ <- 0 to 200) {
         val x = randomBigInt(i)
-//        println(s"$i $x ${x.bitLength}")
 
         val ci = ConcreteUInt(x, i)
         ci.isInstanceOf[ConcreteUInt] should be (true)
@@ -89,12 +87,9 @@ class ConcreteSpec extends FlatSpec with Matchers {
   }
 
   it should "return obvious subtractions under large range of numbers" in {
-    for (trials <- 0 to 10000) {
+    for (_ <- 0 to 10000) {
       val (cu1, cu2) = (randC, randC)
-//      print(s"concrete subtraction $cu1 $cu2 ")
       val sum = cu1 - cu2
-
-//      println(s"sum is $sum")
 
       sum.value should be (cu1.value - cu2.value)
     }
@@ -208,7 +203,7 @@ class ConcreteSpec extends FlatSpec with Matchers {
   }
 
   it should "return obvious multiplications under large range of numbers" in {
-    for (trials <- 0 to 10000) {
+    for (_ <- 0 to 10000) {
       val (cu1, cu2) = (randC, randC)
       val sum = cu1 * cu2
 
@@ -233,7 +228,7 @@ class ConcreteSpec extends FlatSpec with Matchers {
   }
 
   it should "return obvious divisions under large range of numbers" in {
-    for (trials <- 0 to 10000) {
+    for (_ <- 0 to 10000) {
       val (cu1, cu2) = (randC, randC)
 
       val dividend = cu1 / cu2
@@ -263,7 +258,7 @@ class ConcreteSpec extends FlatSpec with Matchers {
   }
 
   it should "return obvious modulus under large range of numbers" in {
-    for (trials <- 0 to 10000) {
+    for (_ <- 0 to 10000) {
       val (cu1, cu2) = (randC, randC)
 
       val modulus = cu1 % cu2
@@ -409,6 +404,49 @@ class ConcreteSpec extends FlatSpec with Matchers {
     for(i <- 3 to maxWidth) {
       for(arg <- 1 until i) {
         testShiftOp(i, arg)
+      }
+    }
+  }
+
+  behavior of "dyn shift right"
+
+  it should "work for wide range of values" in {
+    def testShiftRightOp(width: Int, shift: Int): Unit = {
+      val num = allOnes(width)
+      val expectedNum = num >> shift
+
+      val target = ConcreteUInt(num, width)
+      val shiftedNum = target >> shift
+
+      requiredBitsForUInt(num) should be (width)
+      shiftedNum.width should be ((width - shift).max(0))
+      shiftedNum.value should be (expectedNum)
+    }
+    def testDynamicShiftRightOp(width: Int, shift: Int): Unit = {
+      val num = allOnes(width)
+      val expectedNum = num >> shift
+
+      val target = ConcreteUInt(num, width)
+      val shiftArg = ConcreteUInt(shift, requiredBitsForUInt(shift))
+
+      requiredBitsForUInt(num) should be (width)
+
+      val result = target >> shiftArg
+      // println(s"width $width => num $num arg $shift, target $target result $result")
+//      result.width should be (width)
+      result.value should be (expectedNum)
+    }
+    testShiftRightOp(29, 1)
+
+    for(i <- 3 to maxWidth + 4) {
+      for(arg <- 1 until i) {
+        testShiftRightOp(i, arg)
+      }
+    }
+    for(i <- 3 to 20) {
+      val fullShift = allOnes(i)
+      for(arg <- Seq(fullShift - 1, fullShift, fullShift + 1, fullShift + 2)) {
+        testDynamicShiftRightOp(i, arg.toInt)
       }
     }
   }
