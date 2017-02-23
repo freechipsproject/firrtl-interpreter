@@ -422,6 +422,7 @@ class ConcreteSpec extends FlatSpec with Matchers {
       shiftedNum.width should be ((width - shift).max(0))
       shiftedNum.value should be (expectedNum)
     }
+
     def testDynamicShiftRightOp(width: Int, shift: Int): Unit = {
       val num = allOnes(width)
       val expectedNum = num >> shift
@@ -429,13 +430,27 @@ class ConcreteSpec extends FlatSpec with Matchers {
       val target = ConcreteUInt(num, width)
       val shiftArg = ConcreteUInt(shift, requiredBitsForUInt(shift))
 
-      requiredBitsForUInt(num) should be (width)
+      requiredBitsForUInt(num) should be(width)
 
       val result = target >> shiftArg
       // println(s"width $width => num $num arg $shift, target $target result $result")
-//      result.width should be (width)
+      //      result.width should be (width)
+      result.value should be(expectedNum)
+    }
+
+    def testSIntDynamicShiftRightOp(width: Int, shift: Int): Unit = {
+      val num = allOnes(width-1)
+      val expectedNum = -num >> shift
+
+      val target = ConcreteSInt(-num, width)
+      val shiftArg = ConcreteUInt(shift, requiredBitsForUInt(shift))
+
+      requiredBitsForSInt(num) should be (width)
+
+      val result = target >> shiftArg
       result.value should be (expectedNum)
     }
+
     testShiftRightOp(29, 1)
 
     for(i <- 3 to maxWidth + 4) {
@@ -444,9 +459,13 @@ class ConcreteSpec extends FlatSpec with Matchers {
       }
     }
     for(i <- 3 to 20) {
-      val fullShift = allOnes(i)
-      for(arg <- Seq(fullShift - 1, fullShift, fullShift + 1, fullShift + 2)) {
-        testDynamicShiftRightOp(i, arg.toInt)
+      for(shift <- i - 3 to i + 3) {
+        testDynamicShiftRightOp(i, shift)
+      }
+    }
+    for(i <- 3 to 20) {
+      for(shift <- i - 3 to i + 3) {
+        testSIntDynamicShiftRightOp(i, shift)
       }
     }
   }
