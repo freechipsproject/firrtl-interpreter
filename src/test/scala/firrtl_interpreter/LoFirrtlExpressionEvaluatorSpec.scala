@@ -54,7 +54,7 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
 
   behavior of "Primitive ops"
 
-  val input =
+  val input: String =
     """circuit Test :
       |  module Test :
       |    input clk : Clock
@@ -163,12 +163,6 @@ class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
   it should "throw assertions when parameter is less than zero" in {
     intercept[AssertionError] {
       evaluator.bitOps(Shr, Seq(UIntLiteral(1, IntWidth(3))), Seq(-1), UIntType(IntWidth(3)))
-    }
-    intercept[AssertionError] {
-      evaluator.bitOps(Shr, Seq(UIntLiteral(1, IntWidth(3))), Seq(4), UIntType(IntWidth(3)))
-    }
-    intercept[AssertionError] {
-      evaluator.bitOps(Shr, Seq(UIntLiteral(1, IntWidth(33))), Seq(34), UIntType(IntWidth(3)))
     }
   }
   it should "shift bits n bits to the right" in {
