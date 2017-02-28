@@ -3,6 +3,7 @@
 package firrtl_interpreter.vcd
 
 import firrtl_interpreter.{InterpreterOptionsManager, InterpretiveTester}
+import firrtl.CommonOptions
 import firrtl.util.BackendCompilationUtilities
 import java.io.File
 import org.scalatest.{Matchers, FlatSpec}
@@ -98,6 +99,7 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
 
     val manager = new InterpreterOptionsManager {
       interpreterOptions = interpreterOptions.copy(writeVCD = true)
+      commonOptions = CommonOptions(targetDirName = "test_run_dir")
     }
     val interpreter = new InterpretiveTester(input, manager)
     interpreter.poke("a", -1)
@@ -127,6 +129,7 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
 
     val manager = new InterpreterOptionsManager {
       interpreterOptions = interpreterOptions.copy(writeVCD = true)
+      commonOptions = CommonOptions(targetDirName = "test_run_dir")
     }
 
     val interpreter = new InterpretiveTester(input, manager)
