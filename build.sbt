@@ -1,3 +1,5 @@
+import Dependencies._
+
 name := "firrtl-interpreter"
 
 organization := "edu.berkeley.cs"
@@ -17,8 +19,7 @@ resolvers ++= Seq(
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
 val defaultVersions = Map("firrtl" -> "1.1-SNAPSHOT")
 
-libraryDependencies ++= (Seq("firrtl").map {
-  dep: String => "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", defaultVersions(dep)) })
+libraryDependencies ++= chiselLibraryDependencies("firrtl-interpreter")
 
 libraryDependencies ++= Seq(
   "org.scalatest" % "scalatest_2.11" % "2.2.4",
@@ -30,3 +31,4 @@ libraryDependencies ++= Seq(
 //javaOptions in run ++= Seq(
     //"-Xms2G", "-Xmx4G", "-XX:MaxPermSize=1024M", "-XX:+UseConcMarkSweepGC")
 
+dependsOn((Dependencies.chiselProjectDependencies("firrtl-interpreter")):_*)
