@@ -152,7 +152,6 @@ trait Concrete {
     case ConcreteUInt(thatValue, _, _) =>
       val shift = thatValue.toInt
       assert(shift >= 0, s"ERROR:$this >> $that ${that.value} must be >= 0")
-      assert(shift < this.width, s"ERROR:$this >> $that ${that.value} must be < ${this.width}")
       this match {
         case _: ConcreteUInt => ConcreteUInt(this.value >> shift, this.width)
         case _: ConcreteSInt => ConcreteSInt(this.value >> shift, this.width)
@@ -162,7 +161,6 @@ trait Concrete {
   def >>(that: BigInt): Concrete = >>(that.toInt)
   def >>(shift: Int): Concrete = {
     assert(shift >= 0, s"ERROR:$this >> $shift $shift must be >= 0")
-    assert(shift < this.width, s"ERROR:$this >> $shift $shift must be >= 0")
     this match {
       case ConcreteUInt(thisValue, thisWidth, p) => ConcreteUInt(this.value >> shift, thisWidth - shift, p)
       case ConcreteSInt(thisValue, thisWidth, p) => ConcreteSInt(this.value >> shift, thisWidth - shift, p)
@@ -327,14 +325,14 @@ object Concrete {
   * @param value the BigInt value of this UInt, must be non-negative
   * @param width the number of bits in this value, must be big enough to contain value
   */
-case class ConcreteUInt(val value: BigInt, val width: Int, poisoned: Boolean = false) extends Concrete {
+case class ConcreteUInt(value: BigInt, width: Int, poisoned: Boolean = false) extends Concrete {
   if(width < 0) {
     throw new InterpreterException(s"error: ConcreteUInt($value, $width) bad width $width must be > 0")
   }
   if(value < 0) {
     throw new InterpreterException(s"error: ConcreteUInt($value, $width) bad value $value must be >= 0")
   }
-  val bitsRequired = requiredBitsForUInt(value)
+  val bitsRequired: Int = requiredBitsForUInt(value)
   if((width > 0) && (bitsRequired > width)) {
     throw new InterpreterException(
       s"error: ConcreteUInt($value, $width) bad width $width needs ${requiredBitsForUInt(value)}"
@@ -352,7 +350,7 @@ case class ConcreteUInt(val value: BigInt, val width: Int, poisoned: Boolean = f
   * @param value the BigInt value of this UInt,
   * @param width the number of bits in this value, must be big enough to contain value plus 1 for sign bit
   */
-case class ConcreteSInt(val value: BigInt, val width: Int, poisoned: Boolean = false) extends Concrete {
+case class ConcreteSInt(value: BigInt, width: Int, poisoned: Boolean = false) extends Concrete {
   if(width < 0) {
     throw new InterpreterException(s"error: ConcreteSInt($value, $width) bad width $width must be > 0")
   }
@@ -376,7 +374,7 @@ case class ConcreteSInt(val value: BigInt, val width: Int, poisoned: Boolean = f
   def forceWidth(tpe: Type): ConcreteSInt = forceWidth(typeToWidth(tpe))
   override def toString: String = s"$value.${poisonString}S<$width>"
 }
-case class ConcreteClock(val value: BigInt) extends Concrete {
+case class ConcreteClock(value: BigInt) extends Concrete {
   val width = 1
   val poisoned = false
 
