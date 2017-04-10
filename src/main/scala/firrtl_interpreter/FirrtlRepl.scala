@@ -352,7 +352,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
                 val portRegex = peekRegex.r
                 val numberOfThingsPeeked = peekableThings.sorted.count { settableThing =>
                   portRegex.findFirstIn(settableThing) match {
-                    case Some(foundPort) =>
+                    case Some(_) =>
                       try {
                         val value = interpreter.getValue(settableThing)
                         console.println(s"type $settableThing $value")
@@ -435,7 +435,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
                 val portRegex = pokeRegex.r
                 val setThings = settableThings.flatMap { settableThing =>
                   portRegex.findFirstIn(settableThing) match {
-                    case Some(foundPort) =>
+                    case Some(_) =>
                       interpreter.setValueWithBigInt(settableThing, pokeValue)
                       Some(settableThing)
                     case _ => None
@@ -477,7 +477,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
           getOneArg("peek componentName") match {
             case Some(componentName) =>
               try {
-                val value = interpreter.getValue(componentName)
+                val value = interpreter.getSpecifiedValue(componentName)
                 console.println(s"peek $componentName ${value.showValue}")
               }
               catch {
@@ -514,9 +514,9 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
                 val portRegex = peekRegex.r
                 val numberOfThingsPeeked = peekableThings.sorted.count { settableThing =>
                   portRegex.findFirstIn(settableThing) match {
-                    case Some(foundPort) =>
+                    case Some(_) =>
                       try {
-                        val value = interpreter.getValue(settableThing)
+                        val value = interpreter.getSpecifiedValue(settableThing)
                         console.println(s"rpeek $settableThing ${value.showValue}")
                         true
                       }
@@ -634,7 +634,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
               try {
                 interpreter.setValueWithBigInt("reset", 1)
                 val numberOfSteps = numberOfStepsString.toInt
-                for(stepNumber <- 0 until numberOfSteps) {
+                for(_ <- 0 until numberOfSteps) {
                   interpreter.cycle()
                   interpreter.evaluateCircuit()
                 }
@@ -658,7 +658,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
               try {
                 val numberOfSteps = numberOfStepsString.toInt
                 interpreter.timer("steps") {
-                  for (stepNumber <- 0 until numberOfSteps) {
+                  for (_ <- 0 until numberOfSteps) {
                     interpreter.timer("step") {
                       interpreter.cycle()
                       interpreter.evaluateCircuit()
@@ -714,9 +714,28 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
         }
       },
       new Command("show") {
-        def usage: (String, String) = ("show", "show the state of the circuit")
+        def usage: (String, String) = ("show [state|input|lofirrtl]", "show useful things")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpreterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({ "show"}),
+              new StringsCompleter(jlist(Seq("state", "input", "lofirrtl")))
+            ))
+          }
+        }
+
         def run(args: Array[String]): Unit = {
-          console.println(interpreter.circuitState.prettyString())
+          getOneArg("", Some("state")) match {
+            case Some("lofirrtl") =>
+              console.println(interpreter.loweredAst.serialize)
+            case Some("input") =>
+              console.println(interpreter.ast.serialize)
+            case _ =>
+              console.println(interpreter.circuitState.prettyString())
+          }
         }
       },
       new Command("info") {
@@ -771,8 +790,8 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
                     else {
                       t1.events < t2.events
                     }
-                  case (Some(t1), None)     => false
-                  case (None, Some(t2))     => true
+                  case (Some(_), None)      => false
+                  case (None, Some(_))      => true
                   case _                    => a < b
                 }
               }
