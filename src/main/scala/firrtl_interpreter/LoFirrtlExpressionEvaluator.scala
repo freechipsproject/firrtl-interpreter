@@ -29,11 +29,11 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
 
   val evaluationStack = new ExpressionExecutionStack(this)
 
-  var defaultKeysToResolve = {
+  var defaultKeysToResolve: Array[String] = {
     val keys = new mutable.HashSet[String]
 
     keys ++= circuitState.memories.flatMap {
-      case (name, memory) => memory.getAllFieldDependencies
+      case (_, memory) => memory.getAllFieldDependencies
     }.filter(dependencyGraph.nameToExpression.contains)
 
     keys ++= dependencyGraph.outputPorts
@@ -301,7 +301,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
             case v =>
               throw InterpreterException(s"mux($condition) must be (0|1).U<1> was $v $sourceInfo")
           }
-        case WRef(name, tpe, kind, gender) => getValue(name).forceWidth(tpe)
+        case WRef(name, tpe, _, _) => getValue(name).forceWidth(tpe)
         case ws: WSubField =>
           val name = ws.serialize
           getValue(name).forceWidth(ws.tpe)
@@ -400,7 +400,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     dedent()
     log(
       leftHandSideOption match {
-        case Some(key) =>
+        case Some(_) =>
           s"evaluated    ${leftHandSideOption.getOrElse("")} <= $result"
         case _         =>
           s"evaluated     $result"
@@ -473,7 +473,10 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
 
   def resolveDependencies(specificDependencies: Iterable[String]): Unit = {
     val toResolve: Iterable[String] = {
-      if(useTopologicalSortedKeys && keyOrderInitialized) {
+      if(specificDependencies.nonEmpty) {
+        specificDependencies
+      }
+      else if(useTopologicalSortedKeys && keyOrderInitialized) {
         orderedKeysToResolve
       } else {
         defaultKeysToResolve
@@ -515,7 +518,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     for(printStatement <- dependencyGraph.prints) {
       val condition = evaluate(printStatement.en)
       if(condition.value > 0) {
-        val resolvedArgs = printStatement.args.map { case arg =>
+        val resolvedArgs = printStatement.args.map { arg =>
           evaluate(arg).value
         }
         val formatString = printStatement.string.array.map(_.toChar).mkString("")
