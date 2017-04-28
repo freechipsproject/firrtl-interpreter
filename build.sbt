@@ -1,4 +1,6 @@
-import Dependencies._
+// See LICENSE for license details.
+
+import chiselBuild.ChiselDependencies._
 
 val internalName = "firrtl_interpreter"
 
@@ -33,4 +35,4 @@ libraryDependencies ++= Seq(
 //javaOptions in run ++= Seq(
     //"-Xms2G", "-Xmx4G", "-XX:MaxPermSize=1024M", "-XX:+UseConcMarkSweepGC")
 
-dependsOn((Dependencies.chiselProjectDependencies(internalName)):_*)
+dependsOn((chiselProjectDependencies(internalName)):_*)
