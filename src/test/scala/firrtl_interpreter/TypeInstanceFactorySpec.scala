@@ -3,10 +3,10 @@
 package firrtl_interpreter
 
 import firrtl.ir._
-import org.scalatest.{FlatSpec, ShouldMatchers}
+import org.scalatest.{FlatSpec, Matchers}
 
 // scalastyle:off magic.number
-class TypeInstanceFactorySpec extends FlatSpec with ShouldMatchers {
+class TypeInstanceFactorySpec extends FlatSpec with Matchers {
   behavior of "TypeInstanceFactory"
 
   it should "concrete types are initialized with value zero" in {
