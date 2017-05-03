@@ -80,8 +80,21 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
     assert(dependencyGraph.validNames.contains(name),
       s"Error: getValue($name) is not an element of this circuit")
 
-  if(circuitState.isStale) {
-      evaluateCircuit()
+    if(circuitState.isStale) {
+        evaluateCircuit()
+      }
+    circuitState.getValue(name) match {
+      case Some(value) => value
+      case _ => throw InterpreterException(s"Error: getValue($name) returns value not found")
+    }
+  }
+
+  def getSpecifiedValue(name: String): Concrete = {
+    assert(dependencyGraph.validNames.contains(name),
+      s"Error: getValue($name) is not an element of this circuit")
+
+    if(circuitState.isStale) {
+      evaluateCircuit(Seq(name))
     }
     circuitState.getValue(name) match {
       case Some(value) => value
@@ -148,7 +161,9 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
     log(s"resolve dependencies")
     evaluator.resolveDependencies(specificDependencies)
 
-    circuitState.isStale = false
+    if(specificDependencies.isEmpty) {
+      circuitState.isStale = false
+    }
   }
 
   def reEvaluate(name: String): Unit = {
