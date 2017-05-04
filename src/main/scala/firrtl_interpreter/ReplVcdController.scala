@@ -2,28 +2,31 @@
 
 package firrtl_interpreter
 
-import firrtl_interpreter.vcd.{Wire, VCD}
+import firrtl_interpreter.vcd.{VCD, Wire}
+
+import scala.tools.jline.console.ConsoleReader
+import scala.util.matching.Regex
 
 class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val vcd: VCD) {
-  val console = repl.console
+  val console: ConsoleReader = repl.console
 
   // The following three elements track state of running the vcd file
-  var currentTime = 0L
-  var currentTimeIndex = 0
-  val timeStamps = vcd.valuesAtTime.keys.toList.sorted.toArray
+  var currentTime: Long = 0L
+  var currentTimeIndex: Int = 0
+  val timeStamps: Array[Long] = vcd.valuesAtTime.keys.toList.sorted.toArray
 
   // The following control the current list state of the vcd file
-  var currentListLocation = 0
-  var currentListSize = 10
+  var currentListLocation: Int = 0
+  var currentListSize: Int = 10
 
-  var testAfterRun = true
-  var runVerbose = true
+  var testAfterRun: Boolean = true
+  var runVerbose: Boolean = true
 
-  val IntPattern = """(-?\d+)""".r
+  val IntPattern: Regex = """(-?\d+)""".r
 
-  val vcdCircuitState = interpreter.circuitState.clone
+  val vcdCircuitState: CircuitState = interpreter.circuitState.clone
 
-  val inputs = {
+  val inputs: Set[String] = {
     vcd.scopeRoot.wires
       .filter { wire =>
         interpreter.circuitState.isInput(wire.name)
@@ -31,7 +34,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
       .map(_.name).toSet
   }
 
-  val outputs = {
+  val outputs: Set[Wire] = {
     vcd.scopeRoot.wires.filter { wire =>
       interpreter.circuitState.isOutput(wire.name)
     }.toSet
@@ -104,7 +107,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
 
     if(needToStep) {
       console.println(s"vcd step called at $now")
-      interpreter.cycle(showState = false)
+      interpreter.cycle()
     }
     needToStep
   }
@@ -235,7 +238,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
         arg match {
           case IntPattern(nString) =>
             for {
-              events <- 0 until nString.toInt
+              _ <- 0 until nString.toInt
               if currentTimeIndex < timeStamps.length
             } {
               doChanges()
@@ -323,7 +326,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
       case Nil =>
         showCurrent()
       case "all" :: _ =>
-        for(timeIndex <- timeStamps.indices) {
+        for(_ <- timeStamps.indices) {
           show(0, timeStamps.length)
         }
         currentListLocation = currentTimeIndex + 1
