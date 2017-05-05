@@ -137,7 +137,6 @@ case class CircuitState(
   def vcdRaiseClock(): Unit = {
     if(! clockHigh) {
       vcdLoggerOption.foreach { vcd =>
-        vcd.timeStamp += 1
         vcd.raiseClock()
       }
       clockHigh = true
@@ -146,13 +145,11 @@ case class CircuitState(
   def vcdLowerClock(): Unit = {
     if(clockHigh) {
       vcdLoggerOption.foreach { vcd =>
-        vcd.timeStamp += 1
         vcd.lowerClock()
       }
       clockHigh = false
     }
   }
-  def vcdIncrementTime(n: Int): Unit = vcdLoggerOption.foreach { _.incrementTime(n) }
   def vcdWireChangedwire(key: String, concrete: Concrete): Unit = {
     vcdLoggerOption.foreach { _.wireChanged(key, concrete.value, concrete.width) }
   }
@@ -163,8 +160,6 @@ case class CircuitState(
     * cycle all memories
     */
   def cycle(): Unit = {
-    vcdRaiseClock()
-
     registers.keys.foreach { key =>
       val nextValue = nextRegisters(key)
       vcdWireChangedwire(key, nextValue)
@@ -259,7 +254,7 @@ case class CircuitState(
   def prettyString(dense: Boolean = true): String = {
     val (prefix, separator, postfix) = if(dense) (": ", ", ", "") else (":\n  ", "\n  ", "")
     def showConcreteValues(msg: String, m: Map[String, Concrete]): String = {
-      m.keys.toSeq.sorted.map { case key =>
+      m.keys.toSeq.sorted.map { key =>
         s"$key=${m(key).showValue}"
       }.mkString(msg + prefix, separator, postfix)
     }
@@ -267,8 +262,8 @@ case class CircuitState(
        |CircuitState $stateCounter (${if(isStale) "STALE" else "FRESH"})
        |${showConcreteValues("Inputs", inputPorts.toMap)}
        |${showConcreteValues("Outputs", outputPorts.toMap)}
-       |${showConcreteValues("BeforeRegisters", registers.toMap)}
-       |${showConcreteValues("AfterRegisters", nextRegisters.toMap)}
+       |${showConcreteValues("Registers      ", registers.toMap)}
+       |${showConcreteValues("FutureRegisters", nextRegisters.toMap)}
        |${showConcreteValues("Ephemera", ephemera.toMap)}
        |Memories${memories.values.mkString("\n", "\n  ", "")}""".stripMargin
   }
