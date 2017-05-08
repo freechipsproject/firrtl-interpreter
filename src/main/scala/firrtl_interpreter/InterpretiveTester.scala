@@ -92,6 +92,7 @@ class InterpretiveTester(
 
     try {
       val isRegister = interpreter.circuitState.registers.contains(name)
+      interpreter.circuitState.vcdLowerClock()
       interpreter.setValueWithBigInt(name, value, registerPoke = isRegister)
     }
     catch {
@@ -113,6 +114,7 @@ class InterpretiveTester(
 
     try {
       val isRegister = interpreter.circuitState.registers.contains(name)
+      interpreter.circuitState.vcdLowerClock()
       interpreter.circuitState.setValue(name, value, registerPoke = isRegister)
     }
     catch {

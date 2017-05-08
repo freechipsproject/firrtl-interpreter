@@ -11,36 +11,40 @@ import collection._
 import java.util.{Date, TimeZone}
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.matching.Regex
 
 object VCD extends LazyLogging {
   val Version = "0.2"
 
-  val DateDeclaration = "$date"
-  val VersionDeclaration = "$version"
-  val CommentDeclaration = "$comment"
-  val TimeScaleDeclaration = "$timescale"
-  val ScopeDeclaration = "$scope"
-  val VarDeclaration = "$var"
-  val UpScopeDeclaration = "$upscope"
-  val EndDefinitionsDeclaration = "$enddefinitions"
-  val DumpVarsDeclaration = "$dumpvars"
-  val End = "$end"
+  val DateDeclaration: String = "$date"
+  val VersionDeclaration: String = "$version"
+  val CommentDeclaration: String = "$comment"
+  val TimeScaleDeclaration: String = "$timescale"
+  val ScopeDeclaration: String = "$scope"
+  val VarDeclaration: String = "$var"
+  val UpScopeDeclaration: String = "$upscope"
+  val EndDefinitionsDeclaration: String = "$enddefinitions"
+  val DumpVarsDeclaration: String = "$dumpvars"
+  val End: String = "$end"
 
-  val idChars = (33 to 126).map { asciiValue => asciiValue.toChar.toString }
-  val numberOfIdChars = idChars.length
+  private val ClockName = "clock"
+  private val ResetName = "reset"
+
+  val idChars: Seq[String] = (33 to 126).map { asciiValue => asciiValue.toChar.toString }
+  val numberOfIdChars: Int = idChars.length
 
   // A number of regular expressions to parse vcd lines
-  val SectionHeader = """^\$([^\$]+) *$""".r
-  val EndSection = """^\$end *$""".r
+  val SectionHeader: Regex = """^\$([^\$]+) *$""".r
+  val EndSection: Regex = """^\$end *$""".r
 
-  val ScopedModule = """\s*(?i)(\S+)\s+(\S+)\s*""".r
-  val JustScoped = """\s*(\S+)\s*""".r
+  val ScopedModule: Regex = """\s*(?i)(\S+)\s+(\S+)\s*""".r
+  val JustScoped: Regex = """\s*(\S+)\s*""".r
 
-  val VarSpec = """\s*(\w+)\s+(\d+)\s+(\S+)\s+([\S ]+)\s*""".r
-  val ValueChangeScalar = """\s*(\d+)(\S+)\s*""".r
-  val ValueChangeVector = """\s*([rbh])([0-9\.]+)\s*""".r
-  val ValueChangeVectorX = """\s*([rbh]).*x.*\s*""".r
-  val TimeStamp = """\s*#(\d+)\s*""".r
+  val VarSpec: Regex = """\s*(\w+)\s+(\d+)\s+(\S+)\s+([\S ]+)\s*""".r
+  val ValueChangeScalar: Regex = """\s*(\d+)(\S+)\s*""".r
+  val ValueChangeVector: Regex = """\s*([rbh])([0-9\.]+)\s*""".r
+  val ValueChangeVectorX: Regex = """\s*([rbh]).*x.*\s*""".r
+  val TimeStamp: Regex = """\s*#(\d+)\s*""".r
 
   def apply(moduleName: String, timeScale: String = "1ps", comment: String = ""): VCD = {
     val tz = TimeZone.getTimeZone("UTC")
@@ -59,7 +63,7 @@ object VCD extends LazyLogging {
   }
 
   class WordIterator(fileName: String) extends Iterator[String] {
-    val lines = io.Source.fromFile(fileName).getLines()
+    val lines: Iterator[String] = io.Source.fromFile(fileName).getLines()
     var currentLineNumber = 0
     var currentLine: Iterator[String] = Iterator.empty
     var _hasNext = false
@@ -197,7 +201,7 @@ object VCD extends LazyLogging {
                 desiredScopeFound = false
                 None
             }
-          case text =>
+          case _ =>
             processScope()
         }
       }
@@ -221,15 +225,15 @@ object VCD extends LazyLogging {
       }
       walkPath(scopeOption).reverse match {
         case Nil => Nil
-        case head :: tail => tail
+        case _ :: tail => tail
       }
     }
 
     def checkName(name: String): Option[String] = {
-      if(name == "clock") {
+      if(name == VCD.ClockName) {
         Some(name)
       }
-      else if(name == "reset") {
+      else if(name == VCD.ResetName) {
         Some(name)
       }
       else if(name.startsWith(varPrefix)) {
@@ -347,7 +351,7 @@ object VCD extends LazyLogging {
               val varCode = words.next
               if(wires.contains(varCode)) {
                 supportedVectorRadix.get(radixString) match {
-                  case Some(radix) =>
+                  case Some(_) =>
                     if(currentTime < BigInt(0)) {
                       initialValues += Change(wires(varCode), BigInt(-1))
                     }
@@ -366,7 +370,7 @@ object VCD extends LazyLogging {
             logger.debug(s"current time now $currentTime at line ${words.currentLineNumber}")
           case EndSection() =>
             logger.debug(s"end of dump at line ${words.currentLineNumber}")
-          case text =>
+          case _ =>
         }
       }
     }
@@ -556,8 +560,34 @@ case class VCD(
     }
   }
 
-  def wireChanged(wireName: String, value: BigInt, width: Int = 1): Unit = {
-    if(ignoreUnderscoredNames && wireName.startsWith("_")) return
+  /**
+    * reports whether value is a change from the last recorded value for wireName
+    * @param wireName name of wire
+    * @param value    value of wire
+    * @return
+    */
+  def isNewValue(wireName: String, value: BigInt): Boolean = {
+    lastValues.get(wireName) match {
+      case Some(lastValue) =>
+        if(lastValue.value != value) {
+          true
+        } else {
+          false
+        }
+      case _ =>
+        true
+    }
+  }
+
+  /**
+    * Change wire value if it is different that its the last recorded value
+    * @param wireName name of wire
+    * @param value    value of wire
+    * @param width    width of wire (needed for header info)
+    * @return         false if the value is not different
+    */
+  def wireChanged(wireName: String, value: BigInt, width: Int = 1): Boolean = {
+    if(ignoreUnderscoredNames && wireName.startsWith("_")) return false
 
     def updateInfo(): Unit = {
       val wire = wires(wireName)
@@ -573,16 +603,16 @@ case class VCD(
       }
     }
 
+    logger.info(f"vcd-change time $timeStamp%6d value $value%6d wire $wireName")
     if(! wires.contains(wireName)) {
       addWire(wireName, width: Int)
     }
-    lastValues.get(wireName) match {
-      case Some(lastValue) =>
-        if(lastValue.value != value) {
-          updateInfo()
-        }
-      case _ =>
-        updateInfo()
+    if(isNewValue(wireName, value)) {
+      updateInfo()
+      true
+    }
+    else {
+      false
     }
   }
 
@@ -591,11 +621,23 @@ case class VCD(
   }
 
   def raiseClock(): Unit = {
-    wireChanged("clock", BigInt(1), 1)
+    if(isNewValue(VCD.ClockName, BigInt(1))) {
+      incrementTime()
+      logger.info(f"vcd-clock  time $timeStamp%6d clock raised")
+      wireChanged(VCD.ClockName, BigInt(1))
+    } else {
+      logger.info(f"vcd-clock  time $timeStamp%6d clock already raised")
+    }
   }
 
   def lowerClock(): Unit = {
-    wireChanged("clock", BigInt(0), 1)
+    if(isNewValue(VCD.ClockName, BigInt(0))) {
+      logger.info(f"vcd-clock  time $timeStamp%6d clock lowered")
+      incrementTime()
+      wireChanged(VCD.ClockName, BigInt(0))
+    } else {
+      logger.info(f"vcd-clock  time $timeStamp%6d clock already lowered")
+    }
   }
 
   def wiresFor(change: Change): Set[Wire] = {
@@ -638,10 +680,10 @@ case class VCD(
 
     def doScope(scope: Scope, depth: Int = 0): Unit = {
       def indent(inc: Int = 0): String = " " * ( depth + inc )
-      buffer.append(s"${indent(0)}${VCD.ScopeDeclaration} module ${scope.name} ${VCD.End}\n")
+      buffer.append(s"${indent()}${VCD.ScopeDeclaration} module ${scope.name} ${VCD.End}\n")
       scope.wires.foreach { wire => buffer.append(indent(1) + wire.toString + "\n") }
       scope.subScopes.foreach { subScope => doScope(subScope, depth + 2) }
-      buffer.append(s"${indent(0)}${VCD.UpScopeDeclaration} ${VCD.End}\n")
+      buffer.append(s"${indent()}${VCD.UpScopeDeclaration} ${VCD.End}\n")
     }
 
     doScope(scopeRoot)
@@ -656,10 +698,9 @@ case class VCD(
 
 
   def write(fileName: String): Unit = {
-    new PrintWriter(fileName) {
-      write(serialize)
-      close()
-    }
+    val writer = new PrintWriter(fileName)
+    writer.write(serialize)
+    writer.close()
   }
 }
 
@@ -698,7 +739,7 @@ case class Change(wire: Wire, value: BigInt) {
     }
     else {
       "b" +
-        (wire.width - 1 to 0 by -1).map { index => "x" }.mkString("") +
+        (wire.width - 1 to 0 by -1).map { _ => "x" }.mkString("") +
         s" ${wire.id}"
     }
   }

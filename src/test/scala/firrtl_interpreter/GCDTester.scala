@@ -8,7 +8,7 @@ import org.scalatest.{FlatSpec, Matchers}
 class GCDTester extends FlatSpec with Matchers {
   behavior of "GCD"
 
-  val gcdFirrtl =
+  val gcdFirrtl: String =
     """
       |circuit GCD :
       |  module GCD :
@@ -43,17 +43,17 @@ class GCDTester extends FlatSpec with Matchers {
     val tester = new InterpretiveTester(gcdFirrtl)
     // interpreter.setVerbose()
     List((1, 1, 1), (34, 17, 17), (8, 12, 4)).foreach { case (x, y, z) =>
-      tester.step(1)
+      tester.step()
       tester.poke("io_a", x)
       tester.poke("io_b", y)
       tester.poke("io_e", 1)
-      tester.step(1)
+      tester.step()
 
       tester.poke("io_e", 0)
-      tester.step(1)
+      tester.step()
 
       while (tester.peek("io_v") != Big1) {
-        tester.step(1)
+        tester.step()
       }
       tester.expect("io_z", z)
     }
