@@ -1,27 +1,17 @@
 // See LICENSE for license details.
 
 import chiselBuild.ChiselDependencies._
+import chiselBuild.ChiselSettings
+
+ChiselSettings.commonSettings
+
+ChiselSettings.publishSettings
 
 val internalName = "firrtl_interpreter"
 
 name := "firrtl-interpreter"
 
-organization := "edu.berkeley.cs"
-
 version := "1.1-SNAPSHOT"
-
-val chiselVersion = System.getProperty("chiselVersion", "3.0")
-
-scalaVersion := "2.11.7"
-
-resolvers ++= Seq(
-  Resolver.sonatypeRepo("snapshots"),
-  Resolver.sonatypeRepo("releases"),
-  Resolver.sonatypeRepo("public")
-)
-
-// Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
-val defaultVersions = Map("firrtl" -> "1.1-SNAPSHOT")
 
 libraryDependencies ++= chiselLibraryDependencies(internalName)
 
