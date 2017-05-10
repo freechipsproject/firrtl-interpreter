@@ -7,9 +7,11 @@ ChiselSettings.commonSettings
 
 ChiselSettings.publishSettings
 
+val externalName = "firrtl-interpreter"
+
 val internalName = "firrtl_interpreter"
 
-name := "firrtl-interpreter"
+name := externalName
 
 version := "1.1-SNAPSHOT"
 
