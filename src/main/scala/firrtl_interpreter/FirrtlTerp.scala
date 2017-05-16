@@ -179,8 +179,10 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
   }
 
   def cycle(showState: Boolean = false): Unit = {
+    log("interpreter cycle called " + "="*80)
     if(checkStopped("cycle")) return
 
+    circuitState.vcdLowerClock()
     circuitState.vcdRaiseClock()
 
     if(circuitState.isStale) {
@@ -200,13 +202,11 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
       elem.cycle()
     }
 
-//    println(s"FirrtlTerp: cycle complete ${"="*80}\n${sourceState.prettyString()}")
     log(s"check prints")
     evaluator.checkPrints()
     log(s"check stops")
     lastStopResult = evaluator.checkStops()
 
-    log(s"${circuitState.prettyString()}")
     if(stopped) {
       if(stopResult == 0) {
         throw StopException(s"Success: Stop result $stopResult")
@@ -216,10 +216,10 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
       }
     }
 
-    //    println(s"FirrtlTerp: cycle complete ${"="*80}\n${sourceState.prettyString()}")
-    if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${circuitState.prettyString()}")
+    evaluateCircuit()
+    log(s"cycle complete:\n${circuitState.prettyString()}")
 
-    circuitState.vcdLowerClock()
+    if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${circuitState.prettyString()}")
   }
 
   def doCycles(n: Int): Unit = {
