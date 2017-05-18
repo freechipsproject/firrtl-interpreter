@@ -1,21 +1,22 @@
 // See LICENSE for license details.
 
-import chiselBuild.ChiselDependencies._
+import chiselBuild.ChiselDependencies.{basicDependencies, chiselLibraryDependencies, chiselProjectDependencies}
 import chiselBuild.ChiselSettings
 
 ChiselSettings.commonSettings
 
 ChiselSettings.publishSettings
 
-val externalName = "firrtl-interpreter"
+val internalName = "firrtl-interpreter"
 
-val internalName = "firrtl_interpreter"
-
-name := externalName
+name := internalName
 
 version := "1.1-SNAPSHOT"
 
-libraryDependencies ++= chiselLibraryDependencies(internalName)
+// The Chisel projects we're dependendent on.
+val dependentProjects: Seq[String] = basicDependencies(internalName)
+
+libraryDependencies ++= chiselLibraryDependencies(dependentProjects)
 
 libraryDependencies ++= Seq(
   "org.scalatest" % "scalatest_2.11" % "2.2.4",
@@ -27,4 +28,4 @@ libraryDependencies ++= Seq(
 //javaOptions in run ++= Seq(
     //"-Xms2G", "-Xmx4G", "-XX:MaxPermSize=1024M", "-XX:+UseConcMarkSweepGC")
 
-dependsOn((chiselProjectDependencies(internalName)):_*)
+lazy val firrtl_interpreter = (project in file(".")).dependsOn((chiselProjectDependencies(dependentProjects)):_*)
