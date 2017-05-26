@@ -1,3 +1,5 @@
+// See LICENSE for license details.
+
 name := "firrtl-interpreter"
 
 organization := "edu.berkeley.cs"
@@ -23,8 +25,7 @@ libraryDependencies ++= (Seq("firrtl").map {
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.1",
   "org.scalacheck" %% "scalacheck" % "1.13.4",
-  "org.scala-lang.modules" % "scala-jline" % "2.12.1",
-  "com.github.scopt" %% "scopt" % "3.5.0"
+  "org.scala-lang.modules" % "scala-jline" % "2.12.1"
 )
 
 //javaOptions in run ++= Seq(

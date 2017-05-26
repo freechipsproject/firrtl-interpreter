@@ -6,7 +6,9 @@ import firrtl_interpreter.{InterpreterOptionsManager, InterpretiveTester}
 import firrtl.CommonOptions
 import firrtl.util.BackendCompilationUtilities
 import java.io.File
-import org.scalatest.{Matchers, FlatSpec}
+
+import logger.LogLevel
+import org.scalatest.{FlatSpec, Matchers}
 
 // scalastyle:off magic.number
 class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
@@ -107,7 +109,7 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
     interpreter.poke("b", -7)
     interpreter.peek("b") should be (BigInt(-7))
 
-    interpreter.step(1)
+    interpreter.step()
     interpreter.peek("c") should be (BigInt(-8))
 
     interpreter.poke("a", 255)
@@ -115,7 +117,7 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
     interpreter.poke("b", 249)
     interpreter.peek("b") should be (BigInt(-7))
 
-    interpreter.step(1)
+    interpreter.step()
     interpreter.peek("c") should be (BigInt(-8))
     interpreter.report()
 
@@ -151,5 +153,66 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
 //    interpreter.peek("io_c") should be (BigInt(-8))
 
     interpreter.report()
+  }
+
+  behavior of "example from edysusanto"
+
+  it should "align register updates with clock cycles" in {
+    val input =
+      """
+        |circuit pwminCount :
+        |  module pwminCount :
+        |    input clock : Clock
+        |    input reset : UInt<1>
+        |    output io : {testReg : UInt<4>}
+        |
+        |    clock is invalid
+        |    reset is invalid
+        |    io is invalid
+        |    reg testReg : UInt<4>, clock with : (reset => (reset, UInt<1>("h00"))) @[RegisterVCDSpec.scala 30:24]
+        |    node _T_6 = add(testReg, UInt<1>("h01")) @[RegisterVCDSpec.scala 31:22]
+        |    node _T_7 = tail(_T_6, 1) @[RegisterVCDSpec.scala 31:22]
+        |    testReg <= _T_7 @[RegisterVCDSpec.scala 31:11]
+        |    io.testReg <= testReg @[RegisterVCDSpec.scala 32:14]
+        |
+      """.stripMargin
+
+    logger.Logger.setLevel(LogLevel.Debug)
+
+    val manager = new InterpreterOptionsManager {
+      interpreterOptions = interpreterOptions.copy(writeVCD = true)
+      commonOptions = CommonOptions(targetDirName = "test_run_dir/vcd_register_delay")
+    }
+    {
+      val interpreter = new InterpretiveTester(input, manager)
+      //  interpreter.setVerbose()
+      interpreter.poke("reset", 0)
+
+      interpreter.step(50)
+
+      interpreter.report()
+      interpreter.finish
+    }
+
+//    Thread.sleep(3000)
+
+    val vcd = VCD.read("test_run_dir/vcd_register_delay/pwminCount.vcd")
+
+    /* create an ordered indexed list of all the changes to testReg */
+    val eventsOfInterest = vcd.valuesAtTime.filter {
+      case (_, changeSet) =>
+        changeSet.exists { change =>
+          change.wire.name == "testReg"
+        }
+    }.toSeq.sortBy(_._1).map(_._2).toArray
+
+    // at every step the io_testReg should be one cycle behind
+    for(timeStep <- 4 to 24) {
+      def getValue(step: Int, name: String): Int = {
+        eventsOfInterest(step).find { change => change.wire.name == name}.head.value.toInt
+      }
+
+      getValue(timeStep, "testReg") should be (getValue(timeStep, "io_testReg"))
+    }
   }
 }
