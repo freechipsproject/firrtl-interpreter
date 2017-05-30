@@ -1,10 +1,12 @@
+// See LICENSE for license details.
+
 name := "firrtl-interpreter"
 
 organization := "edu.berkeley.cs"
 
 version := "1.0-SNAPSHOT_2017-05-16"
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.11"
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("snapshots"),
@@ -15,14 +17,13 @@ resolvers ++= Seq(
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
 val defaultVersions = Map("firrtl" -> "1.0-SNAPSHOT_2017-05-16")
 
-libraryDependencies ++= (Seq("firrtl").map {
-  dep: String => "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", defaultVersions(dep)) })
+libraryDependencies ++= Seq("firrtl").map {
+  dep: String => "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", defaultVersions(dep)) }
 
 libraryDependencies ++= Seq(
   "org.scalatest" % "scalatest_2.11" % "2.2.4",
   "org.scalacheck" %% "scalacheck" % "1.12.4",
-  "org.scala-lang.modules" % "scala-jline" % "2.12.1",
-  "com.github.scopt" %% "scopt" % "3.4.0"
+  "org.scala-lang.modules" % "scala-jline" % "2.12.1"
 )
 
 //javaOptions in run ++= Seq(
