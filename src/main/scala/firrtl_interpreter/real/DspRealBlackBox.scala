@@ -27,7 +27,7 @@ abstract class DspRealTwoArgumentToDouble extends BlackBoxImplementation {
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type): Concrete = {
+  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
     val arg1 :: arg2 :: _ = inputValues
     val doubleArg1 = bigIntBitsToDouble(arg1.value)
     val doubleArg2 = bigIntBitsToDouble(arg2.value)
@@ -55,7 +55,7 @@ abstract class DspRealOneArgumentToDouble extends BlackBoxImplementation {
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type): Concrete = {
+  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
     val arg1 :: _ = inputValues
     val doubleArg1 = bigIntBitsToDouble(arg1.value)
     val doubleResult = oneOp(doubleArg1)
@@ -81,7 +81,7 @@ abstract class DspRealTwoArgumentToBoolean extends BlackBoxImplementation {
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type): Concrete = {
+  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
     val arg1 :: arg2 :: _ = inputValues
     val doubleArg1 = bigIntBitsToDouble(arg1.value)
     val doubleArg2 = bigIntBitsToDouble(arg2.value)
@@ -146,7 +146,7 @@ class DspRealToInt(val name: String) extends BlackBoxImplementation {
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type): Concrete = {
+  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
     val arg1 :: _ = inputValues
     val result = arg1.value
     TypeInstanceFactory(tpe, result)
@@ -161,7 +161,7 @@ class DspRealFromInt(val name: String) extends BlackBoxImplementation {
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type): Concrete = {
+  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
     val arg1 :: _ = inputValues
     val result = arg1.value
     TypeInstanceFactory(tpe, result)

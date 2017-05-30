@@ -159,9 +159,7 @@ object DependencyGraph extends SimpleLogger {
     for(port <- extModule.ports) {
       if(port.direction == Output) {
         val outputDependencies = instance.outputDependencies(port.name)
-        if(outputDependencies.nonEmpty) {
-          dependencyGraph(expand(port.name)) = BlackBoxOutput(expand(port.name), instance, outputDependencies, port.tpe)
-        }
+        dependencyGraph(expand(port.name)) = BlackBoxOutput(port.name, instance, outputDependencies, port.tpe)
       }
     }
   }
