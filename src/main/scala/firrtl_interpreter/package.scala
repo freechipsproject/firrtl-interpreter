@@ -10,7 +10,7 @@ package object firrtl_interpreter {
   val Big0 = BigInt(0)
   val Big1 = BigInt(1)
   val DangerShiftSize = 27
-  val BitsRequiredOverflowSizeBigInt = Big1 << DangerShiftSize
+  val BitsRequiredOverflowSizeBigInt: BigInt = Big1 << DangerShiftSize
 
   val random = new scala.util.Random
   random.setSeed(System.currentTimeMillis())

@@ -18,7 +18,7 @@ class Timer {
   var enabled = true
   val timingLog = new mutable.HashMap[String, TimerEvent]
 
-  val totalEvent = new TimerEvent("Total")
+  val totalEvent = TimerEvent("Total")
 
   def apply[R](tag: String)(block: => R): R = {
     if(enabled) {
@@ -26,7 +26,7 @@ class Timer {
       val result = block // call-by-name
       val t1 = System.nanoTime()
 
-      val timerEvent = timingLog.getOrElseUpdate(tag, new TimerEvent(tag))
+      val timerEvent = timingLog.getOrElseUpdate(tag, TimerEvent(tag))
       timerEvent.events += 1
       totalEvent.events += 1
       val delta = t1 - t0

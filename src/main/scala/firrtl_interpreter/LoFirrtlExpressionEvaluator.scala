@@ -29,7 +29,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
 
   val evaluationStack = new ExpressionExecutionStack(this)
 
-  var defaultKeysToResolve: Array[String] = {
+  val defaultKeysToResolve: Array[String] = {
     val keys = new mutable.HashSet[String]
 
     keys ++= circuitState.memories.flatMap {

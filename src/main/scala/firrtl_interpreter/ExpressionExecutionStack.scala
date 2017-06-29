@@ -12,8 +12,8 @@ object ExpressionExecutionStack {
 }
 
 class ExpressionExecutionStack(parent: LoFirrtlExpressionEvaluator) {
-  val dependencyGraph = parent.dependencyGraph
-  var maxExecutionDepth = ExpressionExecutionStack.defaultMaxExecutionDepth
+  val dependencyGraph: DependencyGraph = parent.dependencyGraph
+  var maxExecutionDepth: Long = ExpressionExecutionStack.defaultMaxExecutionDepth
   def allowCombinationalLoops: Boolean = parent.allowCombinationalLoops
 
   val expressionStack = new ArrayBuffer[StackItem]

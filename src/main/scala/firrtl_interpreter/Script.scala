@@ -4,8 +4,10 @@ package firrtl_interpreter
 
 import java.io.File
 
+import scala.tools.jline.console.ConsoleReader
+
 case class ScriptFactory(parent: FirrtlRepl) {
-  val console = parent.console
+  val console: ConsoleReader = parent.console
   var lastFileOption: Option[String] = None
 
   def apply(fileName: String): Option[Script] = {
@@ -20,8 +22,8 @@ case class ScriptFactory(parent: FirrtlRepl) {
 }
 
 class Script(val fileName: String, val lines: Array[String]) {
-  var currentLine = -1
-  var linesLeftToRun = 0
+  var currentLine: Int = -1
+  var linesLeftToRun: Int = 0
 
   def getNextLineOption: Option[String] = {
     if(hasNext) {
@@ -46,7 +48,7 @@ class Script(val fileName: String, val lines: Array[String]) {
   }
 
   def setSkipLines(n: Int): Unit = {
-    for(i <- 0 until n) {
+    for(_ <- 0 until n) {
       getNextLineOption
     }
   }

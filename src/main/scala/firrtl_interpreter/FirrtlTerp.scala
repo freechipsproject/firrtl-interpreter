@@ -55,12 +55,12 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 
   val dependencyGraph = DependencyGraph(loweredAst, this)
   /**
-    * Once a stop has occured, the intepreter will not allow pokes until
+    * Once a stop has occured, the interpreter will not allow pokes until
     * the stop has been cleared
     */
   def clearStop(): Unit = {lastStopResult = None}
 
-  var circuitState = CircuitState(dependencyGraph)
+  val circuitState = CircuitState(dependencyGraph)
   println("Circuit state created")
 
   def makeVCDLogger(fileName: String, showUnderscored: Boolean): Unit = {
@@ -264,7 +264,7 @@ object FirrtlTerp {
     }
     catch {
       case ie: InterpreterException =>
-        println(s"Error: InterpreterExecption(${ie.getMessage} during warmup evaluation")
+        println(s"Error: InterpreterException(${ie.getMessage} during warm-up evaluation")
     }
     interpreter
   }

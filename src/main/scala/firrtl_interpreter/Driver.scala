@@ -97,7 +97,7 @@ trait HasInterpreterOptions {
     .foreach { _ =>
       interpreterOptions = interpreterOptions.copy(lowCompileAtLoad = false)
     }
-    .text("run lowering compuler when firrtl file is loaded")
+    .text("run lowering computer when firrtl file is loaded")
 }
 
 object Driver {

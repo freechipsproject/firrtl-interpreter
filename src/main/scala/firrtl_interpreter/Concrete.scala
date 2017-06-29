@@ -49,16 +49,16 @@ trait Concrete {
   }
   def /(that: Concrete): Concrete = {
     (this, that) match {
-      case (ConcreteUInt(v1, w1, p1), ConcreteUInt(v2, w2, p2)) =>
+      case (ConcreteUInt(v1, w1, _), ConcreteUInt(v2, _, _)) =>
         if(that.value == BigInt(0)) { Concrete.poisonedUInt(w1) }
         else { ConcreteUInt(v1 / v2, w1) }
-      case (ConcreteUInt(v1, w1, p1), ConcreteSInt(v2, w2, p2)) =>
+      case (ConcreteUInt(v1, w1, _), ConcreteSInt(v2, _, _)) =>
         if(that.value == BigInt(0)) { Concrete.poisonedSInt(w1 + 1) }
         else { ConcreteSInt(v1 / v2, w1 + 1) }
-      case (ConcreteSInt(v1, w1, p1), ConcreteUInt(v2, w2, p2)) =>
+      case (ConcreteSInt(v1, w1, _), ConcreteUInt(v2, _, _)) =>
         if(that.value == BigInt(0)) { Concrete.poisonedSInt(w1) }
         else { ConcreteSInt(v1 / v2, w1) }
-      case (ConcreteSInt(v1, w1, p1), ConcreteSInt(v2, w2, p2)) =>
+      case (ConcreteSInt(v1, w1, _), ConcreteSInt(v2, _, _)) =>
         if(that.value == BigInt(0)) { Concrete.poisonedSInt(w1 + 1) }
         else { ConcreteSInt(v1 / v2, w1 + 1) }
     }
@@ -91,13 +91,13 @@ trait Concrete {
   // Padding
   def pad(n: BigInt): Concrete = pad(n.toInt)
   def pad(n: Int): Concrete = this match {
-    case ConcreteUInt(v, w, p) => ConcreteUInt(this.value, this.width.max(n), p)
-    case ConcreteSInt(v, w, p) => ConcreteSInt(this.value, this.width.max(n), p)
+    case ConcreteUInt(_, _, p) => ConcreteUInt(this.value, this.width.max(n), p)
+    case ConcreteSInt(_, _, p) => ConcreteSInt(this.value, this.width.max(n), p)
   }
   // Casting     TODO: I don't think this is done right, need to look at top bit each way
   def asUInt: ConcreteUInt = {
     this match {
-      case si: ConcreteSInt => tail(0)
+      case _: ConcreteSInt => tail(0)
       case _ => ConcreteUInt(this.value, this.width, this.poisoned)
     }
   }
@@ -136,16 +136,16 @@ trait Concrete {
     val shift = that.value.toInt
     assert(that.value >= 0, s"ERROR:$this << $that ${that.value} must be >= 0")
     this match {
-      case ConcreteUInt(thisValue, thisWidth, p) => ConcreteUInt(this.value << shift, thisWidth + shift, p)
-      case ConcreteSInt(thisValue, thisWidth, p) => ConcreteSInt(this.value << shift, thisWidth + shift, p)
+      case ConcreteUInt(_, thisWidth, p) => ConcreteUInt(this.value << shift, thisWidth + shift, p)
+      case ConcreteSInt(_, thisWidth, p) => ConcreteSInt(this.value << shift, thisWidth + shift, p)
     }
   }
   def <<(that: BigInt): Concrete = <<(that.toInt)
   def <<(shift: Int): Concrete = {
     assert(shift >= 0, s"ERROR:$this << $shift $shift must be >= 0")
     this match {
-      case ConcreteUInt(thisValue, thisWidth, p) => ConcreteUInt(this.value << shift, thisWidth + shift, p)
-      case ConcreteSInt(thisValue, thisWidth, p) => ConcreteSInt(this.value << shift, thisWidth + shift, p)
+      case ConcreteUInt(_, thisWidth, p) => ConcreteUInt(this.value << shift, thisWidth + shift, p)
+      case ConcreteSInt(_, thisWidth, p) => ConcreteSInt(this.value << shift, thisWidth + shift, p)
     }
   }
   def >>(that: Concrete): Concrete = that match {
@@ -162,8 +162,8 @@ trait Concrete {
   def >>(shift: Int): Concrete = {
     assert(shift >= 0, s"ERROR:$this >> $shift $shift must be >= 0")
     this match {
-      case ConcreteUInt(thisValue, thisWidth, p) => ConcreteUInt(this.value >> shift, thisWidth - shift, p)
-      case ConcreteSInt(thisValue, thisWidth, p) => ConcreteSInt(this.value >> shift, thisWidth - shift, p)
+      case ConcreteUInt(_, thisWidth, p) => ConcreteUInt(this.value >> shift, thisWidth - shift, p)
+      case ConcreteSInt(_, thisWidth, p) => ConcreteSInt(this.value >> shift, thisWidth - shift, p)
     }
   }
   // Signed
@@ -176,7 +176,7 @@ trait Concrete {
     ConcreteSInt(-value, width + 1)
   }
   def not: ConcreteUInt = this match {
-    case ConcreteUInt(v, _, p) =>
+    case ConcreteUInt(_, _, p) =>
       var flipped = value
       for(bitIndex <- 0 until width) {
         flipped = flipped.flipBit(bitIndex)
@@ -220,8 +220,8 @@ trait Concrete {
     assert(hi <= width, s"Error:Bits($this, hi=$hi, lo=$lo) hi must be < ${this.width}")
     val (high, low) = (hi.toInt, lo.toInt)
     this match {
-      case ConcreteUInt(v, _, p) => ConcreteUInt(getBits(high, low), high - low + 1, p)
-      case ConcreteSInt(v, _, p) => ConcreteUInt(getBits(high, low), high - low + 1, p)
+      case ConcreteUInt(_, _, p) => ConcreteUInt(getBits(high, low), high - low + 1, p)
+      case ConcreteSInt(_, _, p) => ConcreteUInt(getBits(high, low), high - low + 1, p)
     }
   }
   def head(n: BigInt): Concrete = {
@@ -276,9 +276,9 @@ trait Concrete {
     val bitString = value.abs.toString(2)
 
     this match {
-      case ConcreteUInt(v, w, p) =>
+      case ConcreteUInt(_, _, _) =>
         s"${poisonString}UInt<$width>${"0"*(width-bitString.length)}$bitString"
-      case ConcreteSInt(v, w, p) =>
+      case ConcreteSInt(v, _, _) =>
         s"${poisonString}SInt<$width>${if(v<0)"1" else "0"}${"0"*((width-1)-bitString.length)}$bitString"
     }
   }

@@ -150,7 +150,7 @@ case class CircuitState(
       clockHigh = false
     }
   }
-  def vcdWireChangedwire(key: String, concrete: Concrete): Unit = {
+  def vcdWireChangedWire(key: String, concrete: Concrete): Unit = {
     vcdLoggerOption.foreach { _.wireChanged(key, concrete.value, concrete.width) }
   }
   /**
@@ -162,7 +162,7 @@ case class CircuitState(
   def cycle(): Unit = {
     registers.keys.foreach { key =>
       val nextValue = nextRegisters(key)
-      vcdWireChangedwire(key, nextValue)
+      vcdWireChangedWire(key, nextValue)
       registers(key) = nextValue
     }
 
@@ -181,12 +181,12 @@ case class CircuitState(
     if(isInput(key)) {
       inputPorts(key) = concreteValue
       nameToConcreteValue(key) = concreteValue
-      vcdWireChangedwire(key, concreteValue)
+      vcdWireChangedWire(key, concreteValue)
     }
     else if(isOutput(key)) {
       outputPorts(key) = concreteValue
       nameToConcreteValue(key) = concreteValue
-      vcdWireChangedwire(key, concreteValue)
+      vcdWireChangedWire(key, concreteValue)
     }
     else if(registers.contains(key)) {
       if(registerPoke) {
@@ -194,7 +194,7 @@ case class CircuitState(
       }
       else {
         nextRegisters(key) = concreteValue
-        // registers are logged to VCD during clock postive edge in #cycle()
+        // registers are logged to VCD during clock positive edge in #cycle()
       }
     }
     else if(isMemory(key)) {
@@ -208,7 +208,7 @@ case class CircuitState(
     else if(validNames.contains(key)) {
       ephemera(key) = concreteValue
       nameToConcreteValue(key) = concreteValue
-      vcdWireChangedwire(key, concreteValue)
+      vcdWireChangedWire(key, concreteValue)
     }
     else {
       throw InterpreterException(s"Error: setValue($key, $concreteValue) $key is not an element of this circuit")

@@ -4,7 +4,7 @@ package firrtl_interpreter
 
 import java.io.File
 
-import firrtl.{ExecutionOptionsManager}
+import firrtl.ExecutionOptionsManager
 import firrtl_interpreter.vcd.{VCD, Wire}
 import logger.LazyLogging
 
@@ -37,17 +37,16 @@ class VcdReplayTester(
     io.Source.fromFile(file).mkString
   }
 
-  val vcdTesterOptions = optionsManager.goldenVcdOptions
-  val interpreterOptions = optionsManager.interpreterOptions
+  private val vcdTesterOptions = optionsManager.goldenVcdOptions
 
-  val tester = new InterpretiveTester(getInput(vcdTesterOptions.firrtlSourceName), optionsManager)
-  val interpreter = tester.interpreter
+  private val tester = new InterpretiveTester(getInput(vcdTesterOptions.firrtlSourceName), optionsManager)
+  private val interpreter = tester.interpreter
 
-  val dutName = interpreter.ast.main
+  private val dutName = interpreter.ast.main
 
   val vcd: VCD = VCD.read(vcdTesterOptions.vcdSourceName, dutName)
-  val timeStamps = vcd.valuesAtTime.keys.toList.sorted.toArray
-  var runVerbose = false
+  val timeStamps: Array[Long] = vcd.valuesAtTime.keys.toList.sorted.toArray
+  val runVerbose: Boolean = vcdTesterOptions.runVerbose
 
   private var eventsRun = 0
   private var inputValuesSet = 0L
@@ -56,8 +55,8 @@ class VcdReplayTester(
   private var testFailures = 0L
   private var clockCycles = 0L
 
-  val vcdCircuitState = interpreter.circuitState.clone
-  val inputs = {
+  val vcdCircuitState: CircuitState = interpreter.circuitState.clone
+  val inputs: Set[String] = {
     vcd.scopeRoot.wires
       .filter { wire =>
         interpreter.circuitState.isInput(wire.name)
@@ -150,7 +149,7 @@ class VcdReplayTester(
 
   def checkClock(timeIndex: Int): Unit = {
     vcd.valuesAtTime(timeStamps(timeIndex)).foreach { change =>
-      vcd.wiresFor(change).exists { wire =>
+      vcd.wiresFor(change).exists { _ =>
         val fullName = change.wire.fullName
         if(fullName == "clock" && change.value > BigInt(0)) {
           interpreter.cycle()
@@ -197,11 +196,11 @@ object VcdReplayTester {
   def main(args: Array[String]) {
     val optionsManager = new VcdReplayTesterOptions
 
-    optionsManager.parse(args) match {
-      case true =>
-        val repl = new VcdReplayTester(optionsManager)
-        repl.run()
-      case _ =>
+    if (optionsManager.parse(args)) {
+      val repl = new VcdReplayTester(optionsManager)
+      repl.run()
+    } else {
+
     }
   }
 }
@@ -211,7 +210,8 @@ case class VcdReplayOptions(
     vcdSourceName:        String = "",
     skipEvents:           Int = 0,
     eventsToRun:          Int = -1,
-    testAliasedWires:     Boolean = false)
+    testAliasedWires:     Boolean = false,
+    runVerbose:           Boolean = false)
   extends firrtl.ComposableOptions
 
 trait HasVcdReplayOptions {
@@ -248,6 +248,11 @@ trait HasVcdReplayOptions {
   parser.opt[Unit]("test-aliased-wires")
     .abbr("taw")
     .foreach { _ => goldenVcdOptions = goldenVcdOptions.copy(testAliasedWires = true) }
+    .text("number of events to run")
+
+  parser.opt[Unit]("run-verbose")
+    .abbr("rv")
+    .foreach { _ => goldenVcdOptions = goldenVcdOptions.copy(runVerbose = true) }
     .text("number of events to run")
 }
 

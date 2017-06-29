@@ -54,7 +54,7 @@ abstract class BlackBoxImplementation {
   def cycle(): Unit
 
   /**
-    * returns a list of names of inputs that the nanmed output depends on.
+    * returns a list of names of inputs that the named output depends on.
     * @note The order of this list will determine the order of the inputValues argument to the execute method
     * @param outputName the output whose dependencies are being described
     * @return
@@ -67,12 +67,12 @@ abstract class BlackBoxImplementation {
   * a BlackBoxImplementation. This factory provides it.
   * @example {{{
   *   class ExampleBBFactory extends BlackBoxFactory {
-  *     override def createInstatnce(instanceName: String, blackBoxName: String): Option[BlackBoxImplementation] = {
+  *     override def createInstance(instanceName: String, blackBoxName: String): Option[BlackBoxImplementation] = {
   *       instanceName match {
   *         case "bb1" => Some(add(new BB1Impl))
   *         case "bb2" => Some(add(new BB2Impl))
   *         case "bb3" => Some(add(new BB3Impl))
-  *         case _ => throw Exeception(s"ExampleBBBFactory does not know how to create $instanceName}")
+  *         case _ => throw Exception(s"ExampleBBBFactory does not know how to create $instanceName}")
   *       }
   *     }
   *   }
