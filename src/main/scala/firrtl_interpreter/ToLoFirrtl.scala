@@ -2,17 +2,16 @@
 
 package firrtl_interpreter
 
-import java.io.{StringWriter, Writer}
-
-import firrtl.LowFirrtlCompiler
+import firrtl._
 import firrtl.ir.Circuit
-import firrtl.ChirrtlForm
 
 object ToLoFirrtl {
-  def lower(c: Circuit): Circuit = {
+  def lower(c: Circuit,
+            optionsManager: ExecutionOptionsManager with HasFirrtlOptions with HasInterpreterOptions): Circuit = {
     val compiler = new LowFirrtlCompiler
 
-    val compileResult = compiler.compile(firrtl.CircuitState(c, ChirrtlForm), new StringWriter)
+    val annotationMap = AnnotationMap(optionsManager.firrtlOptions.annotations)
+    val compileResult = compiler.compileAndEmit(firrtl.CircuitState(c, ChirrtlForm, Some(annotationMap)))
     compileResult.circuit
   }
 }
