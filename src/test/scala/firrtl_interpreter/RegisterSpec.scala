@@ -21,7 +21,10 @@ class RegisterSpec extends FlatSpec with Matchers {
         |
       """.stripMargin
 
-    val interpreter = FirrtlTerp(input, InterpreterOptions(setVerbose = true))
+    val optionsManager = new InterpreterOptionsManager {
+      val interpeterOptions = InterpreterOptions(setVerbose = true)
+    }
+    val interpreter = FirrtlTerp(input, optionsManager)
 
     def makeValue(value: BigInt): Concrete = ConcreteUInt(value, 1)
 

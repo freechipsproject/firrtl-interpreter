@@ -126,6 +126,8 @@ Session.vim
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio
 
 *.iml
+# don't pickup scala worksheets from intellij
+*.sc
 
 ## Directory-based project format:
 .idea/

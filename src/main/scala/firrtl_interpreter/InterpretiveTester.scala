@@ -1,8 +1,6 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
-import firrtl.ExecutionOptionsManager
-
 /**
   * Works a lot like the chisel classic tester compiles a firrtl input string
   * and allows poke, peek, expect and step
@@ -16,15 +14,12 @@ import firrtl.ExecutionOptionsManager
   * @param input              a firrtl program contained in a string
   * @param optionsManager     collection of options for the interpreter
   */
-class InterpretiveTester(
-    input: String,
-    optionsManager: ExecutionOptionsManager with HasInterpreterOptions =
-      new ExecutionOptionsManager("firrtl-interpreter") with HasInterpreterOptions) {
+class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = new InterpreterOptionsManager) {
   var expectationsMet = 0
 
   firrtl_interpreter.random.setSeed(optionsManager.interpreterOptions.randomSeed)
 
-  val interpreter: FirrtlTerp                = FirrtlTerp(input, optionsManager.interpreterOptions)
+  val interpreter: FirrtlTerp                = FirrtlTerp(input, optionsManager)
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
   val commonOptions: firrtl.CommonOptions    = optionsManager.commonOptions
 

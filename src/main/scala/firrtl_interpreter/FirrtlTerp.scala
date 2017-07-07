@@ -22,12 +22,18 @@ import firrtl.ir._
   *
   * @param ast the circuit to be simulated
   */
-class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) extends SimpleLogger {
+class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) extends SimpleLogger {
+  val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
+
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
   def stopResult: Int  = lastStopResult.get
 
-  val loweredAst: Circuit = if(interpreterOptions.lowCompileAtLoad) ToLoFirrtl.lower(ast) else ast
+  val loweredAst: Circuit = if(interpreterOptions.lowCompileAtLoad) {
+    ToLoFirrtl.lower(ast, optionsManager)
+  } else {
+    ast
+  }
 
   if(interpreterOptions.showFirrtlAtLoad) {
     println("LoFirrtl" + "=" * 120)
@@ -238,9 +244,9 @@ class FirrtlTerp(val ast: Circuit, val interpreterOptions: InterpreterOptions) e
 object FirrtlTerp {
   val blackBoxFactory = new DspRealFactory
 
-  def apply(input: String, interpreterOptions: InterpreterOptions = InterpreterOptions()): FirrtlTerp = {
+  def apply(input: String, optionsManager: HasInterpreterSuite = new InterpreterOptionsManager): FirrtlTerp = {
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
-    val interpreter = new FirrtlTerp(ast, interpreterOptions)
+    val interpreter = new FirrtlTerp(ast, optionsManager)
 
     /* run the circuit once to get the circuit state fully populated. Evaluate all makes sure both
     branches of muxes get computed, while we are at we can compute the sort key order
@@ -261,38 +267,5 @@ object FirrtlTerp {
         println(s"Error: InterpreterExecption(${ie.getMessage} during warmup evaluation")
     }
     interpreter
-  }
-
-  @deprecated("This loses options passed in from the command line, use other appluy methods", since = "2017-01-12")
-  def apply(input: String,
-            verbose: Boolean,
-            blackBoxFactories: Seq[BlackBoxFactory]): FirrtlTerp = {
-    val ast = firrtl.Parser.parse(input.split("\n").toIterator)
-    val options = InterpreterOptions(blackBoxFactories = blackBoxFactories, setVerbose = verbose)
-    val interpreter = new FirrtlTerp(ast, options)
-
-    /* run the circuit once to get the circuit state fully populated. Evaluate all makes sure both
-    branches of muxes get computed, while we are at we can compute the sort key order
-     */
-    try {
-      val saveUseTopologicalSortedKeys = interpreter.evaluator.useTopologicalSortedKeys
-      val saveEvaluateAll = interpreter.evaluator.evaluateAll
-
-      interpreter.evaluator.evaluateAll = true
-      interpreter.evaluator.useTopologicalSortedKeys = true
-      interpreter.evaluateCircuit()
-
-      interpreter.evaluator.useTopologicalSortedKeys = saveUseTopologicalSortedKeys
-      interpreter.evaluator.evaluateAll = saveEvaluateAll
-    }
-    catch {
-      case ie: InterpreterException =>
-        println(s"Error: InterpreterExecption(${ie.getMessage} during warmup evaluation")
-    }
-    interpreter
-  }
-
-  def apply(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]): FirrtlTerp = {
-    apply(ast, blackBoxFactories = blackBoxFactories)
   }
 }

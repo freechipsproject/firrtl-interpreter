@@ -4,8 +4,8 @@ package firrtl_interpreter
 
 import java.io.File
 
-import firrtl.ExecutionOptionsManager
-import firrtl_interpreter.vcd.{Wire, VCD}
+import firrtl.{ExecutionOptionsManager}
+import firrtl_interpreter.vcd.{VCD, Wire}
 import logger.LazyLogging
 
 /**
@@ -251,6 +251,5 @@ trait HasVcdReplayOptions {
     .text("number of events to run")
 }
 
-class VcdReplayTesterOptions
-  extends ExecutionOptionsManager("golden-vcd-tester") with HasVcdReplayOptions with HasInterpreterOptions
+class VcdReplayTesterOptions extends InterpreterOptionsManager with HasVcdReplayOptions
 
