@@ -2,7 +2,7 @@
 
 package firrtl_interpreter.real
 
-import firrtl.ExecutionOptionsManager
+import firrtl.{ExecutionOptionsManager, HasFirrtlOptions}
 import firrtl_interpreter._
 import org.scalatest.{FreeSpec, Matchers}
 
@@ -38,7 +38,7 @@ class BlackBoxRealSpec extends FreeSpec with Matchers {
 
     "addition should work expand instances as found" in {
 
-      val optionsManager = new ExecutionOptionsManager("interpreter") with HasInterpreterOptions {
+      val optionsManager = new InterpreterOptionsManager {
         interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(new DspRealFactory), randomSeed = 0L)
       }
       val tester = new InterpretiveTester(adderInput, optionsManager)
@@ -54,7 +54,7 @@ class BlackBoxRealSpec extends FreeSpec with Matchers {
     }
 
     "poison should propagate through black boxes" in {
-      val optionsManager = new ExecutionOptionsManager("interpreter") with HasInterpreterOptions {
+      val optionsManager = new InterpreterOptionsManager {
         interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(new DspRealFactory), randomSeed = 0L)
       }
       val tester = new InterpretiveTester(adderInput, optionsManager)
@@ -91,7 +91,7 @@ class BlackBoxRealSpec extends FreeSpec with Matchers {
         |    BBFIntPart_1.in <= io_a_node
       """.stripMargin
 
-    val optionsManager = new ExecutionOptionsManager("interpreter") with HasInterpreterOptions {
+    val optionsManager = new InterpreterOptionsManager {
       interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(new DspRealFactory))
     }
     val tester = new InterpretiveTester(input, optionsManager)

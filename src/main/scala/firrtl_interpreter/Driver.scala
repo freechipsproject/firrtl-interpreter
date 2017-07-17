@@ -2,7 +2,7 @@
 
 package firrtl_interpreter
 
-import firrtl.ExecutionOptionsManager
+import firrtl.{ExecutionOptionsManager, HasFirrtlOptions}
 
 case class InterpreterOptions(
     writeVCD:          Boolean              = false,
@@ -92,37 +92,34 @@ trait HasInterpreterOptions {
     }
     .text("compiled low firrtl at firrtl load time")
 
-  parser.opt[Unit]("run-lower-compiler-on-load")
+  parser.opt[Unit]("dont-run-lower-compiler-on-load")
     .abbr("filcol")
     .foreach { _ =>
-      interpreterOptions = interpreterOptions.copy(lowCompileAtLoad = true)
+      interpreterOptions = interpreterOptions.copy(lowCompileAtLoad = false)
     }
     .text("run lowering compuler when firrtl file is loaded")
 }
 
 object Driver {
 
-  def execute(
-      firrtlInput: String,
-      optionsManager: ExecutionOptionsManager with HasInterpreterOptions): Option[InterpretiveTester] = {
+  def execute(firrtlInput: String, optionsManager: InterpreterOptionsManager): Option[InterpretiveTester] = {
     val tester = new InterpretiveTester(firrtlInput, optionsManager)
-
     Some(tester)
   }
 
-  def execute(
-               args: Array[String],
-               firrtlInput: String
-             ): Option[InterpretiveTester] = {
-    val optionsManager = new ExecutionOptionsManager("firrtl-interpreter") with HasInterpreterOptions
+  def execute(args: Array[String], firrtlInput: String): Option[InterpretiveTester] = {
+    val optionsManager = new InterpreterOptionsManager
 
-    optionsManager.parser.parse(args) match {
-      case true =>
-        execute(firrtlInput, optionsManager)
-      case _ =>
-        None
+    if (optionsManager.parser.parse(args)) {
+      execute(firrtlInput, optionsManager)
+    } else {
+      None
     }
   }
 }
 
-class InterpreterOptionsManager extends ExecutionOptionsManager("firrtl-interpreter") with HasInterpreterOptions
+class InterpreterOptionsManager extends ExecutionOptionsManager("interpreter") with HasInterpreterSuite
+
+trait HasInterpreterSuite extends ExecutionOptionsManager with HasFirrtlOptions with HasInterpreterOptions {
+  self : ExecutionOptionsManager =>
+}

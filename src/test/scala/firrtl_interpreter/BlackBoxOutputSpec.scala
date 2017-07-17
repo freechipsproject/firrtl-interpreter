@@ -2,7 +2,6 @@
 
 package firrtl_interpreter
 
-import firrtl.ExecutionOptionsManager
 import firrtl.ir.Type
 import org.scalatest.{FreeSpec, Matchers}
 
@@ -99,7 +98,7 @@ class BlackBoxOutputSpec extends FreeSpec with Matchers {
 
       val factory = new FanOutAdderFactory
 
-      val optionsManager = new ExecutionOptionsManager("interpreter") with HasInterpreterOptions {
+      val optionsManager = new InterpreterOptionsManager {
         interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(factory), randomSeed = 0L)
       }
       val tester = new InterpretiveTester(adderInput, optionsManager)
@@ -140,7 +139,7 @@ class BlackBoxOutputSpec extends FreeSpec with Matchers {
 
       val factory = new BlackBoxCounterFactory
 
-      val optionsManager = new ExecutionOptionsManager("interpreter") with HasInterpreterOptions {
+      val optionsManager = new InterpreterOptionsManager {
         interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(factory), randomSeed = 0L)
       }
       val tester = new InterpretiveTester(input, optionsManager)

@@ -3,7 +3,6 @@ package firrtl_interpreter
 
 import java.io.File
 
-import firrtl.ExecutionOptionsManager
 import firrtl_interpreter.vcd.VCD
 
 import scala.collection.mutable.ArrayBuffer
@@ -24,7 +23,7 @@ abstract class Command(val name: String) {
   }
 }
 
-class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig with HasInterpreterOptions) {
+class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfig) {
   val replConfig: ReplConfig = optionsManager.replConfig
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
 
@@ -58,7 +57,7 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
   var replVcdController: Option[ReplVcdController] = None
 
   def loadSource(input: String): Unit = {
-    currentInterpreterOpt = Some(FirrtlTerp(input, interpreterOptions))
+    currentInterpreterOpt = Some(FirrtlTerp(input, optionsManager))
     currentInterpreterOpt.foreach { _=>
       interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
       interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
@@ -1060,13 +1059,13 @@ class FirrtlRepl(val optionsManager: ExecutionOptionsManager with HasReplConfig 
 }
 
 object FirrtlRepl {
-  def execute(optionsManager: ExecutionOptionsManager with HasReplConfig with HasInterpreterOptions): Unit = {
+  def execute(optionsManager: InterpreterOptionsManager with HasReplConfig): Unit = {
     val repl = new FirrtlRepl(optionsManager)
     repl.run()
   }
 
   def main(args: Array[String]): Unit = {
-    val optionsManager = new ExecutionOptionsManager("firrtl-repl") with HasReplConfig with HasInterpreterOptions
+    val optionsManager = new InterpreterOptionsManager with HasReplConfig
 
     if(optionsManager.parse(args)) {
       val repl = new FirrtlRepl(optionsManager)
