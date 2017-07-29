@@ -4,6 +4,7 @@ package firrtl_interpreter
 import firrtl.ir._
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.matching.Regex
 
 /**
   * provides a black box implementation of a circuit memory presenting  read, write and read/write interfaces
@@ -37,10 +38,10 @@ class Memory(
             ) extends SimpleLogger {
   import Memory._
 
-  val dataWidth    = typeToWidth(dataType)
-  val addressWidth = requiredBitsForUInt(depth)
-  val bigDepth     = BigInt(depth)
-  var moduloIndex  = true
+  val dataWidth: Int    = typeToWidth(dataType)
+  val addressWidth: Int = requiredBitsForUInt(depth)
+  val bigDepth: BigInt  = BigInt(depth)
+  var moduloIndex: Boolean  = true
 
   val maxMemoryInDefaultDisplay = 20
 
@@ -50,9 +51,9 @@ class Memory(
 
   val ports: Map[String, MemoryPort] = {
     (
-      readers.map     { case portName => portName -> ReadPort(portName, readLatency) } ++
-      writers.map     { case portName => portName -> WritePort(portName, writeLatency) } ++
-      readWriters.map { case portName => portName -> ReadWritePort(portName) }
+      readers.map     { portName => portName -> ReadPort(portName, readLatency) } ++
+      writers.map     { portName => portName -> WritePort(portName, writeLatency) } ++
+      readWriters.map { portName => portName -> ReadWritePort(portName) }
     ).toMap
   }
   val writePorts:     Array[WritePort]     = writers.map(writer => ports(writer).asInstanceOf[WritePort]).toArray
@@ -117,10 +118,10 @@ class Memory(
   }
 
   def getAllFieldDependencies: Seq[String] = {
-    (readPorts ++ writePorts ++ readWritePorts).flatMap { case port: MemoryPort => port.fieldDependencies}
+    (readPorts ++ writePorts ++ readWritePorts).flatMap { port: MemoryPort => port.fieldDependencies}
   }
   def getAllOutputFields: Seq[(String, Seq[String])] = {
-    (readPorts ++ writePorts ++ readWritePorts).map { case port: MemoryPort =>
+    (readPorts ++ writePorts ++ readWritePorts).map { port: MemoryPort =>
       (port.outputFieldName, port.fieldDependencies)
     }
   }
@@ -176,7 +177,7 @@ class Memory(
     * @param latency  the number of cycles between port and memory
     */
   case class ReadPort(portName: String, latency: Int) extends MemoryPort {
-    val fieldDependencies = Seq("en", "addr").map { fieldName => s"$name.$portName.$fieldName"}
+    val fieldDependencies: Seq[String] = Seq("en", "addr").map { fieldName => s"$name.$portName.$fieldName"}
 
     case class ReadPipeLineElement(readPipeLineData: Concrete) {
       override def toString: String = s"[${readPipeLineData.value}]"
@@ -244,7 +245,7 @@ class Memory(
     override def setValue(fieldName: String, concreteValue: Concrete): Unit = {
       fieldName match {
         case "mask"    => mask = concreteValue
-        case "data"    => data = concreteValue
+        case "wdata"   => data = concreteValue
         case _         => super.setValue(fieldName, concreteValue)
       }
       inputHasChanged()
@@ -272,7 +273,9 @@ class Memory(
         dataStore(address) = data
       }
     }
-    val fieldDependencies = Seq("en", "addr", "data", "mask").map { fieldName => s"$name.$portName.$fieldName"}
+    val fieldDependencies: Seq[String] = Seq("en", "addr", "data", "mask").map { fieldName =>
+      s"$name.$portName.$fieldName"
+    }
     override def toString: String = {
       s"[$enable:$address:${data.value},${mask.value}" +
         (if(latency>0) pipeLine.mkString(" pl:", ",", "]") else "]")
@@ -322,7 +325,8 @@ class Memory(
     override def setValue(fieldName: String, concreteValue: Concrete): Unit = {
       fieldName match {
         case "wmode"   => writeMode = concreteValue.value > Big0
-        case "rdata"   => readData  = concreteValue
+        case "wdata"   => data      = concreteValue
+        case "wmask"   => mask      = concreteValue
         case "mask"    => mask      = concreteValue
         case _         => super.setValue(fieldName, concreteValue)
       }
@@ -363,8 +367,10 @@ class Memory(
 
 
     }
-    val fieldDependencies = Seq("en", "addr", "mask", "wmode").map { fieldName => s"$name.$portName.$fieldName"}
-    override val outputFieldName = "$name.$portName.rdata"
+    val fieldDependencies: Seq[String] = Seq("en", "addr", "wdata", "wmask", "wmode").map { fieldName =>
+      s"$name.$portName.$fieldName"
+    }
+    override val outputFieldName = s"$name.$portName.rdata"
 
     override def toString: String = {
       s"[${if(writeMode)"W" else "R"}:$enable:$address:${data.value}:${readData.value},${mask.value}" +
@@ -396,5 +402,5 @@ object Memory {
       case _ => key
     }
   }
-  val KeyPattern = """(.*)\.([^\.]*)\.([^\.]*)""".r
+  val KeyPattern: Regex = """(.*)\.([^\.]*)\.([^\.]*)""".r
 }
