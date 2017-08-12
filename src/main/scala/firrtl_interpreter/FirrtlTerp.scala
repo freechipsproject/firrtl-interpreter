@@ -42,6 +42,11 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 
   val blackBoxFactories: Seq[BlackBoxFactory] = interpreterOptions.blackBoxFactories
 
+  val monitorManagerOpt: Option[MonitorManager] = if(interpreterOptions.monitorBitUsage) {
+    Some(new MonitorManager(interpreterOptions))
+  }
+  else { None }
+
   /**
     * turns on evaluator debugging. Can make output quite
     * verbose.
@@ -60,7 +65,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     */
   def clearStop(): Unit = {lastStopResult = None}
 
-  var circuitState = CircuitState(dependencyGraph)
+  var circuitState = CircuitState(dependencyGraph, monitorManagerOpt)
   println("Circuit state created")
 
   def makeVCDLogger(fileName: String, showUnderscored: Boolean): Unit = {

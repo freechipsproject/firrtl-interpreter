@@ -14,12 +14,28 @@ case class InterpreterOptions(
     blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty,
     maxExecutionDepth: Long                 = ExpressionExecutionStack.defaultMaxExecutionDepth,
     showFirrtlAtLoad:  Boolean              = false,
-    lowCompileAtLoad:  Boolean              = true)
+    lowCompileAtLoad:  Boolean              = true,
+    // monitor options
+    monitorReportFileName:  String          = "",
+    monitorBitUsage:        Boolean         = false,
+    monitorHistogramBins:  Int             = 0,
+    monitorTrackTempNodes:  Boolean         = false,
+    prettyPrintReport:      Boolean         = true
+    )
   extends firrtl.ComposableOptions {
 
   def vcdOutputFileName(optionsManager: ExecutionOptionsManager): String = {
     if(writeVCD) {
       s"${optionsManager.getBuildFileName("vcd")}"
+    }
+    else {
+      ""
+    }
+  }
+
+  def getMonitorReportFile(optionsManager: ExecutionOptionsManager with HasInterpreterOptions): String = {
+    if(optionsManager.interpreterOptions.monitorReportFileName.nonEmpty) {
+      optionsManager.getBuildFileName(optionsManager.interpreterOptions.monitorReportFileName)
     }
     else {
       ""
@@ -98,6 +114,46 @@ trait HasInterpreterOptions {
       interpreterOptions = interpreterOptions.copy(lowCompileAtLoad = false)
     }
     .text("run lowering compuler when firrtl file is loaded")
+
+  parser.note("firrtl-interpreter-options-bit-usage-monitoring")
+
+  parser.opt[Unit]("fint-monitor-bit-usage")
+    .abbr("fimbu")
+    .foreach { _ =>
+      interpreterOptions = interpreterOptions.copy(monitorBitUsage = true)
+    }
+    .text("turn on bit monitoring, turns on stats for wires")
+
+  parser.opt[String]("fint-monitor-output-file")
+    .abbr("fimof")
+    .valueName("<name-of-output-file>")
+    .foreach { x =>
+      interpreterOptions = interpreterOptions.copy(monitorReportFileName = x)
+    }
+    .text("write monitoring stats to this file name instead of standard out")
+
+  parser.opt[Int]("fint-monitor-histogram-bins")
+    .abbr("fimhb")
+    .valueName("<number-of-bins>")
+    .foreach { x =>
+      interpreterOptions = interpreterOptions.copy(monitorHistogramBins = x)
+    }
+    .text("keeps this number of bins for histogram of bit usages, must be power of 2, default is none")
+
+  parser.opt[Unit]("fint-monitor-track-temps")
+    .abbr("fitt")
+    .foreach { _ =>
+      interpreterOptions = interpreterOptions.copy(monitorTrackTempNodes = true)
+    }
+    .text("keep bit usage stats for temp nodes, default is false")
+
+  parser.opt[Unit]("fint-pretty-print-monitor-stats")
+    .abbr("fippms")
+    .foreach { _ =>
+      interpreterOptions = interpreterOptions.copy(monitorBitUsage = true)
+    }
+    .text("columnizes bit usage monitor reports")
+
 }
 
 object Driver {

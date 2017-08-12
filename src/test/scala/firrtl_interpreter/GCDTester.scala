@@ -40,7 +40,17 @@ class GCDTester extends FlatSpec with Matchers {
 
 
   it should "run with InterpretedTester" in {
-    val tester = new InterpretiveTester(gcdFirrtl)
+    val optionsManager = new InterpreterOptionsManager {
+      interpreterOptions = interpreterOptions.copy(
+        // monitorReportFileName = "bitstats.csv",
+        monitorBitUsage = true,
+        monitorTrackTempNodes = false,
+        monitorHistogramBins = 16,
+        prettyPrintReport = true
+      )
+    }
+
+    val tester = new InterpretiveTester(gcdFirrtl, optionsManager)
     // interpreter.setVerbose()
     List((1, 1, 1), (34, 17, 17), (8, 12, 4)).foreach { case (x, y, z) =>
       tester.step()
@@ -57,5 +67,6 @@ class GCDTester extends FlatSpec with Matchers {
       }
       tester.expect("io_z", z)
     }
+    tester.report()
   }
 }

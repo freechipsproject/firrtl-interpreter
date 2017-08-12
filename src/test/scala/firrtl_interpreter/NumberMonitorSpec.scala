@@ -18,11 +18,11 @@ class NumberMonitorSpec extends FreeSpec with Matchers {
       }
 
       monitor.mean should be (42.0)
-      monitor.variance should be (0.0)
+      monitor.stddev should be (0.0)
       monitor.minValue should be (42.0)
       monitor.maxValue should be (42.0)
 
-      println(s"mean = ${monitor.mean}, σ = ${monitor.variance} min = ${monitor.minValue} max = ${monitor.maxValue}")
+      println(s"mean = ${monitor.mean}, σ = ${monitor.stddev} min = ${monitor.minValue} max = ${monitor.maxValue}")
       println(s"bins = ${monitor.showBins}")
     }
   }
@@ -34,7 +34,7 @@ class NumberMonitorSpec extends FreeSpec with Matchers {
       monitor.update(value)
     }
 
-    println(s"mean = ${monitor.mean}, σ = ${monitor.variance} min = ${monitor.minValue} max = ${monitor.maxValue}")
+    println(s"mean = ${monitor.mean}, σ = ${monitor.stddev} min = ${monitor.minValue} max = ${monitor.maxValue}")
     println(s"bins = ${monitor.showBins}")
 
 //    monitor.mean.abs should be (5.0)
@@ -42,7 +42,7 @@ class NumberMonitorSpec extends FreeSpec with Matchers {
 //    monitor.minValue should be (42.0)
 //    monitor.maxValue should be (42.0)
 
-    println(s"mean = ${monitor.mean}, σ = ${monitor.variance} min = ${monitor.minValue} max = ${monitor.maxValue}")
+    println(s"mean = ${monitor.mean}, σ = ${monitor.stddev} min = ${monitor.minValue} max = ${monitor.maxValue}")
     println(s"bins = ${monitor.showBins}")
   }
 
@@ -55,7 +55,7 @@ class NumberMonitorSpec extends FreeSpec with Matchers {
       monitor.update(value)
     }
 
-    println(s"mean = ${monitor.mean}, σ = ${monitor.variance} min = ${monitor.minValue} max = ${monitor.maxValue}")
+    println(s"mean = ${monitor.mean}, σ = ${monitor.stddev} min = ${monitor.minValue} max = ${monitor.maxValue}")
     println(s"bins = ${monitor.showBins}")
 
     //    monitor.mean.abs should be (5.0)
@@ -63,7 +63,7 @@ class NumberMonitorSpec extends FreeSpec with Matchers {
     //    monitor.minValue should be (42.0)
     //    monitor.maxValue should be (42.0)
 
-    println(s"mean = ${monitor.mean}, σ = ${monitor.variance} min = ${monitor.minValue} max = ${monitor.maxValue}")
+    println(s"mean = ${monitor.mean}, σ = ${monitor.stddev} min = ${monitor.minValue} max = ${monitor.maxValue}")
     println(s"bins = ${monitor.showBins}")
   }
 

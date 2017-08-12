@@ -8,7 +8,7 @@ import firrtl_interpreter.vcd.VCD
 import scala.collection.mutable
 
 object CircuitState {
-  def apply(dependencyGraph: DependencyGraph): CircuitState = {
+  def apply(dependencyGraph: DependencyGraph, monitorManagerOpt: Option[MonitorManager]): CircuitState = {
     val inputPortToValue  = makePortToConcreteValueMap(dependencyGraph, Input)
     val outputPortToValue = makePortToConcreteValueMap(dependencyGraph, Output)
     val registerToValue   = makeRegisterToConcreteValueMap(dependencyGraph)
@@ -18,7 +18,8 @@ object CircuitState {
       outputPortToValue,
       registerToValue,
       dependencyGraph.memories,
-      dependencyGraph.validNames
+      dependencyGraph.validNames,
+      monitorManagerOpt
     )
     circuitState
   }
@@ -51,7 +52,8 @@ case class CircuitState(
                     outputPorts: mutable.Map[String, Concrete],
                     registers:   mutable.Map[String, Concrete],
                     memories:    mutable.Map[String, Memory],
-                    validNames:  mutable.HashSet[String]) {
+                    validNames:  mutable.HashSet[String],
+                    monitorManagerOpt: Option[MonitorManager] = None) {
   val nextRegisters = new mutable.HashMap[String, Concrete]()
   val ephemera      = new mutable.HashMap[String, Concrete]()
   val rhsOutputs    = new mutable.HashSet[String] // used to see if output has been computed as rhs
@@ -178,6 +180,8 @@ case class CircuitState(
   }
 
   def setValue(key: String, concreteValue: Concrete, registerPoke: Boolean = false): Concrete = {
+    monitorManagerOpt.foreach(_.monitorSetValue(key, concreteValue))
+
     if(isInput(key)) {
       inputPorts(key) = concreteValue
       nameToConcreteValue(key) = concreteValue

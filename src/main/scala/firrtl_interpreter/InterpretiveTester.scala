@@ -1,6 +1,8 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
+import java.io.{File, PrintWriter}
+
 /**
   * Works a lot like the chisel classic tester compiles a firrtl input string
   * and allows poke, peek, expect and step
@@ -209,10 +211,30 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
           }
       }
     }
+    val monitorReport = if(optionsManager.interpreterOptions.getMonitorReportFile(optionsManager).nonEmpty) {
+      interpreter.monitorManagerOpt match {
+        case Some(monitorManager) =>
+          val file = new File(optionsManager.interpreterOptions.getMonitorReportFile(optionsManager))
+          val writer = new PrintWriter(file)
+          writer.write(monitorManager.monitorReport)
+          writer.close()
+          println(s"Bit Monitor report written to file ${file.getAbsolutePath} ")
+          ""
+        case _ => ""
+      }
+    }
+    else {
+      interpreter.monitorManagerOpt match {
+        case Some(monitorManager) => monitorManager.monitorReport
+        case _ => ""
+      }
+    }
+
     s"test ${interpreter.loweredAst.main} " +
       s"$status $expectationsMet tests passed " +
       s"in ${interpreter.circuitState.stateCounter} cycles " +
-      f"taking $elapsedSeconds%.6f seconds"
+      f"taking $elapsedSeconds%.6f seconds" +
+      s"\n$monitorReport"
   }
   /**
     * A simplistic report of the number of expects that passed and
