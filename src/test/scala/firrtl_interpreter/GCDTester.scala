@@ -46,7 +46,7 @@ class GCDTester extends FlatSpec with Matchers {
         monitorBitUsage = true,
         monitorTrackTempNodes = false,
         monitorHistogramBins = 16,
-        prettyPrintReport = true
+        prettyPrintReport = false
       )
     }
 

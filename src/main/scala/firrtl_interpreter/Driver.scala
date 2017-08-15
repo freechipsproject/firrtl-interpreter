@@ -20,7 +20,7 @@ case class InterpreterOptions(
     monitorBitUsage:        Boolean         = false,
     monitorHistogramBins:  Int             = 0,
     monitorTrackTempNodes:  Boolean         = false,
-    prettyPrintReport:      Boolean         = true
+    prettyPrintReport:      Boolean         = false
     )
   extends firrtl.ComposableOptions {
 

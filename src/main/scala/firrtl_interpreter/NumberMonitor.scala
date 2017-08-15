@@ -52,7 +52,7 @@ class NumberMonitor(val canBeNegative: Boolean, val bitSize: Int, numberOfBins: 
 
   def mean: Double = mu
   def variance: Double = if(samples > 1) sq / samples else 0.0
-  def stddev: Double   = math.sqrt(variance)
+  def stddev: Double   = if(samples > 1) math.sqrt(variance) / samples else 0.0
   def showBins: String = bins.map { x => f"$x%8d" }.mkString(" ")
 
   def render(prettyPrint: Boolean = true): String = {
