@@ -69,10 +69,11 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
 
     val tester = new InterpretiveTester(chirrtlMemInput) {
       poke("reset", 1)
-      step(1)
+      step()
       poke("reset", 0)
-      step(1)
+      step()
     }
+    tester.report()
   }
 
   behavior of "memory primitives"
@@ -117,15 +118,92 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
       poke("b", 0)
       poke("select", 0)
 
-      step(1)
+      step()
 
       def testC(): Unit = {
         val m = peek("c")
         println(s"got $m")
-        step(1)
+        step()
       }
       testC()
-
     }
+    tester.report()
+  }
+
+  behavior of "read-write memory"
+
+  it should "run this circuit" in {
+    val input =
+      """
+        |circuit target_memory :
+        |  module target_memory :
+        |    input clock : Clock
+        |    input outer_addr : UInt<11>
+        |    input outer_din : UInt<12>
+        |    output outer_dout : UInt<12>
+        |    input outer_write_en : UInt<1>
+        |
+        |    node outer_addr_sel = bits(outer_addr, 10, 10)
+        |    reg outer_addr_sel_reg : UInt<1>, clock with :
+        |      reset => (UInt<1>("h0"), outer_addr_sel_reg)
+        |    outer_addr_sel_reg <= mux(UInt<1>("h1"), outer_addr_sel, outer_addr_sel_reg)
+        |    inst mem_0_0 of awesome_lib_mem
+        |    mem_0_0.lib_clk <= clock
+        |    mem_0_0.lib_addr <= outer_addr
+        |    node outer_dout_0_0 = bits(mem_0_0.lib_dout, 11, 0)
+        |    mem_0_0.lib_din <= bits(outer_din, 11, 0)
+        |    mem_0_0.lib_write_en <= and(and(outer_write_en, UInt<1>("h1")), eq(outer_addr_sel, UInt<1>("h0")))
+        |    node outer_dout_0 = outer_dout_0_0
+        |    inst mem_1_0 of awesome_lib_mem
+        |    mem_1_0.lib_clk <= clock
+        |    mem_1_0.lib_addr <= outer_addr
+        |    node outer_dout_1_0 = bits(mem_1_0.lib_dout, 11, 0)
+        |    mem_1_0.lib_din <= bits(outer_din, 11, 0)
+        |    mem_1_0.lib_write_en <= and(and(outer_write_en, UInt<1>("h1")), eq(outer_addr_sel, UInt<1>("h1")))
+        |    node outer_dout_1 = outer_dout_1_0
+        |    outer_dout <= mux(eq(outer_addr_sel_reg, UInt<1>("h0")), outer_dout_0, mux(eq(outer_addr_sel_reg, UInt<1>("h1")), outer_dout_1, UInt<1>("h0")))
+        |
+        |  module awesome_lib_mem :
+        |    input lib_clk : Clock
+        |    input lib_addr : UInt<10>
+        |    input lib_din : UInt<12>
+        |    output lib_dout : UInt<12>
+        |    input lib_write_en : UInt<1>
+        |
+        |    mem ram :
+        |      data-type => UInt<12>
+        |      depth => 1024
+        |      read-latency => 1
+        |      write-latency => 1
+        |      readwriter => RW_0
+        |      read-under-write => undefined
+        |    ram.RW_0.clk <= lib_clk
+        |    ram.RW_0.addr <= lib_addr
+        |    ram.RW_0.en <= UInt<1>("h1")
+        |    ram.RW_0.wmode <= lib_write_en
+        |    lib_dout <= ram.RW_0.rdata
+        |    ram.RW_0.wdata <= lib_din
+        |    ram.RW_0.wmask <= UInt<1>("h1")
+      """.stripMargin
+
+    val tester = new InterpretiveTester(input) {
+      // setVerbose(true)
+
+      poke("outer_write_en", 1)
+      for(i <- 0 until 10) {
+        poke("outer_addr", i)
+        poke("outer_din", i * 3)
+        step()
+      }
+      poke("outer_write_en", 0)
+      step(2)
+
+      for(i <- 0 until 10) {
+        poke("outer_addr", i)
+        step()
+        expect("outer_dout", i * 3)
+      }
+    }
+    tester.report()
   }
 }
