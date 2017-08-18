@@ -40,9 +40,15 @@ class GCDTester extends FlatSpec with Matchers {
 
 
   it should "run with InterpretedTester" in {
-    val tester = new InterpretiveTester(gcdFirrtl)
+    val manager = new InterpreterOptionsManager {
+      interpreterOptions = interpreterOptions.copy(showFirrtlAtLoad = true)
+    }
+    val tester = new InterpretiveTester(gcdFirrtl, manager)
     // interpreter.setVerbose()
-    List((1, 1, 1), (34, 17, 17), (8, 12, 4)).foreach { case (x, y, z) =>
+//    List((1, 1, 1), (34, 17, 17), (8, 12, 4)).foreach { case (x, y, z) =>
+    for {x <- 1 to 1000
+         y <- 1 to 100
+    } {
       tester.step()
       tester.poke("io_a", x)
       tester.poke("io_b", y)
@@ -55,7 +61,8 @@ class GCDTester extends FlatSpec with Matchers {
       while (tester.peek("io_v") != Big1) {
         tester.step()
       }
-      tester.expect("io_z", z)
+//      tester.expect("io_z", z)
     }
+    tester.report()
   }
 }
