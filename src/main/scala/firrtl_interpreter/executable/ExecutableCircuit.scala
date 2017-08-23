@@ -2,11 +2,7 @@
 
 package firrtl_interpreter.executable
 
-import firrtl_interpreter.executable
-
-import scala.collection.mutable
-
-class State(numberOfBigInts: Int, numberOfInts: Int, nameMap: Map[String, WireValue]) {
+class ExecutableCircuit(numberOfBigInts: Int, numberOfInts: Int, nameMap: Map[String, WireValue]) {
   val bigInts: Array[BigInt] = Array.fill(numberOfBigInts){ BigInt(0) }
   val ints: Array[Int] = Array.fill(numberOfInts){ 0 }
   val names: Map[String, WireValue] = nameMap
@@ -16,7 +12,7 @@ class State(numberOfBigInts: Int, numberOfInts: Int, nameMap: Map[String, WireVa
   }
 
   def header: String = {
-    names.keys.toArray.sorted.map { name => f"${name}%10.10s" }.mkString("")
+    names.keys.toArray.sorted.map { name => f"$name%10.10s" }.mkString("")
   }
   override def toString: String = {
     names.keys.toArray.sorted.map(names(_)).map { wire =>
@@ -25,42 +21,42 @@ class State(numberOfBigInts: Int, numberOfInts: Int, nameMap: Map[String, WireVa
   }
 }
 
-//noinspection ScalaStyle
-object State {
-  def apply(nameMap: Map[String, WireValue]): State = {
+//noinspection ScalaStyle,ScalaUnusedSymbol
+object ExecutableCircuit {
+  def apply(nameMap: Map[String, WireValue]): ExecutableCircuit = {
     val (bigWireCount, intWireCount) = nameMap.values.foldLeft((0, 0)) { case ((aCount, bCount), wireValue) =>
       if(wireValue.bitSize > 32) (aCount + 1, bCount) else (aCount, bCount + 1)
     }
-    new State(bigWireCount, intWireCount, nameMap)
+    new ExecutableCircuit(bigWireCount, intWireCount, nameMap)
   }
 
   def main(args: Array[String]): Unit = {
     var nextWire = -1
-    def getNextWire() = { nextWire += 1; nextWire }
+    def newNextWire() = { nextWire += 1; nextWire }
 
     val wires = Seq(
-      WireValue("io_a", isSigned = false, 32, getNextWire()),
-      WireValue("io_b", isSigned = false, 32, getNextWire()),
-      WireValue("io_e", isSigned = false, 32, getNextWire()),
-      WireValue("io_z", isSigned = false, 32, getNextWire()),
-      WireValue("io_v", isSigned = false, 32, getNextWire()),
-      WireValue("reg_x_in", isSigned = false, 32, getNextWire()),
-      WireValue("reg_x_out", isSigned = false, 32, getNextWire()),
-      WireValue("reg_y_in", isSigned = false, 32, getNextWire()),
-      WireValue("reg_y_out", isSigned = false, 32, getNextWire()),
-      WireValue("t_13", isSigned = false, 32, getNextWire()),
-      WireValue("t_14", isSigned = false, 32, getNextWire()),
-      WireValue("t_15", isSigned = false, 32, getNextWire()),
-      WireValue("t_16", isSigned = false, 32, getNextWire()),
-      WireValue("t_17", isSigned = false, 32, getNextWire()),
-      WireValue("t_18", isSigned = false, 32, getNextWire()),
-      WireValue("t_19", isSigned = false, 32, getNextWire()),
-      WireValue("t_20", isSigned = false, 32, getNextWire()),
-      WireValue("t_21", isSigned = false, 32, getNextWire()),
-      WireValue("gen_0", isSigned = false, 32, getNextWire()),
-      WireValue("gen_1", isSigned = false, 32, getNextWire())
+      WireValue("io_a", isSigned = false, 32, newNextWire()),
+      WireValue("io_b", isSigned = false, 32, newNextWire()),
+      WireValue("io_e", isSigned = false, 32, newNextWire()),
+      WireValue("io_z", isSigned = false, 32, newNextWire()),
+      WireValue("io_v", isSigned = false, 32, newNextWire()),
+      WireValue("reg_x_in", isSigned = false, 32, newNextWire()),
+      WireValue("reg_x_out", isSigned = false, 32, newNextWire()),
+      WireValue("reg_y_in", isSigned = false, 32, newNextWire()),
+      WireValue("reg_y_out", isSigned = false, 32, newNextWire()),
+      WireValue("t_13", isSigned = false, 32, newNextWire()),
+      WireValue("t_14", isSigned = false, 32, newNextWire()),
+      WireValue("t_15", isSigned = false, 32, newNextWire()),
+      WireValue("t_16", isSigned = false, 32, newNextWire()),
+      WireValue("t_17", isSigned = false, 32, newNextWire()),
+      WireValue("t_18", isSigned = false, 32, newNextWire()),
+      WireValue("t_19", isSigned = false, 32, newNextWire()),
+      WireValue("t_20", isSigned = false, 32, newNextWire()),
+      WireValue("t_21", isSigned = false, 32, newNextWire()),
+      WireValue("gen_0", isSigned = false, 32, newNextWire()),
+      WireValue("gen_1", isSigned = false, 32, newNextWire())
     )
-    val state = State(wires.map { wv => (wv.name, wv) }.toMap)
+    val state = ExecutableCircuit(wires.map { wv => (wv.name, wv) }.toMap)
 
     println(s"state 0 $state")
 
@@ -166,7 +162,7 @@ object State {
     }
 
     def show(): Unit = {
-      println(f"state $cycle%6d ${state}")
+      println(f"state $cycle%6d $state")
     }
 
     println(f"state ${""}%6.6s  ${state.header}")
@@ -174,11 +170,11 @@ object State {
     val startTime = System.nanoTime()
 
     for {x <- 1 to 1000
-         y <- 1 to 100
+         y <- 1 to 1000
     } {
 
-      poke("io_a", 33)
-      poke("io_b", 11)
+      poke("io_a", x)
+      poke("io_b", y)
       poke("io_e", 1)
 
       step()
@@ -195,22 +191,6 @@ object State {
     val endTime = System.nanoTime()
     val elapsedSeconds = (endTime - startTime).toDouble / 1000000000.0
 
-    println(f"taking $elapsedSeconds%.6f seconds")
-
-
-
-    //    val g1 = GetInt(state, 0).apply
-//    val gb = GetInt(state, 1).apply
-//    val g2 = GetIntConstant(7).apply _
-//    val expr = AddInts(g1, g2).apply _
-//    val assign1 = AssignInt(state, 0, expr)
-//    val assign2 = AssignInt(state, 1, AddInts(g1, AddInts(g1, gb).apply _).apply _ )
-//    assign1()
-//    assign2()
-//    println(s"state 1 $state")
-//    println(s"state 1 $state")
-//    assign1()
-//    assign2()
-//    println(s"state 2 $state")
+    println(f"processed $cycle cycles $elapsedSeconds%.6f seconds")
   }
 }

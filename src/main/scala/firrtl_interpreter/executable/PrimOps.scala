@@ -2,17 +2,21 @@
 
 package firrtl_interpreter.executable
 
-class PrimOps {
+trait Assigner {
+  def apply(): Unit
+}
+
+trait IntAssigner {
+  def apply(): Int
 }
 
 case class GetIntConstant(n: Int) {
   def apply(): Int = n
 }
 
-case class GetInt(state: State, index: Int) {
+case class GetInt(state: ExecutableCircuit, index: Int) {
   val apply: () => Int = {
-    if(true) nakedGetInt  _
-    else verboseGetInt _
+    if(true) nakedGetInt else verboseGetInt
   }
 
   def nakedGetInt(): Int = {
@@ -48,15 +52,15 @@ case class GtInts(f1: () => Int, f2: () => Int) {
   def apply(): Int = if(f1() > f2()) 1 else 0
 }
 
-class AddBigIntToInt(state: State, aIndex: Int, bIndex: Int) {
+class AddBigIntToInt(state: ExecutableCircuit, aIndex: Int, bIndex: Int) {
   def apply: BigInt = state.bigInts(aIndex) + state.ints(bIndex)
 }
 
-class AssignBigInt(state: State, index: Int, expression: => BigInt) {
-  def apply: Unit = state.bigInts(index) = expression
+class AssignBigInt(state: ExecutableCircuit, index: Int, expression: => BigInt) {
+  def apply(): Unit = state.bigInts(index) = expression
 }
 
-case class AssignInt(state: State, index: Int, expression: () => Int) {
+case class AssignInt(state: ExecutableCircuit, index: Int, expression: () => Int) extends Assigner {
   def apply(): Unit = {
 //    println(s"assign index $index ${state.names.values.find(_.index == index).get.name} ${expression()}")
     state.ints(index) = expression()
