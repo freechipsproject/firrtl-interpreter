@@ -89,7 +89,7 @@ object ConcreteCircuit {
     new ConcreteCircuit
   }
 
-  def runOnce(): Unit ={
+  def runOnce(values: Seq[(Int, Int, Int)]): Unit ={
     var nextWire = -1
     def newNextWire() = { nextWire += 1; nextWire }
 
@@ -232,27 +232,6 @@ object ConcreteCircuit {
 
 //    println(f"state ${""}%6.6s  ${state.header}")
 
-    def computeGcd(a: Int, b: Int): (Int, Int) = {
-      var x = a
-      var y = b
-      var depth = 1
-      while(y > 0 ) {
-        if (x > y) {
-          x -= y
-        }
-        else {
-          y -= x
-        }
-        depth += 1
-      }
-      (x, depth)
-    }
-
-    val values =
-      for {x <- 1 to 1000
-           y <- 1 to 1000
-      } yield (x, y, computeGcd(x, y)._1)
-
     val startTime = System.nanoTime()
 
     values.foreach { case (x, y, z) =>
@@ -284,11 +263,32 @@ object ConcreteCircuit {
   }
 
   def main(args: Array[String]): Unit = {
-    runOnce()
-    runOnce()
-    runOnce()
-    ExecutableCircuit.main(Array.empty[String])
-    ExecutableCircuit.main(Array.empty[String])
-    ExecutableCircuit.main(Array.empty[String])
+    def computeGcd(a: Int, b: Int): (Int, Int) = {
+      var x = a
+      var y = b
+      var depth = 1
+      while(y > 0 ) {
+        if (x > y) {
+          x -= y
+        }
+        else {
+          y -= x
+        }
+        depth += 1
+      }
+      (x, depth)
+    }
+
+    val values =
+      for {x <- 1 to 1000
+           y <- 1 to 1000
+      } yield (x, y, computeGcd(x, y)._1)
+
+    runOnce(values)
+    runOnce(values)
+    runOnce(values)
+    ExecutableCircuit.runOnce(values)
+    ExecutableCircuit.runOnce(values)
+    ExecutableCircuit.runOnce(values)
   }
 }

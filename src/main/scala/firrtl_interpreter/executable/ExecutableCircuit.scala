@@ -40,14 +40,17 @@ class ExecutableCircuit {
 object ExecutableCircuit {
   def apply(nameMap: Map[String, WireValue]): ExecutableCircuit = {
     val (bigWireCount, intWireCount) = nameMap.values.foldLeft((0, 0)) { case ((aCount, bCount), wireValue) =>
-      if(wireValue.bitSize > 32) (aCount + 1, bCount) else (aCount, bCount + 1)
+      if (wireValue.bitSize > 32) (aCount + 1, bCount) else (aCount, bCount + 1)
     }
     new ExecutableCircuit
   }
 
-  def main(args: Array[String]): Unit = {
+  def runOnce(values: Seq[(Int, Int, Int)]): Unit = {
     var nextWire = -1
-    def newNextWire() = { nextWire += 1; nextWire }
+
+    def newNextWire() = {
+      nextWire += 1; nextWire
+    }
 
     val wires = Seq(
       WireValue("io_a", isSigned = false, 32, newNextWire()),
@@ -76,7 +79,7 @@ object ExecutableCircuit {
     wires.foreach { wv => state.addWire(wv) }
     state.build()
 
-//    println(s"state 0 $state")
+    //    println(s"state 0 $state")
 
     val instructions = Seq(
       AssignInt(state, state.getIndex("t_13"),
@@ -170,15 +173,18 @@ object ExecutableCircuit {
       val index = state.getIndex(name)
       state.ints(index) = value
     }
+
     def peek(name: String): Int = {
       state.ints(state.getIndex(name))
     }
+
     def expect(name: String, value: Int, msg: => String) = {
       assert(state.ints(state.getIndex(name)) == value,
         s"${state.ints(state.getIndex(name))} did not equal $value, $msg")
     }
 
     var cycle = 0
+
     def step(): Unit = {
       regNextInstructions.foreach { inst => inst() }
       instructions.foreach { inst => inst() }
@@ -189,13 +195,13 @@ object ExecutableCircuit {
       println(f"state $cycle%6d $state")
     }
 
-//    println(f"state ${""}%6.6s  ${state.header}")
+    //    println(f"state ${""}%6.6s  ${state.header}")
 
     def computeGcd(a: Int, b: Int): (Int, Int) = {
       var x = a
       var y = b
       var depth = 1
-      while(y > 0 ) {
+      while (y > 0) {
         if (x > y) {
           x -= y
         }
@@ -225,12 +231,12 @@ object ExecutableCircuit {
       poke("io_e", 0)
       step()
 
-      while(peek("io_v") != 1) {
+      while (peek("io_v") != 1) {
         step()
       }
 
       expect("io_z", z, s"$x, $y")
-        //      show()
+      //      show()
 
     }
 
@@ -240,5 +246,32 @@ object ExecutableCircuit {
     println(
       f"processed $cycle cycles $elapsedSeconds%.6f seconds ${cycle.toDouble / (1000000.0 * elapsedSeconds)}%5.3f MHz"
     )
+  }
+
+  def main(args: Array[String]): Unit = {
+    def computeGcd(a: Int, b: Int): (Int, Int) = {
+      var x = a
+      var y = b
+      var depth = 1
+      while(y > 0 ) {
+        if (x > y) {
+          x -= y
+        }
+        else {
+          y -= x
+        }
+        depth += 1
+      }
+      (x, depth)
+    }
+
+    val values =
+      for {x <- 1 to 1000
+           y <- 1 to 1000
+      } yield (x, y, computeGcd(x, y)._1)
+
+    runOnce(values)
+    runOnce(values)
+    runOnce(values)
   }
 }
