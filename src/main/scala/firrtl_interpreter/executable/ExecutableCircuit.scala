@@ -5,40 +5,32 @@ package firrtl_interpreter.executable
 import scala.collection.mutable
 
 class ExecutableCircuit {
-  var bigInts: Array[BigInt] = Array[BigInt](0)
-  var ints: Array[Int] = Array[Int](0)
-  val names: mutable.HashMap[String, WireValue] = new mutable.HashMap[String, WireValue]
-
-  def getIndex(name: String): Int = {
-    names(name).index
-  }
+  val names: mutable.HashMap[String, ExecutableValue] = new mutable.HashMap[String, ExecutableValue]
 
   def header: String = {
     names.keys.toArray.sorted.map { name => f"$name%10.10s" }.mkString("")
   }
 
-  def build(): Unit = {
-    val (bigIntsCount, intsCount) = names.values.foldLeft((0, 0)) { case ((bc, ic), wireValue) =>
-      if(wireValue.isBig) (bc + 1, ic) else (bc, ic + 1)
-    }
-    bigInts = Array.fill(bigIntsCount)(BigInt(0))
-    ints =  Array.fill(intsCount)(0)
-  }
-
-  def addWire(wireValue: WireValue): Unit = {
+  def addWire(wireValue: ExecutableValue): Unit = {
     names(wireValue.name) = wireValue
   }
 
+  def apply(name: String): ExecutableValue = {
+    names(name)
+  }
+
+  def getUInt(name: String): UInt = {
+    names(name).asInstanceOf[UInt]
+  }
+
   override def toString: String = {
-    names.keys.toArray.sorted.map(names(_)).map { wire =>
-      f"${if(wire.isBig) bigInts(wire.index) else BigInt(ints(wire.index))}%10d"
-    }.mkString("")
+    names.keys.toArray.sorted.map { key => f"${names(key).asBigInt}%10d" }.mkString("")
   }
 }
 
 //noinspection ScalaStyle,ScalaUnusedSymbol
 object ExecutableCircuit {
-  def apply(nameMap: Map[String, WireValue]): ExecutableCircuit = {
+  def apply(nameMap: Map[String, UInt]): ExecutableCircuit = {
     val (bigWireCount, intWireCount) = nameMap.values.foldLeft((0, 0)) { case ((aCount, bCount), wireValue) =>
       if (wireValue.bitSize > 32) (aCount + 1, bCount) else (aCount, bCount + 1)
     }
@@ -53,134 +45,122 @@ object ExecutableCircuit {
     }
 
     val wires = Seq(
-      WireValue("io_a", isSigned = false, 32, newNextWire()),
-      WireValue("io_b", isSigned = false, 32, newNextWire()),
-      WireValue("io_e", isSigned = false, 32, newNextWire()),
-      WireValue("io_z", isSigned = false, 32, newNextWire()),
-      WireValue("io_v", isSigned = false, 32, newNextWire()),
-      WireValue("reg_x_in", isSigned = false, 32, newNextWire()),
-      WireValue("reg_x_out", isSigned = false, 32, newNextWire()),
-      WireValue("reg_y_in", isSigned = false, 32, newNextWire()),
-      WireValue("reg_y_out", isSigned = false, 32, newNextWire()),
-      WireValue("t_13", isSigned = false, 32, newNextWire()),
-      WireValue("t_14", isSigned = false, 32, newNextWire()),
-      WireValue("t_15", isSigned = false, 32, newNextWire()),
-      WireValue("t_16", isSigned = false, 32, newNextWire()),
-      WireValue("t_17", isSigned = false, 32, newNextWire()),
-      WireValue("t_18", isSigned = false, 32, newNextWire()),
-      WireValue("t_19", isSigned = false, 32, newNextWire()),
-      WireValue("t_20", isSigned = false, 32, newNextWire()),
-      WireValue("t_21", isSigned = false, 32, newNextWire()),
-      WireValue("gen_0", isSigned = false, 32, newNextWire()),
-      WireValue("gen_1", isSigned = false, 32, newNextWire())
+      UInt("io_a", 32),
+      UInt("io_b", 32),
+      UInt("io_e", 32),
+      UInt("io_z", 32),
+      UInt("io_v", 32),
+      UInt("reg_x_in", 32),
+      UInt("reg_x_out", 32),
+      UInt("reg_y_in", 32),
+      UInt("reg_y_out", 32),
+      UInt("t_13", 32),
+      UInt("t_14", 32),
+      UInt("t_15", 32),
+      UInt("t_16", 32),
+      UInt("t_17", 32),
+      UInt("t_18", 32),
+      UInt("t_19", 32),
+      UInt("t_20", 32),
+      UInt("t_21", 32),
+      UInt("gen_0", 32),
+      UInt("gen_1", 32)
     )
     val state = new ExecutableCircuit
 
     wires.foreach { wv => state.addWire(wv) }
-    state.build()
 
     //    println(s"state 0 $state")
 
     val instructions = Seq(
-      AssignInt(state, state.getIndex("t_13"),
+      AssignInt(state, state.getUInt("t_13"),
         GtInts(
-          GetInt(state, state.getIndex("reg_x_out")).apply,
-          GetInt(state, state.getIndex("reg_y_out")).apply).apply _
+          GetInt(state, state.getUInt("reg_x_out")).apply,
+          GetInt(state, state.getUInt("reg_y_out")).apply).apply _
       ),
-      AssignInt(state, state.getIndex("t_14"),
+      AssignInt(state, state.getUInt("t_14"),
         SubInts(
-          GetInt(state, state.getIndex("reg_x_out")).apply,
-          GetInt(state, state.getIndex("reg_y_out")).apply).apply _
+          GetInt(state, state.getUInt("reg_x_out")).apply,
+          GetInt(state, state.getUInt("reg_y_out")).apply).apply _
       ),
-      AssignInt(state, state.getIndex("t_15"),
+      AssignInt(state, state.getUInt("t_15"),
         TailInts(
-          GetInt(state, state.getIndex("t_14")).apply,
+          GetInt(state, state.getUInt("t_14")).apply,
           GetIntConstant(1).apply _
         ).apply _
       ),
-      AssignInt(state, state.getIndex("t_17"),
+      AssignInt(state, state.getUInt("t_17"),
         EqInts(
-          GetInt(state, state.getIndex("t_13")).apply,
+          GetInt(state, state.getUInt("t_13")).apply,
           GetIntConstant(0).apply _
         ).apply _
       ),
-      AssignInt(state, state.getIndex("t_18"),
+      AssignInt(state, state.getUInt("t_18"),
         SubInts(
-          GetInt(state, state.getIndex("reg_y_out")).apply,
-          GetInt(state, state.getIndex("reg_x_out")).apply).apply _
+          GetInt(state, state.getUInt("reg_y_out")).apply,
+          GetInt(state, state.getUInt("reg_x_out")).apply).apply _
       ),
-      AssignInt(state, state.getIndex("t_19"),
+      AssignInt(state, state.getUInt("t_19"),
         TailInts(
-          GetInt(state, state.getIndex("t_18")).apply,
+          GetInt(state, state.getUInt("t_18")).apply,
           GetIntConstant(1).apply _
         ).apply _
       ),
-      AssignInt(state, state.getIndex("t_21"),
+      AssignInt(state, state.getUInt("t_21"),
         EqInts(
-          GetInt(state, state.getIndex("reg_y_out")).apply,
+          GetInt(state, state.getUInt("reg_y_out")).apply,
           GetIntConstant(0).apply _
         ).apply _
       ),
-      AssignInt(state, state.getIndex("gen_0"),
+      AssignInt(state, state.getUInt("gen_0"),
         MuxInts(
-          GetInt(state, state.getIndex("t_13")).apply,
-          GetInt(state, state.getIndex("t_15")).apply,
-          GetInt(state, state.getIndex("reg_x_out")).apply
+          GetInt(state, state.getUInt("t_13")).apply,
+          GetInt(state, state.getUInt("t_15")).apply,
+          GetInt(state, state.getUInt("reg_x_out")).apply
         ).apply _
       ),
-      AssignInt(state, state.getIndex("gen_1"),
+      AssignInt(state, state.getUInt("gen_1"),
         MuxInts(
-          GetInt(state, state.getIndex("t_17")).apply,
-          GetInt(state, state.getIndex("t_19")).apply,
-          GetInt(state, state.getIndex("reg_y_out")).apply
+          GetInt(state, state.getUInt("t_17")).apply,
+          GetInt(state, state.getUInt("t_19")).apply,
+          GetInt(state, state.getUInt("reg_y_out")).apply
         ).apply _
       ),
-      AssignInt(state, state.getIndex("io_z"),
-        GetInt(state, state.getIndex("reg_x_out")).apply
-      ),
-      AssignInt(state, state.getIndex("io_v"),
-        GetInt(state, state.getIndex("t_21")).apply
-      ),
-      AssignInt(state, state.getIndex("reg_x_in"),
-        GetInt(state, state.getIndex("t_21")).apply
-      ),
-      AssignInt(state, state.getIndex("reg_x_in"),
+      AssignInt(state, state.getUInt("io_z"), GetInt(state, state.getUInt("reg_x_out")).apply),
+      AssignInt(state, state.getUInt("io_v"), GetInt(state, state.getUInt("t_21")).apply),
+      AssignInt(state, state.getUInt("reg_x_in"), GetInt(state, state.getUInt("t_21")).apply),
+      AssignInt(state, state.getUInt("reg_x_in"),
         MuxInts(
-          GetInt(state, state.getIndex("io_e")).apply,
-          GetInt(state, state.getIndex("io_a")).apply,
-          GetInt(state, state.getIndex("gen_0")).apply
+          GetInt(state, state.getUInt("io_e")).apply,
+          GetInt(state, state.getUInt("io_a")).apply,
+          GetInt(state, state.getUInt("gen_0")).apply
         ).apply _
       ),
-      AssignInt(state, state.getIndex("reg_y_in"),
+      AssignInt(state, state.getUInt("reg_y_in"),
         MuxInts(
-          GetInt(state, state.getIndex("io_e")).apply,
-          GetInt(state, state.getIndex("io_b")).apply,
-          GetInt(state, state.getIndex("gen_1")).apply
+          GetInt(state, state.getUInt("io_e")).apply,
+          GetInt(state, state.getUInt("io_b")).apply,
+          GetInt(state, state.getUInt("gen_1")).apply
         ).apply _
       )
     )
 
     val regNextInstructions = Seq(
-      AssignInt(state, state.getIndex("reg_x_out"),
-        GetInt(state, state.getIndex("reg_x_in")).apply
-      ),
-      AssignInt(state, state.getIndex("reg_y_out"),
-        GetInt(state, state.getIndex("reg_y_in")).apply
-      )
+      AssignInt(state, state.getUInt("reg_x_out"), GetInt(state, state.getUInt("reg_x_in")).apply),
+      AssignInt(state, state.getUInt("reg_y_out"), GetInt(state, state.getUInt("reg_y_in")).apply)
     )
 
     def poke(name: String, value: Int): Unit = {
-      val index = state.getIndex(name)
-      state.ints(index) = value
+      state.getUInt(name).value = value
     }
 
     def peek(name: String): Int = {
-      state.ints(state.getIndex(name))
+      state.getUInt(name).value
     }
 
     def expect(name: String, value: Int, msg: => String) = {
-      assert(state.ints(state.getIndex(name)) == value,
-        s"${state.ints(state.getIndex(name))} did not equal $value, $msg")
+      assert(peek(name) == value,
+        s"${peek(name)} did not equal $value, $msg")
     }
 
     var cycle = 0

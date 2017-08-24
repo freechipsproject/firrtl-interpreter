@@ -82,7 +82,7 @@ case class AssignIntValues(state: ConcreteCircuit, index: IntValue, expression: 
 
 //noinspection ScalaStyle,ScalaUnusedSymbol
 object ConcreteCircuit {
-  def apply(nameMap: Map[String, WireValue]): ConcreteCircuit = {
+  def apply(nameMap: Map[String, UInt]): ConcreteCircuit = {
     val (bigWireCount, intWireCount) = nameMap.values.foldLeft((0, 0)) { case ((aCount, bCount), wireValue) =>
       if(wireValue.bitSize > 32) (aCount + 1, bCount) else (aCount, bCount + 1)
     }
