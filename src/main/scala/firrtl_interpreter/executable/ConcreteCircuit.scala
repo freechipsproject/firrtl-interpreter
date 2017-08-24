@@ -287,8 +287,8 @@ object ConcreteCircuit {
     runOnce(values)
     runOnce(values)
     runOnce(values)
-    ExecutableCircuit.runOnce(values)
-    ExecutableCircuit.runOnce(values)
-    ExecutableCircuit.runOnce(values)
+//    ExecutableCircuit.runOnce(values)
+//    ExecutableCircuit.runOnce(values)
+//    ExecutableCircuit.runOnce(values)
   }
 }

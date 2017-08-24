@@ -6,13 +6,16 @@ import scala.collection.mutable
 
 class ExecutableCircuit {
   val names: mutable.HashMap[String, ExecutableValue] = new mutable.HashMap[String, ExecutableValue]
+  val combinationalExpressions: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
+  val registerExpressions: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
 
   def header: String = {
     names.keys.toArray.sorted.map { name => f"$name%10.10s" }.mkString("")
   }
 
-  def addWire(wireValue: ExecutableValue): Unit = {
+  def addWire(wireValue: ExecutableValue): ExecutableValue = {
     names(wireValue.name) = wireValue
+    wireValue
   }
 
   def apply(name: String): ExecutableValue = {

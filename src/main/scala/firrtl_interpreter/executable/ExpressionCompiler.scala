@@ -30,19 +30,12 @@
 //    }
 //  }
 //
-//  val wires = new mutable.ArrayBuffer[WireValue]()
-//  var nextIntIndex = -1
-//  def getIntIndex(): Int = { nextIntIndex += 1; nextIntIndex}
-//  var nextBigIntIndex = -1
-//  def getBigIntIndex(): Int = { nextBigIntIndex += 1; nextBigIntIndex}
 //  val executableExpressions = new mutable.ArrayBuffer[Assigner]
 //
 //  val state = ExecutableCircuit(Map.empty)
 //
-//
-//
 //  // scalastyle:off
-//  def processModule(modulePrefix: String, myModule: DefModule, dependencyGraph: DependencyGraph): Unit = {
+//  def processModule(modulePrefix: String, myModule: DefModule, circuit: Circuit): Unit = {
 //    def expand(name: String): String = if(modulePrefix.isEmpty) name else modulePrefix + "." + name
 //
 //    def processDependencyStatements(s: firrtl.ir.Statement): Unit = {
@@ -74,23 +67,21 @@
 //        }
 //      }
 //      def processExpression(expression: Expression): () => Int = {
-//        dependencyGraph.numberOfNodes += 1
-//        val result = expression match {
+//        val result: () => Int = expression match {
 //          case Mux(condition, trueExpression, falseExpression, tpe) =>
-//            dependencyGraph.numberOfMuxes += 1
 //            MuxInts(
 //              processExpression(condition),
 //              processExpression(trueExpression),
 //              processExpression(falseExpression)
-//            )
+//            ).apply
 //          case WRef(name, tpe, kind, gender) =>
-//            val getInt = GetInt(state, state.getIndex(expand(name)))
+//            val getInt = GetInt(state, state.getUInt(expand(name)))
 //            getInt.apply
 //          case subfield: WSubField =>
-//            val getInt = GetInt(state, state.getIndex(expand(subfield.serialize)))
+//            val getInt = GetInt(state, state.getUInt(expand(subfield.serialize)))
 //            getInt.apply
 //          case subindex: WSubIndex =>
-//            val getInt = GetInt(state, state.getIndex(expand(subindex.serialize)))
+//            val getInt = GetInt(state, state.getUInt(expand(subindex.serialize)))
 //            getInt.apply
 //          //          TODO:(chick) case ValidIf(condition, value, tpe) => ValidIf(processExpression(condition), processExpression(value), tpe)
 //          case DoPrim(op, args, const, tpe) =>
@@ -113,10 +104,12 @@
 //                throw new Exception(s"processExpression:error: unhandled expression $expression")
 //            }
 //            result
+//          case _ =>
+//            throw new InterpreterException(s"bad expression $expression")
 //        }
+//        result
 //      }
 //
-//      dependencyGraph.numberOfStatements += 1
 //      s match {
 //        case block: Block =>
 //          block.stmts.map { subStatement =>
@@ -128,56 +121,33 @@
 //            case WRef(name, tpe, _, _) => makeWire(expand(name), tpe)
 //            case (_: WSubField | _: WSubIndex) => makeWire(expand(con.loc.serialize), con.loc.tpe)
 //          }
-//          executableExpressions += AssignInt(state, newWireValue.index, processExpression(con.expr))
+//          state.combinationalExpressions += AssignInt(state, newWireValue, processExpression(con.expr))
 //        case WDefInstance(info, instanceName, moduleName, _) =>
-//          val subModule = findModule(moduleName, dependencyGraph.circuit)
+//          val subModule = findModule(moduleName, circuit)
 //          val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
 //          log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
-//          processModule(newPrefix, subModule, dependencyGraph)
-//          dependencyGraph.addSourceInfo(newPrefix, info)
-//          dependencyGraph.addInstanceName(instanceName, moduleName)
-//          s
+//          processModule(newPrefix, subModule, circuit)
 //        case DefNode(info, name, expression) =>
 //          log(s"declaration:DefNode:$name:${expression.serialize}")
-//          val newWireValue = WireValue(expand(name), isSigned = false, 32, getIntIndex())
-//          wires += newWireValue
-//
-//          executableExpressions += AssignInt(state, newWireValue.index, processExpression(expression))
+//          val newWireValue = makeWire(expand(name), 32)  //TODO:(chick) This width cannot be hard-coded
+//          executableExpressions += AssignInt(state, newWireValue, processExpression(expression))
 //        case DefWire(info, name, tpe) =>
 //          log(s"declaration:DefWire:$name")
-//          val newWireValue = WireValue(expand(name), isSigned = false, 32, getIntIndex())
-//          wires += newWireValue
+//          makeWire(expand(name), tpe)
 //        case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
 //          log(s"declaration:DefRegister:$name")
 ////          log(s"declaration:DefRegister:$name clock <- ${clockExpression.serialize} ${processExpression(clockExpression).serialize}")
 ////          log(s"declaration:DefRegister:$name reset <- ${resetExpression.serialize} ${processExpression(resetExpression).serialize}")
 ////          log(s"declaration:DefRegister:$name init  <- ${initValueExpression.serialize} ${processExpression(initValueExpression).serialize}")
 //          val expandedName = expand(name)
-//          val newWireValueIn = WireValue(s"${expandedName}_in", isSigned = false, 32, getIntIndex())
-//          wires += newWireValueIn
-//          val newWireValueOut = WireValue(s"${expandedName}", isSigned = false, 32, getIntIndex())
-//          wires += newWireValueOut
+//          val newWireValueIn = makeWire(s"${expandedName}/in", tpe)
+//          val newWireValueOut = makeWire(s"${expandedName}", tpe)
 //
-//          val renamedDefRegister = DefRegister(
-//            info, expand(name), tpe,
-//            processExpression(clockExpression),
-//            processExpression(resetExpression),
-//            processExpression(initValueExpression)
-//          )
-//
-//          dependencyGraph.registerNames += expandedName
-//          dependencyGraph.recordName(expandedName)
-//          dependencyGraph.recordType(expandedName, tpe)
-//          dependencyGraph.registers(expandedName) = renamedDefRegister
-//          dependencyGraph.addSourceInfo(expandedName, info)
-//          s
+//          state.registerExpressions += AssignInt(state, newWireValueOut, GetInt(state, newWireValueIn).apply)
 //        case defMemory: DefMemory =>
 //          val expandedName = expand(defMemory.name)
 //          log(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
 //          val newDefMemory = defMemory.copy(name = expandedName)
-//          dependencyGraph.addMemory(newDefMemory)
-//          dependencyGraph.addSourceInfo(expandedName, defMemory.info)
-//          s
 //        case IsInvalid(info, expression) =>
 ////          IsInvalid(info, processExpression(expression))
 //        case Stop(info, ret, clkExpression, enableExpression) =>
@@ -236,43 +206,44 @@
 //      }
 //    }
 //
-//    def makeWire(name: String, tpe: Type): WireValue = {
-//      val bitWidth = getBitWidth(tpe)
-//      val newIndex = if(bitWidth > 32) { getBigIntIndex() } else { getIntIndex() }
+//    def makeWire(name: String, tpe: Type): executable.UInt = {
+//      makeWire(name, getBitWidth(tpe))
+//    }
 //
-//      val wireValue = WireValue(name, getIsSigned(tpe),bitWidth, newIndex)
+//    def makeWire(name: String, width: Int): executable.UInt = {
+//      val wireValue = executable.UInt(name, width)
+//      state.addWire(wireValue)
 //      wireValue
 //    }
 //
 //    def processPorts(module: DefModule): Unit = {
 //      for(port <- module.ports) {
 //        val newWireValue = makeWire(expand(port.name), port.tpe)
-//        wires += newWireValue
+//        state.addWire(newWireValue)
 //      }
 //    }
 //
 //    myModule match {
 //      case module: firrtl.ir.Module =>
 //        processPorts(module)
-//        processDependencyStatements(module.body, dependencyGraph)
 //      case extModule: ExtModule => // Look to see if we have an implementation for this
 //        log(s"got external module ${extModule.name} instance $modulePrefix")
 //        processPorts(extModule)
 //        /* use exists while looking for the right factory, short circuits iteration when found */
-//        log(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
-//        val implementationFound = dependencyGraph.blackBoxFactories.exists { factory =>
-//          log("Found an existing factory")
-//          factory.createInstance(modulePrefix, extModule.defname) match {
-//            case Some(implementation) =>
-//              processExternalInstance(extModule, modulePrefix, implementation, dependencyGraph)
-//              true
-//            case _ => false
-//          }
-//        }
-//        if(! implementationFound) {
-//          println( s"""WARNING: external module "${extModule.defname}"($modulePrefix:${extModule.name})""" +
-//            """was not matched with an implementation""")
-//        }
+////        log(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
+////        val implementationFound = dependencyGraph.blackBoxFactories.exists { factory =>
+////          log("Found an existing factory")
+////          factory.createInstance(modulePrefix, extModule.defname) match {
+////            case Some(implementation) =>
+////              processExternalInstance(extModule, modulePrefix, implementation, dependencyGraph)
+////              true
+////            case _ => false
+////          }
+////        }
+////        if(! implementationFound) {
+////          println( s"""WARNING: external module "${extModule.defname}"($modulePrefix:${extModule.name})""" +
+////            """was not matched with an implementation""")
+////        }
 //    }
 //  }
 //
@@ -286,29 +257,28 @@
 //        throw InterpreterException(s"Top level module is not the right kind of module $x")
 //    }
 //
-//    val dependencyGraph = new DependencyGraph(circuit, module, interpreter.blackBoxFactories)
 //
-//    processModule("", module, dependencyGraph)
+//    processModule("", module, circuit)
 //
-//    for(name <- dependencyGraph.validNames) {
-//      if(! dependencyGraph.nameToExpression.contains(name)) {
-//        val defaultValue = dependencyGraph.nameToType(name) match {
-//          case UIntType(width) => UIntLiteral(0, width)
-//          case SIntType(width) => SIntLiteral(0, width)
-//          case ClockType       => UIntLiteral(0, IntWidth(1))
-//          case _ =>
-//            throw new Exception(s"error can't find default value for $name.type = ${dependencyGraph.nameToType(name)}")
-//        }
-//        dependencyGraph.nameToExpression(name) = defaultValue
-//      }
-//    }
-//
-//    log(s"For module ${module.name} dependencyGraph =")
-//    dependencyGraph.nameToExpression.keys.toSeq.sorted foreach { k =>
-//      val v = dependencyGraph.nameToExpression(k).serialize
-//      log(s"  $k -> (" + v.toString.take(MaxColumnWidth) + ")")
-//    }
-//    println(s"End of dependency graph")
-//    dependencyGraph
+////    for(name <- dependencyGraph.validNames) {
+////      if(! dependencyGraph.nameToExpression.contains(name)) {
+////        val defaultValue = dependencyGraph.nameToType(name) match {
+////          case UIntType(width) => UIntLiteral(0, width)
+////          case SIntType(width) => SIntLiteral(0, width)
+////          case ClockType       => UIntLiteral(0, IntWidth(1))
+////          case _ =>
+////            throw new Exception(s"error can't find default value for $name.type = ${dependencyGraph.nameToType(name)}")
+////        }
+////        dependencyGraph.nameToExpression(name) = defaultValue
+////      }
+////    }
+////
+////    log(s"For module ${module.name} dependencyGraph =")
+////    dependencyGraph.nameToExpression.keys.toSeq.sorted foreach { k =>
+////      val v = dependencyGraph.nameToExpression(k).serialize
+////      log(s"  $k -> (" + v.toString.take(MaxColumnWidth) + ")")
+////    }
+////    println(s"End of dependency graph")
+////    dependencyGraph
 //  }
 //}
