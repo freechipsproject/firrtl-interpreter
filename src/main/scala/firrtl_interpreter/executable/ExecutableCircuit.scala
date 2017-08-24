@@ -2,10 +2,12 @@
 
 package firrtl_interpreter.executable
 
-class ExecutableCircuit(numberOfBigInts: Int, numberOfInts: Int, nameMap: Map[String, WireValue]) {
-  val bigInts: Array[BigInt] = Array.fill(numberOfBigInts){ BigInt(0) }
-  val ints: Array[Int] = Array.fill(numberOfInts){ 0 }
-  val names: Map[String, WireValue] = nameMap
+import scala.collection.mutable
+
+class ExecutableCircuit {
+  var bigInts: Array[BigInt] = Array[BigInt](0)
+  var ints: Array[Int] = Array[Int](0)
+  val names: mutable.HashMap[String, WireValue] = new mutable.HashMap[String, WireValue]
 
   def getIndex(name: String): Int = {
     names(name).index
@@ -14,9 +16,22 @@ class ExecutableCircuit(numberOfBigInts: Int, numberOfInts: Int, nameMap: Map[St
   def header: String = {
     names.keys.toArray.sorted.map { name => f"$name%10.10s" }.mkString("")
   }
+
+  def build(): Unit = {
+    val (bigIntsCount, intsCount) = names.values.foldLeft((0, 0)) { case ((bc, ic), wireValue) =>
+      if(wireValue.isBig) (bc + 1, ic) else (bc, ic + 1)
+    }
+    bigInts = Array.fill(bigIntsCount)(BigInt(0))
+    ints =  Array.fill(intsCount)(0)
+  }
+
+  def addWire(wireValue: WireValue): Unit = {
+    names(wireValue.name) = wireValue
+  }
+
   override def toString: String = {
     names.keys.toArray.sorted.map(names(_)).map { wire =>
-      f"${if(wire.bitSize > 32) bigInts(wire.index) else BigInt(ints(wire.index))}%10d"
+      f"${if(wire.isBig) bigInts(wire.index) else BigInt(ints(wire.index))}%10d"
     }.mkString("")
   }
 }
@@ -27,7 +42,7 @@ object ExecutableCircuit {
     val (bigWireCount, intWireCount) = nameMap.values.foldLeft((0, 0)) { case ((aCount, bCount), wireValue) =>
       if(wireValue.bitSize > 32) (aCount + 1, bCount) else (aCount, bCount + 1)
     }
-    new ExecutableCircuit(bigWireCount, intWireCount, nameMap)
+    new ExecutableCircuit
   }
 
   def main(args: Array[String]): Unit = {
@@ -56,9 +71,12 @@ object ExecutableCircuit {
       WireValue("gen_0", isSigned = false, 32, newNextWire()),
       WireValue("gen_1", isSigned = false, 32, newNextWire())
     )
-    val state = ExecutableCircuit(wires.map { wv => (wv.name, wv) }.toMap)
+    val state = new ExecutableCircuit
 
-    println(s"state 0 $state")
+    wires.foreach { wv => state.addWire(wv) }
+    state.build()
+
+//    println(s"state 0 $state")
 
     val instructions = Seq(
       AssignInt(state, state.getIndex("t_13"),
@@ -149,11 +167,17 @@ object ExecutableCircuit {
     )
 
     def poke(name: String, value: Int): Unit = {
-      state.ints(state.getIndex(name)) = value
+      val index = state.getIndex(name)
+      state.ints(index) = value
     }
     def peek(name: String): Int = {
       state.ints(state.getIndex(name))
     }
+    def expect(name: String, value: Int, msg: => String) = {
+      assert(state.ints(state.getIndex(name)) == value,
+        s"${state.ints(state.getIndex(name))} did not equal $value, $msg")
+    }
+
     var cycle = 0
     def step(): Unit = {
       regNextInstructions.foreach { inst => inst() }
@@ -165,13 +189,32 @@ object ExecutableCircuit {
       println(f"state $cycle%6d $state")
     }
 
-    println(f"state ${""}%6.6s  ${state.header}")
+//    println(f"state ${""}%6.6s  ${state.header}")
+
+    def computeGcd(a: Int, b: Int): (Int, Int) = {
+      var x = a
+      var y = b
+      var depth = 1
+      while(y > 0 ) {
+        if (x > y) {
+          x -= y
+        }
+        else {
+          y -= x
+        }
+        depth += 1
+      }
+      (x, depth)
+    }
+
+    val values =
+      for {x <- 1 to 1000
+           y <- 1 to 1000
+      } yield (x, y, computeGcd(x, y)._1)
 
     val startTime = System.nanoTime()
 
-    for {x <- 1 to 1000
-         y <- 1 to 1000
-    } {
+    values.foreach { case (x, y, z) =>
 
       poke("io_a", x)
       poke("io_b", y)
@@ -185,12 +228,17 @@ object ExecutableCircuit {
       while(peek("io_v") != 1) {
         step()
       }
-//      show()
+
+      expect("io_z", z, s"$x, $y")
+        //      show()
+
     }
 
     val endTime = System.nanoTime()
     val elapsedSeconds = (endTime - startTime).toDouble / 1000000000.0
 
-    println(f"processed $cycle cycles $elapsedSeconds%.6f seconds")
+    println(
+      f"processed $cycle cycles $elapsedSeconds%.6f seconds ${cycle.toDouble / (1000000.0 * elapsedSeconds)}%5.3f MHz"
+    )
   }
 }

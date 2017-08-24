@@ -2,6 +2,7 @@
 //
 //package firrtl_interpreter.executable
 //
+//import firrtl.PrimOps._
 //import firrtl._
 //import firrtl.ir._
 //import firrtl_interpreter._
@@ -38,37 +39,81 @@
 //
 //  val state = ExecutableCircuit(Map.empty)
 //
+//
+//
 //  // scalastyle:off
 //  def processModule(modulePrefix: String, myModule: DefModule, dependencyGraph: DependencyGraph): Unit = {
 //    def expand(name: String): String = if(modulePrefix.isEmpty) name else modulePrefix + "." + name
 //
-//    def processDependencyStatements(s: firrtl.ir.Statement): firrtl.ir.Statement = {
+//    def processDependencyStatements(s: firrtl.ir.Statement): Unit = {
 //
+//      def mathPrimitive(opCode: PrimOp, args: Seq[Expression], tpe: Type): () => Int = {
+//        val arg1 = processExpression(args.head)
+//        val arg2 = processExpression(args.tail.head)
+//        opCode match {
+//          case Add => AddInts(arg1, arg2).apply
+//          case Sub => SubInts(arg1, arg2).apply
+//            //TODO:(chick) build this out
+////          case Mul => arg1 * arg2
+////          case Div => arg1 / arg2
+////          case Rem => arg1 % arg2
+//        }
+//      }
+//
+//      def comparisonOp(opCode: PrimOp, args: Seq[Expression], tpe: Type): () => Int = {
+//        val arg1 = processExpression(args.head)
+//        val arg2 = processExpression(args.tail.head)
+//        opCode match {
+//          case Eq      => EqInts(arg1, arg2).apply
+//          //TODO:(chick) build this out
+////          case Neq     => arg1 != arg2
+////          case Lt      => arg1 <  arg2
+////          case Leq     => arg1 <= arg2
+//          case Gt      => GtInts(arg1, arg2).apply
+////          case Geq => arg1 >= arg2
+//        }
+//      }
 //      def processExpression(expression: Expression): () => Int = {
 //        dependencyGraph.numberOfNodes += 1
 //        val result = expression match {
 //          case Mux(condition, trueExpression, falseExpression, tpe) =>
 //            dependencyGraph.numberOfMuxes += 1
-//            Mux(
+//            MuxInts(
 //              processExpression(condition),
 //              processExpression(trueExpression),
-//              processExpression(falseExpression),
-//              tpe
+//              processExpression(falseExpression)
 //            )
-//          case WRef(name, tpe, kind, gender) => WRef(expand(name), tpe, kind, gender)
-//          case WSubField(subExpression, name, tpe, gender) =>
-//            WSubField(processExpression(subExpression), name, tpe, gender)
-//          case WSubIndex(subExpression, value, tpe, gender) =>
-//            WSubIndex(processExpression(subExpression), value, tpe, gender)
-//          case ValidIf(condition, value, tpe) => ValidIf(processExpression(condition), processExpression(value), tpe)
+//          case WRef(name, tpe, kind, gender) =>
+//            val getInt = GetInt(state, state.getIndex(expand(name)))
+//            getInt.apply
+//          case subfield: WSubField =>
+//            val getInt = GetInt(state, state.getIndex(expand(subfield.serialize)))
+//            getInt.apply
+//          case subindex: WSubIndex =>
+//            val getInt = GetInt(state, state.getIndex(expand(subindex.serialize)))
+//            getInt.apply
+//          //          TODO:(chick) case ValidIf(condition, value, tpe) => ValidIf(processExpression(condition), processExpression(value), tpe)
 //          case DoPrim(op, args, const, tpe) =>
-//            DoPrim(op, args.map { subExpression => processExpression(subExpression)}, const, tpe)
-//          case c: UIntLiteral => c
-//          case c: SIntLiteral => c
-//          case _ =>
-//            throw new Exception(s"processExpression:error: unhandled expression $expression")
+//            val v = op match {
+//              case Add => mathPrimitive(op, args, tpe)
+//              case Sub => mathPrimitive(op, args, tpe)
+//              case Mul => mathPrimitive(op, args, tpe)
+//              case Div => mathPrimitive(op, args, tpe)
+//              case Rem => mathPrimitive(op, args, tpe)
+//
+//              case Eq => comparisonOp(op, args, tpe)
+//              case Neq => comparisonOp(op, args, tpe)
+//              case Lt => comparisonOp(op, args, tpe)
+//              case Leq => comparisonOp(op, args, tpe)
+//              case Gt => comparisonOp(op, args, tpe)
+//              case Geq => comparisonOp(op, args, tpe)
+//              case c: UIntLiteral => GetIntConstant(c.value.toInt).apply
+//              case c: SIntLiteral => GetIntConstant(c.value.toInt).apply
+//              case _ =>
+//                throw new Exception(s"processExpression:error: unhandled expression $expression")
+//            }
+//            result
 //        }
-//        result
 //      }
 //
 //      dependencyGraph.numberOfStatements += 1
@@ -84,8 +129,6 @@
 //            case (_: WSubField | _: WSubIndex) => makeWire(expand(con.loc.serialize), con.loc.tpe)
 //          }
 //          executableExpressions += AssignInt(state, newWireValue.index, processExpression(con.expr))
-//
-//          con
 //        case WDefInstance(info, instanceName, moduleName, _) =>
 //          val subModule = findModule(moduleName, dependencyGraph.circuit)
 //          val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
@@ -95,32 +138,33 @@
 //          dependencyGraph.addInstanceName(instanceName, moduleName)
 //          s
 //        case DefNode(info, name, expression) =>
-//          log(s"declaration:DefNode:$name:${expression.serialize} ${processExpression(expression).serialize}")
-//          val expandedName = expand(name)
-//          dependencyGraph.nodes += expandedName
-//          dependencyGraph.recordName(expandedName)
-//          dependencyGraph(expandedName) = processExpression(expression)
-//          dependencyGraph.addSourceInfo(expandedName, info)
-//          s
+//          log(s"declaration:DefNode:$name:${expression.serialize}")
+//          val newWireValue = WireValue(expand(name), isSigned = false, 32, getIntIndex())
+//          wires += newWireValue
+//
+//          executableExpressions += AssignInt(state, newWireValue.index, processExpression(expression))
 //        case DefWire(info, name, tpe) =>
 //          log(s"declaration:DefWire:$name")
-//          val expandedName = expand(name)
-//          dependencyGraph.wires += expandedName
-//          dependencyGraph.recordName(expandedName)
-//          dependencyGraph.recordType(expandedName, tpe)
-//          dependencyGraph.addSourceInfo(expandedName, info)
-//          s
+//          val newWireValue = WireValue(expand(name), isSigned = false, 32, getIntIndex())
+//          wires += newWireValue
 //        case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
-//          log(s"declaration:DefRegister:$name clock <- ${clockExpression.serialize} ${processExpression(clockExpression).serialize}")
-//          log(s"declaration:DefRegister:$name reset <- ${resetExpression.serialize} ${processExpression(resetExpression).serialize}")
-//          log(s"declaration:DefRegister:$name init  <- ${initValueExpression.serialize} ${processExpression(initValueExpression).serialize}")
+//          log(s"declaration:DefRegister:$name")
+////          log(s"declaration:DefRegister:$name clock <- ${clockExpression.serialize} ${processExpression(clockExpression).serialize}")
+////          log(s"declaration:DefRegister:$name reset <- ${resetExpression.serialize} ${processExpression(resetExpression).serialize}")
+////          log(s"declaration:DefRegister:$name init  <- ${initValueExpression.serialize} ${processExpression(initValueExpression).serialize}")
+//          val expandedName = expand(name)
+//          val newWireValueIn = WireValue(s"${expandedName}_in", isSigned = false, 32, getIntIndex())
+//          wires += newWireValueIn
+//          val newWireValueOut = WireValue(s"${expandedName}", isSigned = false, 32, getIntIndex())
+//          wires += newWireValueOut
+//
 //          val renamedDefRegister = DefRegister(
 //            info, expand(name), tpe,
 //            processExpression(clockExpression),
 //            processExpression(resetExpression),
 //            processExpression(initValueExpression)
 //          )
-//          val expandedName = expand(name)
+//
 //          dependencyGraph.registerNames += expandedName
 //          dependencyGraph.recordName(expandedName)
 //          dependencyGraph.recordType(expandedName, tpe)
@@ -135,18 +179,18 @@
 //          dependencyGraph.addSourceInfo(expandedName, defMemory.info)
 //          s
 //        case IsInvalid(info, expression) =>
-//          IsInvalid(info, processExpression(expression))
+////          IsInvalid(info, processExpression(expression))
 //        case Stop(info, ret, clkExpression, enableExpression) =>
-//          dependencyGraph.addStop(Stop(info, ret, processExpression(clkExpression), processExpression(enableExpression)))
-//          s
+////          dependencyGraph.addStop(Stop(info, ret, processExpression(clkExpression), processExpression(enableExpression)))
+////          s
 //        case Print(info, stringLiteral, argExpressions, clkExpression, enableExpression) =>
-//          dependencyGraph.addPrint(Print(
-//            info, stringLiteral,
-//            argExpressions.map { expression => processExpression(expression) },
-//            processExpression(clkExpression),
-//            processExpression(enableExpression)
-//          ))
-//          s
+////          dependencyGraph.addPrint(Print(
+////            info, stringLiteral,
+////            argExpressions.map { expression => processExpression(expression) },
+////            processExpression(clkExpression),
+////            processExpression(enableExpression)
+////          ))
+////          s
 //        case EmptyStmt =>
 //          s
 //        case conditionally: Conditionally =>
