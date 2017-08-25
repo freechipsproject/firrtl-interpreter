@@ -201,10 +201,10 @@ object ExecutableCircuit {
       (x, depth)
     }
 
-    val values =
-      for {x <- 1 to 1000
-           y <- 1 to 1000
-      } yield (x, y, computeGcd(x, y)._1)
+    // val values =
+    //   for {x <- 1 to 1000
+    //        y <- 1 to 1000
+    //   } yield (x, y, computeGcd(x, y)._1)
 
     val startTime = System.nanoTime()
 
@@ -254,8 +254,8 @@ object ExecutableCircuit {
     }
 
     val values =
-      for {x <- 1 to 1000
-           y <- 1 to 1000
+      for {x <- 1 to 1500
+           y <- 1 to 1500
       } yield (x, y, computeGcd(x, y)._1)
 
     runOnce(values)

@@ -20,66 +20,88 @@ case class BigValue(name: String, isSigned: Boolean, size: Int) extends BaseValu
 
 class ConcreteCircuit(n: Int) {
   val names: mutable.HashMap[String, Int] = new mutable.HashMap[String, Int]
-  val values = new Array[IntValue](n)
+  val widths = new Array[Int](n)
+  val values = new Array[Int](n)
 
   def getIndex(name: String): Int = names(name)
-  def get(name: String): IntValue = values(names(name))
-  def get(idx: Int): IntValue = values(idx)
+  def get(name: String): Int = values(names(name))
+  def get(idx: Int): Int = values(idx)
 
   def header: String = {
     names.keys.toArray.sorted.map { name => f"$name%10.10s" }.mkString("")
   }
   override def toString: String = {
-    names.keys.toArray.sorted.map(get(_).value).map { b => f"$b%10d" }.mkString("")
+    names.keys.toArray.sorted.map(get(_)).map { b => f"$b%10d" }.mkString("")
   }
 }
 
-case class GetIntValuesConstant(n: Int) {
+class GetIntValuesConstant(n: Int) {
   def apply(): Int = n
 }
+object GetIntValuesConstant {
+  def apply(n: Int) = new GetIntValuesConstant(n)
+}
 
-case class GetIntValues(state: ConcreteCircuit, intValue: IntValue) {
+case class GetIntValues(state: ConcreteCircuit, idx: Int) {
   val apply: () => Int = {
     if(true) nakedGetIntValues else verboseGetIntValues
   }
 
   def nakedGetIntValues(): Int = {
-    intValue.value
+    state.values(idx)
   }
   def verboseGetIntValues(): Int = {
-    println(s"getting int from index ${intValue.value}")
-    intValue.value
+    println(s"getting int from index $idx = ${state.values(idx)}")
+    state.values(idx)
   }
 }
 
-case class AddIntValues(f1: () => Int, f2: () => Int) {
+class AddIntValues(f1: () => Int, f2: () => Int) {
   def apply(): Int = f1() + f2()
 }
+object AddIntValues {
+  def apply(f1: () => Int, f2: () => Int) = new AddIntValues(f1, f2)
+}
 
-case class SubIntValues(f1: () => Int, f2: () => Int) {
+class SubIntValues(f1: () => Int, f2: () => Int) {
   def apply(): Int = f1() - f2()
 }
+object SubIntValues {
+  def apply(f1: () => Int, f2: () => Int) = new SubIntValues(f1, f2)
+}
 
-case class TailIntValues(f1: () => Int, f2: () => Int) {
+class TailIntValues(f1: () => Int, f2: () => Int) {
   def apply(): Int = f1()
 }
+object TailIntValues {
+  def apply(f1: () => Int, f2: () => Int) = new TailIntValues(f1, f2)
+}
 
-case class MuxIntValues(condition: () => Int, trueClause: () => Int, falseClause: () => Int) {
+class MuxIntValues(condition: () => Int, trueClause: () => Int, falseClause: () => Int) {
   def apply(): Int = if(condition() > 0) trueClause() else falseClause()
 }
+object MuxIntValues {
+  def apply(condition: () => Int, trueClause: () => Int, falseClause: () => Int) = new MuxIntValues(condition, trueClause, falseClause)
+}
 
-case class EqIntValues(f1: () => Int, f2: () => Int) {
+class EqIntValues(f1: () => Int, f2: () => Int) {
   def apply(): Int = if(f1() == f2()) 1 else 0
 }
-
-case class GtIntValues(f1: () => Int, f2: () => Int) {
-  def apply(): Int = if(f1() > f2()) 1 else 0
+object EqIntValues {
+  def apply(f1: () => Int, f2: () => Int) = new EqIntValues(f1, f2)
 }
 
-case class AssignIntValues(state: ConcreteCircuit, index: IntValue, expression: () => Int) extends Assigner {
+class GtIntValues(f1: () => Int, f2: () => Int) {
+  def apply(): Int = if(f1() > f2()) 1 else 0
+}
+object GtIntValues {
+  def apply(f1: () => Int, f2: () => Int) = new GtIntValues(f1, f2)
+}
+
+case class AssignIntValues(state: ConcreteCircuit, index: Int, expression: () => Int) extends Assigner {
   def apply(): Unit = {
     //    println(s"assign index $index ${state.names.values.find(_.index == index).get.name} ${expression()}")
-    index.value = expression()
+    state.values(index) = expression()
   }
 }
 
@@ -121,126 +143,128 @@ object ConcreteCircuit {
     val state = new ConcreteCircuit(wires.length)
     wires.zipWithIndex.foreach { case ((name, wire), idx) =>
       state.names(name) = idx
-      state.values(idx) = wire
+      state.values(idx) = 0
+      state.widths(idx) = wire.size
     }
 
 //    println(s"state 0 $state")
 
+    val destinations = Array(
+      state.getIndex("t_13"),
+      state.getIndex("t_14"),
+      state.getIndex("t_15"),
+      state.getIndex("t_17"),
+      state.getIndex("t_18"),
+      state.getIndex("t_19"),
+      state.getIndex("t_21"),
+      state.getIndex("gen_0"),
+      state.getIndex("gen_1"),
+      state.getIndex("io_z"),
+      state.getIndex("io_v"),
+      state.getIndex("reg_x_in"),
+      state.getIndex("reg_x_in"),
+      state.getIndex("reg_y_in"),
+      state.getIndex("t_19"),
+      state.getIndex("t_21"),
+      state.getIndex("gen_0"),
+      state.getIndex("gen_1"),
+      state.getIndex("io_z"),
+      state.getIndex("io_v"),
+      state.getIndex("reg_x_in"),
+      state.getIndex("reg_x_in"),
+      state.getIndex("reg_y_in")
+    )
     val instructions = Array(
-      AssignIntValues(state, state.get("t_13"),
-        GtIntValues(
-          GetIntValues(state, state.get("reg_x_out")).apply,
-          GetIntValues(state, state.get("reg_y_out")).apply).apply _
-      ),
-      AssignIntValues(state, state.get("t_14"),
-        SubIntValues(
-          GetIntValues(state, state.get("reg_x_out")).apply,
-          GetIntValues(state, state.get("reg_y_out")).apply).apply _
-      ),
-      AssignIntValues(state, state.get("t_15"),
-        TailIntValues(
-          GetIntValues(state, state.get("t_14")).apply,
-          GetIntValuesConstant(1).apply _
-        ).apply _
-      ),
-      AssignIntValues(state, state.get("t_17"),
-        EqIntValues(
-          GetIntValues(state, state.get("t_13")).apply,
-          GetIntValuesConstant(0).apply _
-        ).apply _
-      ),
-      AssignIntValues(state, state.get("t_18"),
-        SubIntValues(
-          GetIntValues(state, state.get("reg_y_out")).apply,
-          GetIntValues(state, state.get("reg_x_out")).apply).apply _
-      ),
-      AssignIntValues(state, state.get("t_19"),
-        TailIntValues(
-          GetIntValues(state, state.get("t_18")).apply,
-          GetIntValuesConstant(1).apply _
-        ).apply _
-      ),
-      AssignIntValues(state, state.get("t_21"),
-        EqIntValues(
-          GetIntValues(state, state.get("reg_y_out")).apply,
-          GetIntValuesConstant(0).apply _
-        ).apply _
-      ),
-      AssignIntValues(state, state.get("gen_0"),
-        MuxIntValues(
-          GetIntValues(state, state.get("t_13")).apply,
-          GetIntValues(state, state.get("t_15")).apply,
-          GetIntValues(state, state.get("reg_x_out")).apply
-        ).apply _
-      ),
-      AssignIntValues(state, state.get("gen_1"),
-        MuxIntValues(
-          GetIntValues(state, state.get("t_17")).apply,
-          GetIntValues(state, state.get("t_19")).apply,
-          GetIntValues(state, state.get("reg_y_out")).apply
-        ).apply _
-      ),
-      AssignIntValues(state, state.get("io_z"),
-        GetIntValues(state, state.get("reg_x_out")).apply
-      ),
-      AssignIntValues(state, state.get("io_v"),
-        GetIntValues(state, state.get("t_21")).apply
-      ),
-      AssignIntValues(state, state.get("reg_x_in"),
-        GetIntValues(state, state.get("t_21")).apply
-      ),
-      AssignIntValues(state, state.get("reg_x_in"),
-        MuxIntValues(
-          GetIntValues(state, state.get("io_e")).apply,
-          GetIntValues(state, state.get("io_a")).apply,
-          GetIntValues(state, state.get("gen_0")).apply
-        ).apply _
-      ),
-      AssignIntValues(state, state.get("reg_y_in"),
-        MuxIntValues(
-          GetIntValues(state, state.get("io_e")).apply,
-          GetIntValues(state, state.get("io_b")).apply,
-          GetIntValues(state, state.get("gen_1")).apply
-        ).apply _
-      )
+      GtIntValues(
+        GetIntValues(state, state.getIndex("reg_x_out")).apply,
+        GetIntValues(state, state.getIndex("reg_y_out")).apply).apply _,
+      SubIntValues(
+        GetIntValues(state, state.getIndex("reg_x_out")).apply,
+        GetIntValues(state, state.getIndex("reg_y_out")).apply).apply _,
+      TailIntValues(
+        GetIntValues(state, state.getIndex("t_14")).apply,
+        GetIntValuesConstant(1).apply _
+      ).apply _,
+      EqIntValues(
+        GetIntValues(state, state.getIndex("t_13")).apply,
+        GetIntValuesConstant(0).apply _ 
+      ).apply _,
+      SubIntValues(
+        GetIntValues(state, state.getIndex("reg_y_out")).apply,
+        GetIntValues(state, state.getIndex("reg_x_out")).apply).apply _,
+      TailIntValues(
+        GetIntValues(state, state.getIndex("t_18")).apply,
+        GetIntValuesConstant(1).apply _
+      ).apply _ ,
+      EqIntValues(
+        GetIntValues(state, state.getIndex("reg_y_out")).apply,
+        GetIntValuesConstant(0).apply _
+      ).apply _ ,
+      MuxIntValues(
+        GetIntValues(state, state.getIndex("t_13")).apply,
+        GetIntValues(state, state.getIndex("t_15")).apply,
+        GetIntValues(state, state.getIndex("reg_x_out")).apply
+      ).apply _ ,
+      MuxIntValues(
+        GetIntValues(state, state.getIndex("t_17")).apply,
+        GetIntValues(state, state.getIndex("t_19")).apply,
+        GetIntValues(state, state.getIndex("reg_y_out")).apply
+      ).apply _ ,
+      GetIntValues(state, state.getIndex("reg_x_out")).apply,
+      GetIntValues(state, state.getIndex("t_21")).apply,
+      GetIntValues(state, state.getIndex("t_21")).apply,
+      MuxIntValues(
+        GetIntValues(state, state.getIndex("io_e")).apply,
+        GetIntValues(state, state.getIndex("io_a")).apply,
+        GetIntValues(state, state.getIndex("gen_0")).apply
+      ).apply _ ,
+      MuxIntValues(
+        GetIntValues(state, state.getIndex("io_e")).apply,
+        GetIntValues(state, state.getIndex("io_b")).apply,
+        GetIntValues(state, state.getIndex("gen_1")).apply
+      ).apply _
     )
 
+    val regNextDestinations = Array(
+      state.getIndex("reg_x_out"),
+      state.getIndex("reg_y_out")
+    )
     val regNextInstructions = Array(
-      AssignIntValues(state, state.get("reg_x_out"),
-        GetIntValues(state, state.get("reg_x_in")).apply
-      ),
-      AssignIntValues(state, state.get("reg_y_out"),
-        GetIntValues(state, state.get("reg_y_in")).apply
-      )
+      GetIntValues(state, state.getIndex("reg_x_in")).apply,
+      GetIntValues(state, state.getIndex("reg_y_in")).apply
     )
 
     def pokeIdx(idx: Int, value: Int): Unit = {
-      state.get(idx).value = value
+      state.values(idx) = value
     }
     def poke(name: String, value: Int): Unit = {
       pokeIdx(state.getIndex(name), value)
     }
     def peekIdx(idx: Int): Int = {
-      state.get(idx).value
+      state.values(idx)
     }
     def peek(name: String): Int = {
       peekIdx(state.getIndex(name))
     }
+    def expectIdx(idx: Int, value: Int, msg: => String) = {
+      assert(peekIdx(idx) == value,
+        s"${peekIdx(idx)} did not equal $value, $msg")
+    }
     def expect(name: String, value: Int, msg: => String) = {
-      assert(peek(name) == value,
-        s"${peek(name)} did not equal $value, $msg")
+      expectIdx(state.getIndex(name), value, msg)
     }
 
     var cycle = 0
     def step(): Unit = {
       var i = 0
       while (i < regNextInstructions.length) {
-        regNextInstructions(i)()
+        state.values(regNextDestinations(i)) = regNextInstructions(i)()
         i += 1
       }
       i = 0
       while (i < instructions.length) {
-        instructions(i)()
+        // instructions(i)()
+        state.values(destinations(i)) = instructions(i)()
         i += 1
       }
       cycle += 1
@@ -276,7 +300,7 @@ object ConcreteCircuit {
         step()
       }
 
-      expect("io_z", z, s"$x, $y")
+      expectIdx(io_z, z, s"$x, $y")
       //      show()
 
     }
@@ -307,15 +331,15 @@ object ConcreteCircuit {
     }
 
     val values =
-      for {x <- 1 to 1000
-           y <- 1 to 1000
+      for {x <- 1 to 1500
+           y <- 1 to 1500
       } yield (x, y, computeGcd(x, y)._1)
 
     runOnce(values)
     runOnce(values)
     runOnce(values)
-    // ExecutableCircuit.runOnce(values)
-    // ExecutableCircuit.runOnce(values)
-    // ExecutableCircuit.runOnce(values)
+    ExecutableCircuit.runOnce(values)
+    ExecutableCircuit.runOnce(values)
+    ExecutableCircuit.runOnce(values)
   }
 }
