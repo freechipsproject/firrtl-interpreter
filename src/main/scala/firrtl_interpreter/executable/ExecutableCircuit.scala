@@ -72,7 +72,7 @@ object ExecutableCircuit {
 
     //    println(s"state 0 $state")
 
-    val instructions = Seq(
+    val instructions = Array[Assigner](
       AssignInt(state, state.getUInt("t_13"),
         GtInts(
           GetInt(state, state.getUInt("reg_x_out")).apply,
@@ -145,7 +145,7 @@ object ExecutableCircuit {
       )
     )
 
-    val regNextInstructions = Seq(
+    val regNextInstructions = Array(
       AssignInt(state, state.getUInt("reg_x_out"), GetInt(state, state.getUInt("reg_x_in")).apply),
       AssignInt(state, state.getUInt("reg_y_out"), GetInt(state, state.getUInt("reg_y_in")).apply)
     )
@@ -166,8 +166,16 @@ object ExecutableCircuit {
     var cycle = 0
 
     def step(): Unit = {
-      regNextInstructions.foreach { inst => inst() }
-      instructions.foreach { inst => inst() }
+      var i = 0
+      while (i < regNextInstructions.length) {
+        regNextInstructions(i)()
+        i += 1
+      }
+      i = 0
+      while (i < instructions.length) {
+        instructions(i)()
+        i += 1
+      }
       cycle += 1
     }
 
