@@ -1,30 +1,27 @@
 // See LICENSE for license details.
 
-import chiselBuild.ChiselDependencies.{basicDependencies, chiselLibraryDependencies, chiselProjectDependencies}
-import chiselBuild.ChiselSettings
+enablePlugins(BuildInfoPlugin)
 
-ChiselSettings.commonSettings
+ChiselProjectDependenciesPlugin.chiselBuildInfoSettings
 
-ChiselSettings.publishSettings
+ChiselProjectDependenciesPlugin.chiselProjectSettings
 
-val internalName = "firrtl-interpreter"
-
-name := internalName
+name := "firrtl-interpreter"
 
 version := "1.1-SNAPSHOT"
 
 // The Chisel projects we're dependendent on.
-val dependentProjects: Seq[String] = basicDependencies(internalName)
+val chiselDeps = chisel.dependencies(Seq(
+    ("edu.berkeley.cs" % "firrtl" % "1.1-SNAPSHOT", "firrtl")
+))
 
-libraryDependencies ++= chiselLibraryDependencies(dependentProjects)
+val dependentProjects = chiselDeps.projects
 
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.1",
   "org.scalacheck" %% "scalacheck" % "1.13.4",
   "org.scala-lang.modules" % "scala-jline" % "2.12.1"
-)
+) ++ chiselDeps.libraries
 
-//javaOptions in run ++= Seq(
-    //"-Xms2G", "-Xmx4G", "-XX:MaxPermSize=1024M", "-XX:+UseConcMarkSweepGC")
-
-lazy val firrtl_interpreter = (project in file(".")).dependsOn((chiselProjectDependencies(dependentProjects)):_*)
+lazy val firrtl_interpreter = (project in file("."))
+  .dependsOn(dependentProjects.map(classpathDependency(_)):_*)
