@@ -1,12 +1,24 @@
 // See LICENSE for license details.
 
-package firrtl_interpreter.executable
+package firrtl_interpreter.fastexperiments
 
 import scala.collection.mutable
 
 trait BaseValue {
   def name: String
   def size: Int
+  def isSigned: Boolean
+  var bigInt: BigInt
+}
+
+trait Value {
+  def name: String
+  def isSigned: Boolean
+  def width: Int
+  var bigInt = BigInt(0)
+  var int    = 0
+  def applyInt(): Int = int
+  def applyBig(): BigInt = bigInt
 }
 
 case class IntValue(name: String, isSigned: Boolean, size: Int) extends BaseValue {

@@ -6,6 +6,22 @@ import org.scalatest.{FlatSpec, Matchers}
 // scalastyle:off magic.number
 
 class GCDTester extends FlatSpec with Matchers {
+  def computeGcd(a: Int, b: Int): (Int, Int) = {
+    var x = a
+    var y = b
+    var depth = 1
+    while(y > 0 ) {
+      if (x > y) {
+        x -= y
+      }
+      else {
+        y -= x
+      }
+      depth += 1
+    }
+    (x, depth)
+  }
+
   behavior of "GCD"
 
   val gcdFirrtl: String =
@@ -43,12 +59,18 @@ class GCDTester extends FlatSpec with Matchers {
     val manager = new InterpreterOptionsManager {
       interpreterOptions = interpreterOptions.copy(showFirrtlAtLoad = true)
     }
+
+    val values =
+      for {x <- 1 to 1000
+           y <- 1 to 100
+      } yield (x, y, computeGcd(x, y)._1)
+
     val tester = new InterpretiveTester(gcdFirrtl, manager)
+
+    val startTime = System.nanoTime()
     // interpreter.setVerbose()
 //    List((1, 1, 1), (34, 17, 17), (8, 12, 4)).foreach { case (x, y, z) =>
-    for {x <- 1 to 1000
-         y <- 1 to 100
-    } {
+    for((x, y, z) <- values) {
       tester.step()
       tester.poke("io_a", x)
       tester.poke("io_b", y)
@@ -61,8 +83,23 @@ class GCDTester extends FlatSpec with Matchers {
       while (tester.peek("io_v") != Big1) {
         tester.step()
       }
-//      tester.expect("io_z", z)
+      tester.expect("io_z", z)
     }
+    val endTime = System.nanoTime()
+    val elapsedSeconds = (endTime - startTime).toDouble / 1000000000.0
+
+    val cycle = tester.interpreter.circuitState.stateCounter
+
+    println(
+      f"processed $cycle cycles $elapsedSeconds%.6f seconds ${cycle.toDouble / (1000000.0 * elapsedSeconds)}%5.3f MHz"
+    )
     tester.report()
   }
 }
+
+/*
+| Interpeter   | 33179980 |  5.544332  |   5.984 |
+| Verilator    |  3861276 |  50.425607 |   0.077 |
+| Pure Scala   | 32179980 |   0.349653 |  92.034 |
+| Pure C       | 33179980 |   5.571678 | 241.705 |
+ */

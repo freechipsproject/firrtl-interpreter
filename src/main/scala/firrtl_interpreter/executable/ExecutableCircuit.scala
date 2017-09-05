@@ -5,256 +5,75 @@ package firrtl_interpreter.executable
 import scala.collection.mutable
 
 class ExecutableCircuit {
-  val names: mutable.HashMap[String, ExecutableValue] = new mutable.HashMap[String, ExecutableValue]
-  val combinationalExpressions: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
-  val registerExpressions: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
+  val namesToValues:    mutable.HashMap[String, Value]    = new mutable.HashMap[String, Value]
 
-  def header: String = {
-    names.keys.toArray.sorted.map { name => f"$name%10.10s" }.mkString("")
-  }
+  val combinationalAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
 
-  def addWire(wireValue: ExecutableValue): ExecutableValue = {
-    names(wireValue.name) = wireValue
-    wireValue
-  }
-
-  def apply(name: String): ExecutableValue = {
-    names(name)
-  }
-
-  def getUInt(name: String): UInt = {
-    names(name).asInstanceOf[UInt]
-  }
-
-  override def toString: String = {
-    names.keys.toArray.sorted.map { key => f"${names(key).asBigInt}%10d" }.mkString("")
-  }
-}
-
-//noinspection ScalaStyle,ScalaUnusedSymbol
-object ExecutableCircuit {
-  def apply(nameMap: Map[String, UInt]): ExecutableCircuit = {
-    val (bigWireCount, intWireCount) = nameMap.values.foldLeft((0, 0)) { case ((aCount, bCount), wireValue) =>
-      if (wireValue.bitSize > 32) (aCount + 1, bCount) else (aCount, bCount + 1)
-    }
-    new ExecutableCircuit
-  }
-
-  def runOnce(values: Seq[(Int, Int, Int)]): Unit = {
-    var nextWire = -1
-
-    def newNextWire() = {
-      nextWire += 1; nextWire
-    }
-
-    val wires = Seq(
-      UInt("io_a", 32),
-      UInt("io_b", 32),
-      UInt("io_e", 32),
-      UInt("io_z", 32),
-      UInt("io_v", 32),
-      UInt("reg_x_in", 32),
-      UInt("reg_x_out", 32),
-      UInt("reg_y_in", 32),
-      UInt("reg_y_out", 32),
-      UInt("t_13", 32),
-      UInt("t_14", 32),
-      UInt("t_15", 32),
-      UInt("t_16", 32),
-      UInt("t_17", 32),
-      UInt("t_18", 32),
-      UInt("t_19", 32),
-      UInt("t_20", 32),
-      UInt("t_21", 32),
-      UInt("gen_0", 32),
-      UInt("gen_1", 32)
-    )
-    val state = new ExecutableCircuit
-
-    wires.foreach { wv => state.addWire(wv) }
-
-    //    println(s"state 0 $state")
-
-    val instructions = Seq(
-      AssignInt(state, state.getUInt("t_13"),
-        GtInts(
-          GetInt(state, state.getUInt("reg_x_out")).apply,
-          GetInt(state, state.getUInt("reg_y_out")).apply).apply _
-      ),
-      AssignInt(state, state.getUInt("t_14"),
-        SubInts(
-          GetInt(state, state.getUInt("reg_x_out")).apply,
-          GetInt(state, state.getUInt("reg_y_out")).apply).apply _
-      ),
-      AssignInt(state, state.getUInt("t_15"),
-        TailInts(
-          GetInt(state, state.getUInt("t_14")).apply,
-          GetIntConstant(1).apply _
-        ).apply _
-      ),
-      AssignInt(state, state.getUInt("t_17"),
-        EqInts(
-          GetInt(state, state.getUInt("t_13")).apply,
-          GetIntConstant(0).apply _
-        ).apply _
-      ),
-      AssignInt(state, state.getUInt("t_18"),
-        SubInts(
-          GetInt(state, state.getUInt("reg_y_out")).apply,
-          GetInt(state, state.getUInt("reg_x_out")).apply).apply _
-      ),
-      AssignInt(state, state.getUInt("t_19"),
-        TailInts(
-          GetInt(state, state.getUInt("t_18")).apply,
-          GetIntConstant(1).apply _
-        ).apply _
-      ),
-      AssignInt(state, state.getUInt("t_21"),
-        EqInts(
-          GetInt(state, state.getUInt("reg_y_out")).apply,
-          GetIntConstant(0).apply _
-        ).apply _
-      ),
-      AssignInt(state, state.getUInt("gen_0"),
-        MuxInts(
-          GetInt(state, state.getUInt("t_13")).apply,
-          GetInt(state, state.getUInt("t_15")).apply,
-          GetInt(state, state.getUInt("reg_x_out")).apply
-        ).apply _
-      ),
-      AssignInt(state, state.getUInt("gen_1"),
-        MuxInts(
-          GetInt(state, state.getUInt("t_17")).apply,
-          GetInt(state, state.getUInt("t_19")).apply,
-          GetInt(state, state.getUInt("reg_y_out")).apply
-        ).apply _
-      ),
-      AssignInt(state, state.getUInt("io_z"), GetInt(state, state.getUInt("reg_x_out")).apply),
-      AssignInt(state, state.getUInt("io_v"), GetInt(state, state.getUInt("t_21")).apply),
-      AssignInt(state, state.getUInt("reg_x_in"), GetInt(state, state.getUInt("t_21")).apply),
-      AssignInt(state, state.getUInt("reg_x_in"),
-        MuxInts(
-          GetInt(state, state.getUInt("io_e")).apply,
-          GetInt(state, state.getUInt("io_a")).apply,
-          GetInt(state, state.getUInt("gen_0")).apply
-        ).apply _
-      ),
-      AssignInt(state, state.getUInt("reg_y_in"),
-        MuxInts(
-          GetInt(state, state.getUInt("io_e")).apply,
-          GetInt(state, state.getUInt("io_b")).apply,
-          GetInt(state, state.getUInt("gen_1")).apply
-        ).apply _
-      )
-    )
-
-    val regNextInstructions = Seq(
-      AssignInt(state, state.getUInt("reg_x_out"), GetInt(state, state.getUInt("reg_x_in")).apply),
-      AssignInt(state, state.getUInt("reg_y_out"), GetInt(state, state.getUInt("reg_y_in")).apply)
-    )
-
-    def poke(name: String, value: Int): Unit = {
-      state.getUInt(name).value = value
-    }
-
-    def peek(name: String): Int = {
-      state.getUInt(name).value
-    }
-
-    def expect(name: String, value: Int, msg: => String) = {
-      assert(peek(name) == value,
-        s"${peek(name)} did not equal $value, $msg")
-    }
-
-    var cycle = 0
-
-    def step(): Unit = {
-      regNextInstructions.foreach { inst => inst() }
-      instructions.foreach { inst => inst() }
-      cycle += 1
-    }
-
-    def show(): Unit = {
-      println(f"state $cycle%6d $state")
-    }
-
-    //    println(f"state ${""}%6.6s  ${state.header}")
-
-    def computeGcd(a: Int, b: Int): (Int, Int) = {
-      var x = a
-      var y = b
-      var depth = 1
-      while (y > 0) {
-        if (x > y) {
-          x -= y
-        }
-        else {
-          y -= x
-        }
-        depth += 1
+  val clockAssigns: mutable.HashMap[ExpressionResult, mutable.ArrayBuffer[Assigner]] = {
+    new mutable.HashMap[ExpressionResult, mutable.ArrayBuffer[Assigner]] {
+      override def default(key: ExpressionResult): mutable.ArrayBuffer[Assigner] = {
+        this(key) = new mutable.ArrayBuffer[Assigner]()
+        this(key)
       }
-      (x, depth)
     }
-
-    val values =
-      for {x <- 1 to 1000
-           y <- 1 to 1000
-      } yield (x, y, computeGcd(x, y)._1)
-
-    val startTime = System.nanoTime()
-
-    values.foreach { case (x, y, z) =>
-
-      poke("io_a", x)
-      poke("io_b", y)
-      poke("io_e", 1)
-
-      step()
-
-      poke("io_e", 0)
-      step()
-
-      while (peek("io_v") != 1) {
-        step()
-      }
-
-      expect("io_z", z, s"$x, $y")
-      //      show()
-
-    }
-
-    val endTime = System.nanoTime()
-    val elapsedSeconds = (endTime - startTime).toDouble / 1000000000.0
-
-    println(
-      f"processed $cycle cycles $elapsedSeconds%.6f seconds ${cycle.toDouble / (1000000.0 * elapsedSeconds)}%5.3f MHz"
-    )
   }
 
-  def main(args: Array[String]): Unit = {
-    def computeGcd(a: Int, b: Int): (Int, Int) = {
-      var x = a
-      var y = b
-      var depth = 1
-      while(y > 0 ) {
-        if (x > y) {
-          x -= y
-        }
-        else {
-          y -= x
-        }
-        depth += 1
-      }
-      (x, depth)
+  def newValue(name: String, tpe: firrtl.ir.Type): Value = {
+    namesToValues.get(name) match {
+      case Some(intValue) => intValue
+      case _ =>
+        val value = Value(name, tpe)
+        namesToValues(name) = value
+        value
     }
-
-    val values =
-      for {x <- 1 to 1000
-           y <- 1 to 1000
-      } yield (x, y, computeGcd(x, y)._1)
-
-    runOnce(values)
-    runOnce(values)
-    runOnce(values)
   }
+
+  def newValue(name: String, isSigned: Boolean, width: Int): Value = {
+    namesToValues.get(name) match {
+      case Some(intValue) => intValue
+      case _ =>
+        val value = Value(name, isSigned, width)
+        namesToValues(name) = value
+        value
+    }
+  }
+
+  def assign(value: Value, expressionResult: ExpressionResult): Unit = {
+    val assignment = (value, expressionResult) match {
+      case (v: IntValue, e: IntExpressionResult) => AssignInt(v, e.apply)
+      case (v: BigValue, e: IntExpressionResult) => AssignBig(v, ToBig(e.apply).apply)
+      case (v: BigValue, e: BigExpressionResult) => AssignBig(v, e.apply)
+    }
+    combinationalAssigns += assignment
+  }
+
+  def clockAssign(clockExpression: ExpressionResult, value: Value, expressionResult: ExpressionResult): Unit = {
+    val assignment = (value, expressionResult) match {
+      case (v: IntValue, e: IntExpressionResult) => AssignInt(v, e.apply)
+      case (v: BigValue, e: IntExpressionResult) => AssignBig(v, ToBig(e.apply).apply)
+      case (v: BigValue, e: BigExpressionResult) => AssignBig(v, e.apply)
+    }
+    clockAssigns(clockExpression) += assignment
+  }
+
+  //  def header: String = {
+//    names.keys.toArray.sorted.map { name => f"$name%10.10s" }.mkString("")
+//  }
+//
+//  def addWire(wireValue: ExecutableValue): ExecutableValue = {
+//    names(wireValue.name) = wireValue
+//    wireValue
+//  }
+//
+//  def apply(name: String): ExecutableValue = {
+//    names(name)
+//  }
+//
+//  def getUInt(name: String): IntValue = {
+//    names(name).asInstanceOf[IntValue]
+//  }
+//
+//  override def toString: String = {
+//    names.keys.toArray.sorted.map { key => f"${names(key).asBigInt}%10d" }.mkString("")
+//  }
 }
