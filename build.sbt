@@ -10,6 +10,8 @@ name := "firrtl-interpreter"
 
 version := "1.1-SNAPSHOT"
 
+crossScalaVersions := Seq("2.11.11", "2.12.3")
+
 // The Chisel projects we're dependendent on.
 val chiselDeps = chisel.dependencies(Seq(
     ("edu.berkeley.cs" %% "firrtl" % "1.1-SNAPSHOT", "firrtl")
