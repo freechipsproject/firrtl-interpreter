@@ -11,16 +11,8 @@ case class GetBigConstant(n: Big) extends BigExpressionResult {
 }
 
 case class GetBig(uBig: BigValue) extends BigExpressionResult {
-  val apply: FuncBig = {
-    if(true) nakedGetBig else verboseGetBig
-  }
-
-  def nakedGetBig(): Big = {
+  def apply(): Big = {
     uBig.value
-  }
-  def verboseGetBig(): Big = {
-    println(s"getting int from index ${nakedGetBig()}")
-    nakedGetBig()
   }
 }
 
@@ -32,25 +24,27 @@ case class SubBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
   def apply(): Big = f1() - f2()
 }
 
-case class TailBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
-  def apply(): Big = f1()
+case class TailBigs(f1: FuncBig, isSigned: Boolean, dropNumber: Int, width: Int) extends BigExpressionResult {
+  def apply(): Big = {
+    val int = f1()
+    int.abs & ((1 << (width - dropNumber)) - 1)
+  }
 }
 
-case class MuxBigs(condition: FuncBig, trueClause: FuncBig, falseClause: FuncBig) extends BigExpressionResult {
+case class MuxBigs(condition: FuncInt, trueClause: FuncBig, falseClause: FuncBig) extends BigExpressionResult {
   def apply(): Big = if(condition() > 0) trueClause() else falseClause()
 }
 
-case class EqBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
-  def apply(): Big = if(f1() == f2()) 1 else 0
+case class EqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
+  def apply(): Int = if(f1() == f2()) 1 else 0
 }
 
-case class GtBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
-  def apply(): Big = if(f1() > f2()) 1 else 0
+case class GtBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
+  def apply(): Int = if(f1() > f2()) 1 else 0
 }
 
 case class AssignBig(uBig: BigValue, expression: FuncBig) extends Assigner {
   def apply(): Unit = {
-//    println(s"assign index $index ${state.names.values.find(_.index == index).get.name} ${expression()}")
     uBig.value = expression()
   }
 }

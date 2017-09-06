@@ -47,19 +47,50 @@ class ExpressionCompiler extends SimpleLogger {
               case Add => AddInts(e1.apply, e2.apply)
               case Sub => SubInts(e1.apply, e2.apply)
               case Eq  => EqInts(e1.apply, e2.apply)
+              case Gt  => GtInts(e1.apply, e2.apply)
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode)(${args.head}, ${args.tail.head})")
+            }
+          case (e1: BigExpressionResult, e2: IntExpressionResult) =>
+            opCode match {
+              case Add => AddBigs(e1.apply, ToBig(e2.apply).apply)
+              case Sub => SubBigs(e1.apply, ToBig(e2.apply).apply)
+              case Eq  => EqBigs(e1.apply, ToBig(e2.apply).apply)
+              case Gt  => GtBigs(e1.apply, ToBig(e2.apply).apply)
+              case _ =>
+                throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
             }
           case (e1: BigExpressionResult, e2: BigExpressionResult) =>
             opCode match {
               case Add => AddBigs(e1.apply, e2.apply)
               case Sub => SubBigs(e1.apply, e2.apply)
               case Eq  => EqBigs(e1.apply, e2.apply)
+              case Gt  => GtBigs(e1.apply, e2.apply)
               case _ =>
-                throw InterpreterException(s"Error:BinaryOp:$opCode)(${args.head}, ${args.tail.head})")
+                throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
             }
           case _ =>
-            throw InterpreterException(s"Error:BinaryOp:$opCode)(${args.head}, ${args.tail.head})")
+            throw InterpreterException(
+              s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head}) ($arg1, $arg2)")
+        }
+      }
+
+      def oneArgOneParam(
+                          op: PrimOp,
+                          expressions: Seq[Expression],
+                          ints: Seq[BigInt],
+                          tpe: firrtl.ir.Type
+                        ): ExpressionResult = {
+        val arg1 = processExpression(expressions.head)
+        val arg2 = ints.head
+        val (isSigned, width) = tpe match {
+          case UIntType(IntWidth(n)) => (false, n.toInt)
+          case SIntType(IntWidth(n)) => (true, n.toInt)
+        }
+
+        arg1 match {
+          case e1: IntExpressionResult => TailInts(e1.apply, isSigned, arg2.toInt, width)
+          case e1: BigExpressionResult => TailBigs(e1.apply, isSigned, arg2.toInt, width)
         }
       }
 
@@ -72,11 +103,16 @@ class ExpressionCompiler extends SimpleLogger {
       def processExpression(expression: Expression): ExpressionResult = {
         val result: ExpressionResult = expression match {
           case Mux(condition, trueExpression, falseExpression, _) =>
-            (processExpression(condition), processExpression(trueExpression), processExpression(falseExpression)) match {
-              case (c: IntExpressionResult, t: IntExpressionResult, f: IntExpressionResult) =>
-                MuxInts(c.apply, t.apply, f.apply)
-              case (c: BigExpressionResult, t: BigExpressionResult, f: BigExpressionResult) =>
-                MuxBigs(c.apply, t.apply, f.apply)
+            processExpression(condition) match {
+              case c: IntExpressionResult =>
+                (processExpression(trueExpression), processExpression(falseExpression)) match {
+                  case (t: IntExpressionResult, f: IntExpressionResult) =>
+                    MuxInts(c.apply, t.apply, f.apply)
+                  case (t: BigExpressionResult, f: BigExpressionResult) =>
+                    MuxBigs(c.apply, t.apply, f.apply)
+                }
+              case _ =>
+                throw InterpreterException(s"Mux condition is not 1 bit $condition")
             }
           case WRef(name, tpe, kind, gender) =>
             state.newValue(name, tpe) match {
@@ -102,20 +138,22 @@ class ExpressionCompiler extends SimpleLogger {
               case Div => binaryOps(op, args, tpe)
               case Rem => binaryOps(op, args, tpe)
 
-              case Eq => binaryOps(op, args, tpe)
+              case Eq  => binaryOps(op, args, tpe)
               case Neq => binaryOps(op, args, tpe)
-              case Lt => binaryOps(op, args, tpe)
+              case Lt  => binaryOps(op, args, tpe)
               case Leq => binaryOps(op, args, tpe)
-              case Gt => binaryOps(op, args, tpe)
+              case Gt  => binaryOps(op, args, tpe)
               case Geq => binaryOps(op, args, tpe)
+
+              case Tail => oneArgOneParam(op, args, const, tpe)
               case _ =>
                 throw new Exception(s"processExpression:error: unhandled expression $expression")
             }
             v
           case UIntLiteral(value, IntWidth(width)) =>
-            if(Value.isBig(width.toInt)) GetIntConstant(value.toInt) else GetBigConstant(value)
+            if(Value.isBig(width.toInt))  GetBigConstant(value) else GetIntConstant(value.toInt)
           case SIntLiteral(value, IntWidth(width)) =>
-            if(Value.isBig(width.toInt)) GetIntConstant(value.toInt) else GetBigConstant(value)
+            if(Value.isBig(width.toInt))  GetBigConstant(value) else GetIntConstant(value.toInt)
           case _ =>
             throw new InterpreterException(s"bad expression $expression")
         }
@@ -241,6 +279,7 @@ class ExpressionCompiler extends SimpleLogger {
     myModule match {
       case module: firrtl.ir.Module =>
         processPorts(module)
+        processStatements(module.body)
       case extModule: ExtModule => // Look to see if we have an implementation for this
         log(s"got external module ${extModule.name} instance $modulePrefix")
         processPorts(extModule)
@@ -263,7 +302,7 @@ class ExpressionCompiler extends SimpleLogger {
   }
 
   // scalastyle:off cyclomatic.complexity
-  def compile(circuit: Circuit, interpreter: FirrtlTerp): ExecutableCircuit = {
+  def compile(circuit: Circuit): ExecutableCircuit = {
     val module = findModule(circuit.main, circuit) match {
       case regularModule: firrtl.ir.Module => regularModule
       case externalModule: firrtl.ir.ExtModule =>

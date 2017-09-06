@@ -2,6 +2,8 @@
 
 package firrtl_interpreter.executable
 
+import firrtl_interpreter.InterpreterException
+
 import scala.collection.mutable
 
 class ExecutableCircuit {
@@ -41,8 +43,11 @@ class ExecutableCircuit {
   def assign(value: Value, expressionResult: ExpressionResult): Unit = {
     val assignment = (value, expressionResult) match {
       case (v: IntValue, e: IntExpressionResult) => AssignInt(v, e.apply)
+      case (v: IntValue, e: BigExpressionResult) => AssignInt(v, ToInt(e.apply).apply)
       case (v: BigValue, e: IntExpressionResult) => AssignBig(v, ToBig(e.apply).apply)
       case (v: BigValue, e: BigExpressionResult) => AssignBig(v, e.apply)
+      case _ =>
+        throw InterpreterException(s"what's going on $value $expressionResult")
     }
     combinationalAssigns += assignment
   }

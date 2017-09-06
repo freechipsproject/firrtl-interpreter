@@ -11,21 +11,17 @@ case class GetIntConstant(n: Int) extends IntExpressionResult {
 }
 
 case class GetInt(uInt: IntValue) extends IntExpressionResult {
-  val apply: FuncInt = {
-    if(true) nakedGetInt else verboseGetInt
-  }
-
-  def nakedGetInt(): Int = {
+  def apply(): Int = {
     uInt.value
-  }
-  def verboseGetInt(): Int = {
-    println(s"getting int from index ${nakedGetInt()}")
-    nakedGetInt()
   }
 }
 
 case class ToBig(f: FuncInt) {
   def apply(): Big = Big(f())
+}
+
+case class ToInt(f: FuncBig) {
+  def apply(): Int = f().toInt
 }
 
 case class AddInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
@@ -36,8 +32,11 @@ case class SubInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
   def apply(): Int = f1() - f2()
 }
 
-case class TailInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
-  def apply(): Int = f1()
+case class TailInts(f1: FuncInt, isSigned: Boolean, dropNumber: Int, width: Int) extends IntExpressionResult {
+  def apply(): Int = {
+    val int = f1()
+    int.abs & ((1 << (width - dropNumber)) - 1)
+  }
 }
 
 case class MuxInts(condition: FuncInt, trueClause: FuncInt, falseClause: FuncInt) extends IntExpressionResult {

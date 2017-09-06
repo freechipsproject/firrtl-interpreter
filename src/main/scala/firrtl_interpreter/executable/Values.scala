@@ -61,7 +61,7 @@ object Value {
     }
   }
   def getIntWidth(name: String, tpe: firrtl.ir.Type): Int = {
-    tpe.match {
+    tpe match {
       case groundType: firrtl.ir.GroundType =>
         groundType.width match {
           case firrtl.ir.IntWidth(n) => n.toInt
