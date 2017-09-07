@@ -166,9 +166,21 @@ class ExpressionCompiler extends SimpleLogger {
             processStatements(subStatement)
           }
         case con: Connect =>
+          // if it's a register we use the name of it's input side
+          def renameIfRegister(name: String): String = {
+            if (state.registerNames.contains(name)) {
+              s"$name${ExpressionCompiler.RegisterInputSuffix}"
+            }
+            else {
+              name
+            }
+          }
+
           val newWireValue = con.loc match {
-            case WRef(name, tpe, _, _) => state.newValue(expand(name), tpe)
-            case (_: WSubField | _: WSubIndex) => state.newValue(expand(con.loc.serialize), con.loc.tpe)
+            case WRef(name, tpe, _, _) =>
+              state.newValue(renameIfRegister(expand(name)), tpe)
+            case (_: WSubField | _: WSubIndex) =>
+              state.newValue(renameIfRegister(expand(con.loc.serialize)), con.loc.tpe)
           }
           state.assign(newWireValue, processExpression(con.expr))
         case WDefInstance(info, instanceName, moduleName, _) =>
@@ -201,8 +213,10 @@ class ExpressionCompiler extends SimpleLogger {
 
           val clockResult = processExpression(clockExpression)
 
-          val registerIn  = state.newValue(s"$expandedName/in", tpe)
+          val registerIn  = state.newValue(s"$expandedName${ExpressionCompiler.RegisterInputSuffix}", tpe)
           val registerOut = state.newValue(s"$expandedName", tpe)
+
+          state.registerNames += expandedName
 
           registerIn match {
             case e: BigValue => state.clockAssign(clockResult, registerOut, GetBig(e))
@@ -336,4 +350,8 @@ class ExpressionCompiler extends SimpleLogger {
 //    dependencyGraph
     state
   }
+}
+
+object ExpressionCompiler {
+  val RegisterInputSuffix = "/in"
 }

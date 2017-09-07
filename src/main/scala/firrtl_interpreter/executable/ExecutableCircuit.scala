@@ -11,6 +11,8 @@ class ExecutableCircuit {
 
   val combinationalAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
 
+  val registerNames: mutable.HashSet[String] = new mutable.HashSet[String]
+
   val clockAssigns: mutable.HashMap[ExpressionResult, mutable.ArrayBuffer[Assigner]] = {
     new mutable.HashMap[ExpressionResult, mutable.ArrayBuffer[Assigner]] {
       override def default(key: ExpressionResult): mutable.ArrayBuffer[Assigner] = {
@@ -61,24 +63,24 @@ class ExecutableCircuit {
     clockAssigns(clockExpression) += assignment
   }
 
-  //  def header: String = {
-//    names.keys.toArray.sorted.map { name => f"$name%10.10s" }.mkString("")
-//  }
-//
-//  def addWire(wireValue: ExecutableValue): ExecutableValue = {
-//    names(wireValue.name) = wireValue
-//    wireValue
-//  }
-//
-//  def apply(name: String): ExecutableValue = {
-//    names(name)
-//  }
-//
-//  def getUInt(name: String): IntValue = {
-//    names(name).asInstanceOf[IntValue]
-//  }
-//
-//  override def toString: String = {
-//    names.keys.toArray.sorted.map { key => f"${names(key).asBigInt}%10d" }.mkString("")
-//  }
+  def header: String = {
+    namesToValues.keys.toArray.sorted.map { name => f"$name%10.10s" }.mkString("")
+  }
+
+  def addWire(wireValue: Value): Value = {
+    namesToValues(wireValue.name) = wireValue
+    wireValue
+  }
+
+  def apply(name: String): Value = {
+    namesToValues(name)
+  }
+
+  def getUInt(name: String): IntValue = {
+    namesToValues(name).asInstanceOf[IntValue]
+  }
+
+  override def toString: String = {
+    namesToValues.keys.toArray.sorted.map { key => f"${namesToValues(key).asBig}%10d" }.mkString("")
+  }
 }

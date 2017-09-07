@@ -1,11 +1,13 @@
 // See LICENSE for license details.
 
+//TODO:(chick) ordinary assignments to registers need to go to input side
+
 package firrtl_interpreter.executable
 
 import firrtl._
 import firrtl.ir.Circuit
-import firrtl_interpreter.{HasInterpreterOptions, ToLoFirrtl}
 
+//noinspection ScalaStyle
 class Compiler(ast: Circuit) {
   def lower(c: Circuit): Circuit = {
       val compiler = new LowFirrtlCompiler
@@ -15,20 +17,54 @@ class Compiler(ast: Circuit) {
       compileResult.circuit
     }
 
-
   val loweredAst: Circuit = lower(ast)
 
   val x = new ExpressionCompiler
 
   val out = x.compile(loweredAst)
+
+  def poke(name: String, value: Int): Unit = {
+    out.namesToValues(name) match {
+      case i: IntValue => i.value = value
+      case i: BigValue => i.value = value
+    }
+  }
+
+  def step(steps: Int = 1): Unit = {
+    out.clockAssigns.values.foreach { instructions => instructions.foreach { assign => assign() } }
+    out.combinationalAssigns.foreach { assign => assign()}
+  }
+
+  println(out.header)
+  println(out.toString)
+
+  poke("io_a", 11)
+  poke("io_b", 33)
+  poke("io_e", 1)
+
+  step()
+  println(out.toString)
+
+  poke("io_e", 0)
+  step()
+  println(out.toString)
+
+  step()
+  println(out.toString)
+
+  step()
+  println(out.toString)
+
+  step()
+  println(out.toString)
+
 }
 
 object Compiler {
-
   def apply(input: String): Compiler = {
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
-    val interpreter = new Compiler(ast)
-    interpreter
+    val circuit = new Compiler(ast)
+    circuit
   }
 
   def main(args: Array[String]): Unit = {
