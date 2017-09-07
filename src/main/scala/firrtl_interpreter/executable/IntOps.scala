@@ -16,11 +16,11 @@ case class GetInt(uInt: IntValue) extends IntExpressionResult {
   }
 }
 
-case class ToBig(f: FuncInt) {
+case class ToBig(f: FuncInt) extends BigExpressionResult {
   def apply(): Big = Big(f())
 }
 
-case class ToInt(f: FuncBig) {
+case class ToInt(f: FuncBig) extends IntExpressionResult {
   def apply(): Int = f().toInt
 }
 

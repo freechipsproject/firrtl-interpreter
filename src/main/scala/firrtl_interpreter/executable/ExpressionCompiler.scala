@@ -9,8 +9,6 @@ import firrtl_interpreter._
 
 
 class ExpressionCompiler extends SimpleLogger {
-  val MaxColumnWidth = 100 // keeps displays of expressions readable
-
   /**
     * finds the specified module name in the circuit
     *
@@ -212,6 +210,8 @@ class ExpressionCompiler extends SimpleLogger {
           val expandedName = expand(name)
 
           val clockResult = processExpression(clockExpression)
+          val resetResult = processExpression(resetExpression)
+          val resetValue  = processExpression(initValueExpression)
 
           val registerIn  = state.newValue(s"$expandedName${ExpressionCompiler.RegisterInputSuffix}", tpe)
           val registerOut = state.newValue(s"$expandedName", tpe)
@@ -219,8 +219,18 @@ class ExpressionCompiler extends SimpleLogger {
           state.registerNames += expandedName
 
           registerIn match {
-            case e: BigValue => state.triggeredAssign(clockResult, registerOut, GetBig(e))
-            case e: IntValue => state.triggeredAssign(clockResult, registerOut, GetInt(e))
+            case e: BigValue =>
+              state.triggeredAssign(clockResult, registerOut, GetBig(e))
+              resetValue match {
+                case rv: IntExpressionResult => state.triggeredAssign(resetResult, registerOut, ToBig(rv.apply))
+                case rv: BigExpressionResult => state.triggeredAssign(resetResult, registerOut, rv)
+              }
+            case e: IntValue =>
+              state.triggeredAssign(clockResult, registerOut, GetInt(e))
+              resetValue match {
+                case rv: IntExpressionResult => state.triggeredAssign(resetResult, registerOut, rv)
+                case rv: BigExpressionResult => state.triggeredAssign(resetResult, registerOut, ToInt(rv.apply))
+              }
             case _ =>
               throw InterpreterException(s"bad register $statement")
           }
