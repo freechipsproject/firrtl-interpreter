@@ -1,6 +1,6 @@
 // See LICENSE for license details.
 
-//TODO:(chick) ordinary assignments to registers need to go to input side
+//TODO:(chick) handle reset and multi-clock for registers
 
 package firrtl_interpreter.executable
 
@@ -21,7 +21,7 @@ class Compiler(ast: Circuit) {
 
   val x = new ExpressionCompiler
 
-  val out = x.compile(loweredAst)
+  private val out = x.compile(loweredAst)
 
   def poke(name: String, value: Int): Unit = {
     out.namesToValues(name) match {
@@ -31,8 +31,8 @@ class Compiler(ast: Circuit) {
   }
 
   def step(steps: Int = 1): Unit = {
-    out.clockAssigns.values.foreach { instructions => instructions.foreach { assign => assign() } }
-    out.combinationalAssigns.foreach { assign => assign()}
+    out.getTriggerExpressions.foreach { key => out.executeTriggeredAssigns(key) }
+    out.executeCombinational()
   }
 
   println(out.header)

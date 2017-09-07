@@ -168,7 +168,7 @@ class ExpressionCompiler extends SimpleLogger {
         case con: Connect =>
           // if it's a register we use the name of it's input side
           def renameIfRegister(name: String): String = {
-            if (state.registerNames.contains(name)) {
+            if (state.isRegister(name)) {
               s"$name${ExpressionCompiler.RegisterInputSuffix}"
             }
             else {
@@ -219,8 +219,8 @@ class ExpressionCompiler extends SimpleLogger {
           state.registerNames += expandedName
 
           registerIn match {
-            case e: BigValue => state.clockAssign(clockResult, registerOut, GetBig(e))
-            case e: IntValue => state.clockAssign(clockResult, registerOut, GetInt(e))
+            case e: BigValue => state.triggeredAssign(clockResult, registerOut, GetBig(e))
+            case e: IntValue => state.triggeredAssign(clockResult, registerOut, GetInt(e))
             case _ =>
               throw InterpreterException(s"bad register $statement")
           }
