@@ -79,6 +79,33 @@ case class GeqInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
   def apply(): Int = if(f1() >= f2()) 1 else 0
 }
 
+case class AsUIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
+  val apply = if(isSigned) applySigned else applyUnsigned
+  def applySigned(): Int = TailInts(f1, isSigned, 1, width).apply()
+  def applyUnsigned(): Int = f1()
+}
+
+case class AsSIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
+  val apply = if(isSigned) applySigned else applyUnsigned
+  val mask: Int = 1 << (width - 1)
+  def applySigned(): Int = f1()
+  def applyUnsigned(): Int = {
+    val uInt = f1()
+    if(width == 1 && uInt == 1) {
+      -1
+    }
+    else if((uInt & mask) > 0) {
+      uInt
+    } else {
+      uInt - mask
+    }
+  }
+}
+
+case class AsClockInts(f1: FuncInt) extends IntExpressionResult {
+  def apply(): Int = if(f1() == 0) 0 else 1
+}
+
 case class AssignInt(uInt: IntValue, expression: FuncInt) extends Assigner {
   def apply(): Unit = {
 //    println(s"assign index $index ${state.names.values.find(_.index == index).get.name} ${expression()}")

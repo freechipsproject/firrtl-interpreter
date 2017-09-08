@@ -70,6 +70,33 @@ case class GeqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
   def apply(): Int = if(f1() >= f2()) 1 else 0
 }
 
+case class AsUIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
+  val apply = if(isSigned) applySigned else applyUnsigned
+  def applySigned(): Big = TailBigs(f1, isSigned, 1, width).apply()
+  def applyUnsigned(): Big = f1()
+}
+
+case class AsSIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
+  val apply = if(isSigned) applySigned else applyUnsigned
+  val mask: Big = BigInt(1) << (width - 1)
+  def applySigned(): Big = f1()
+  def applyUnsigned(): Big = {
+    val uInt = f1()
+    if(width == 1 && uInt == BigInt(1)) {
+      BigInt(-1)
+    }
+    else if((uInt & mask) > 0) {
+      uInt
+    } else {
+      uInt - mask
+    }
+  }
+}
+
+case class AsClockBigs(f1: FuncBig) extends IntExpressionResult {
+  def apply(): Int = if(f1() == 0) 0 else 1
+}
+
 case class AssignBig(uBig: BigValue, expression: FuncBig) extends Assigner {
   def apply(): Unit = {
     uBig.value = expression()
