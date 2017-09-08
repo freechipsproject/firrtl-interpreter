@@ -24,6 +24,18 @@ case class SubBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
   def apply(): Big = f1() - f2()
 }
 
+case class MulBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
+  def apply(): Big = f1() * f2()
+}
+
+case class DivBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
+  def apply(): Big = f1() / f2()
+}
+
+case class RemBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
+  def apply(): Big = f1() % f2()
+}
+
 case class TailBigs(f1: FuncBig, isSigned: Boolean, dropNumber: Int, width: Int) extends BigExpressionResult {
   def apply(): Big = {
     val int = f1()
@@ -38,9 +50,24 @@ case class MuxBigs(condition: FuncInt, trueClause: FuncBig, falseClause: FuncBig
 case class EqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
   def apply(): Int = if(f1() == f2()) 1 else 0
 }
+case class NeqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
+  def apply(): Int = if(f1() != f2()) 1 else 0
+}
+
+case class LtBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
+  def apply(): Int = if(f1() < f2()) 1 else 0
+}
+
+case class LeqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
+  def apply(): Int = if(f1() <= f2()) 1 else 0
+}
 
 case class GtBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
   def apply(): Int = if(f1() > f2()) 1 else 0
+}
+
+case class GeqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
+  def apply(): Int = if(f1() >= f2()) 1 else 0
 }
 
 case class AssignBig(uBig: BigValue, expression: FuncBig) extends Assigner {

@@ -44,8 +44,16 @@ class ExpressionCompiler extends SimpleLogger {
             opCode match {
               case Add => AddInts(e1.apply, e2.apply)
               case Sub => SubInts(e1.apply, e2.apply)
+              case Mul => MulInts(e1.apply, e2.apply)
+              case Div => DivInts(e1.apply, e2.apply)
+              case Rem => RemInts(e1.apply, e2.apply)
+
               case Eq  => EqInts(e1.apply, e2.apply)
+              case Neq => NeqInts(e1.apply, e2.apply)
+              case Lt  => LtInts(e1.apply, e2.apply)
+              case Leq => LeqInts(e1.apply, e2.apply)
               case Gt  => GtInts(e1.apply, e2.apply)
+              case Geq => GeqInts(e1.apply, e2.apply)
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode)(${args.head}, ${args.tail.head})")
             }
@@ -53,8 +61,15 @@ class ExpressionCompiler extends SimpleLogger {
             opCode match {
               case Add => AddBigs(e1.apply, ToBig(e2.apply).apply)
               case Sub => SubBigs(e1.apply, ToBig(e2.apply).apply)
+              case Mul => MulBigs(e1.apply, ToBig(e2.apply).apply)
+              case Div => DivBigs(e1.apply, ToBig(e2.apply).apply)
+              case Rem => RemBigs(e1.apply, ToBig(e2.apply).apply)
               case Eq  => EqBigs(e1.apply, ToBig(e2.apply).apply)
+              case Neq => NeqBigs(e1.apply, ToBig(e2.apply).apply)
+              case Lt  => LtBigs(e1.apply, ToBig(e2.apply).apply)
+              case Leq => LeqBigs(e1.apply, ToBig(e2.apply).apply)
               case Gt  => GtBigs(e1.apply, ToBig(e2.apply).apply)
+              case Geq => GeqBigs(e1.apply, ToBig(e2.apply).apply)
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
             }
@@ -62,8 +77,15 @@ class ExpressionCompiler extends SimpleLogger {
             opCode match {
               case Add => AddBigs(e1.apply, e2.apply)
               case Sub => SubBigs(e1.apply, e2.apply)
+              case Mul => MulBigs(e1.apply, e2.apply)
+              case Div => DivBigs(e1.apply, e2.apply)
+              case Rem => RemBigs(e1.apply, e2.apply)
               case Eq  => EqBigs(e1.apply, e2.apply)
+              case Neq => NeqBigs(e1.apply, e2.apply)
+              case Lt  => LtBigs(e1.apply, e2.apply)
+              case Leq => LeqBigs(e1.apply, e2.apply)
               case Gt  => GtBigs(e1.apply, e2.apply)
+              case Geq => GeqBigs(e1.apply, e2.apply)
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
             }
@@ -109,8 +131,8 @@ class ExpressionCompiler extends SimpleLogger {
                   case (t: BigExpressionResult, f: BigExpressionResult) =>
                     MuxBigs(c.apply, t.apply, f.apply)
                 }
-              case _ =>
-                throw InterpreterException(s"Mux condition is not 1 bit $condition")
+              case c =>
+                throw InterpreterException(s"Mux condition is not 1 bit $condition parsed as $c")
             }
           case WRef(name, tpe, kind, gender) =>
             state.newValue(name, tpe) match {

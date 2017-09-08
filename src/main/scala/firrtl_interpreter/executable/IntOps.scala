@@ -32,6 +32,18 @@ case class SubInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
   def apply(): Int = f1() - f2()
 }
 
+case class MulInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = f1() * f2()
+}
+
+case class DivInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = f1() / f2()
+}
+
+case class RemInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = f1() % f2()
+}
+
 case class TailInts(f1: FuncInt, isSigned: Boolean, dropNumber: Int, width: Int) extends IntExpressionResult {
   def apply(): Int = {
     val int = f1()
@@ -47,8 +59,24 @@ case class EqInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
   def apply(): Int = if(f1() == f2()) 1 else 0
 }
 
+case class NeqInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = if(f1() != f2()) 1 else 0
+}
+
+case class LtInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = if(f1() < f2()) 1 else 0
+}
+
+case class LeqInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = if(f1() <= f2()) 1 else 0
+}
+
 case class GtInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
   def apply(): Int = if(f1() > f2()) 1 else 0
+}
+
+case class GeqInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = if(f1() >= f2()) 1 else 0
 }
 
 case class AssignInt(uInt: IntValue, expression: FuncInt) extends Assigner {
