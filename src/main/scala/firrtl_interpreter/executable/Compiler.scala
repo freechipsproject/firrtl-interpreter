@@ -1,6 +1,7 @@
 // See LICENSE for license details.
 
 //TODO:(chick) handle reset and multi-clock for registers
+//TODO:(chick) shift amounts can only be int, this may reduce match statements
 
 package firrtl_interpreter.executable
 

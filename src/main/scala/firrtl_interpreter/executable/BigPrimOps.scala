@@ -97,6 +97,22 @@ case class AsClockBigs(f1: FuncBig) extends IntExpressionResult {
   def apply(): Int = if(f1() == 0) 0 else 1
 }
 
+case class ShlBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
+  def apply(): Big = f1() << f2().toInt
+}
+
+case class ShrBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
+  def apply(): Big = f1() << f2().toInt
+}
+
+case class DshlBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
+  def apply(): Big = f1() << f2().toInt
+}
+
+case class DshrBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
+  def apply(): Big = f1() >> f2().toInt
+}
+
 case class AssignBig(uBig: BigValue, expression: FuncBig) extends Assigner {
   def apply(): Unit = {
     uBig.value = expression()

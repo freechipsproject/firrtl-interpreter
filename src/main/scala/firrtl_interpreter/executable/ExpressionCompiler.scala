@@ -55,6 +55,9 @@ class ExpressionCompiler extends SimpleLogger {
               case Gt  => GtInts(e1.apply, e2.apply)
               case Geq => GeqInts(e1.apply, e2.apply)
 
+              case Dshl => DshlInts(e1.apply, e2.apply)
+              case Dshr => DshrInts(e1.apply, e2.apply)
+
               case Pad => GeqInts(e1.apply, e2.apply)
 
               case _ =>
@@ -74,6 +77,10 @@ class ExpressionCompiler extends SimpleLogger {
               case Leq => LeqBigs(e1.apply, ToBig(e2.apply).apply)
               case Gt  => GtBigs(e1.apply, ToBig(e2.apply).apply)
               case Geq => GeqBigs(e1.apply, ToBig(e2.apply).apply)
+
+              case Dshl => DshlBigs(e1.apply, ToBig(e2.apply).apply)
+              case Dshr => DshrBigs(e1.apply, ToBig(e2.apply).apply)
+
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
             }
@@ -91,6 +98,10 @@ class ExpressionCompiler extends SimpleLogger {
               case Leq => LeqBigs(e1.apply, e2.apply)
               case Gt  => GtBigs(e1.apply, e2.apply)
               case Geq => GeqBigs(e1.apply, e2.apply)
+
+              case Dshl => DshlBigs(e1.apply, e2.apply)
+              case Dshr => DshrBigs(e1.apply, e2.apply)
+
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
             }
@@ -117,10 +128,14 @@ class ExpressionCompiler extends SimpleLogger {
           case e1: IntExpressionResult =>
             op match {
               case Tail => TailInts(e1.apply, isSigned, arg2.toInt, width)
+              case Shl  => ShlInts(e1.apply, GetIntConstant(arg2.toInt).apply)
+              case Shr  => ShrInts(e1.apply, GetIntConstant(arg2.toInt).apply)
             }
           case e1: BigExpressionResult =>
             op match {
               case Tail => TailBigs(e1.apply, isSigned, arg2.toInt, width)
+              case Shl  => ShlBigs(e1.apply, GetBigConstant(arg2.toInt).apply)
+              case Shr  => ShrBigs(e1.apply, GetBigConstant(arg2.toInt).apply)
             }
         }
       }
@@ -151,7 +166,6 @@ class ExpressionCompiler extends SimpleLogger {
               case AsSInt  => e1
               case AsClock => e1
             }
-
         }
       }
 
@@ -210,12 +224,12 @@ class ExpressionCompiler extends SimpleLogger {
               case AsSInt  => unaryOps(op, args, tpe)
               case AsClock => unaryOps(op, args, tpe)
 
-//              case Shl => bitOps(op, args, const, tpe)
-//              case Shr => bitOps(op, args, const, tpe)
-//
-//              case Dshl => dynamicBitOps(op, args, const, tpe)
-//              case Dshr => dynamicBitOps(op, args, const, tpe)
-//
+              case Shl => oneArgOneParamOps(op, args, const, tpe)
+              case Shr => oneArgOneParamOps(op, args, const, tpe)
+
+              case Dshl => binaryOps(op, args, tpe)
+              case Dshr => binaryOps(op, args, tpe)
+
 //              case Cvt => oneArgOps(op, args, const, tpe)
 //              case Neg => oneArgOps(op, args, const, tpe)
 //              case Not => oneArgOps(op, args, const, tpe)

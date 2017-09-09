@@ -106,11 +106,25 @@ case class AsClockInts(f1: FuncInt) extends IntExpressionResult {
   def apply(): Int = if(f1() == 0) 0 else 1
 }
 
+case class ShlInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = f1() << f2()
+}
+
+case class ShrInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = f1() << f2()
+}
+
+case class DshlInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = f1() << f2()
+}
+
+case class DshrInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = f1() >> f2()
+}
+
 case class AssignInt(uInt: IntValue, expression: FuncInt) extends Assigner {
   def apply(): Unit = {
 //    println(s"assign index $index ${state.names.values.find(_.index == index).get.name} ${expression()}")
     uInt.value = expression()
   }
 }
-
-
