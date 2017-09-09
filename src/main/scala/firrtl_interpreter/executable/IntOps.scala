@@ -44,13 +44,6 @@ case class RemInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
   def apply(): Int = f1() % f2()
 }
 
-case class TailInts(f1: FuncInt, isSigned: Boolean, dropNumber: Int, width: Int) extends IntExpressionResult {
-  def apply(): Int = {
-    val int = f1()
-    int.abs & ((1 << (width - dropNumber)) - 1)
-  }
-}
-
 case class MuxInts(condition: FuncInt, trueClause: FuncInt, falseClause: FuncInt) extends IntExpressionResult {
   def apply(): Int = if(condition() > 0) trueClause() else falseClause()
 }
@@ -80,14 +73,14 @@ case class GeqInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
 }
 
 case class AsUIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
-  val apply = if(isSigned) applySigned else applyUnsigned
+  def apply(): Int = if(isSigned) applySigned() else applyUnsigned()
   def applySigned(): Int = TailInts(f1, isSigned, 1, width).apply()
   def applyUnsigned(): Int = f1()
 }
 
 case class AsSIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
-  val apply = if(isSigned) applySigned else applyUnsigned
-  val mask: Int = 1 << (width - 1)
+  def apply(): Int = if(isSigned) applySigned() else applyUnsigned()
+  private val mask: Int = 1 << (width - 1)
   def applySigned(): Int = f1()
   def applyUnsigned(): Int = {
     val uInt = f1()
@@ -122,9 +115,96 @@ case class DshrInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
   def apply(): Int = f1() >> f2()
 }
 
+case class NegInts(f1: FuncInt) extends IntExpressionResult {
+  def apply(): Int = - f1()
+}
+
+case class NotInts(f1: FuncInt) extends IntExpressionResult {
+  def apply(): Int = ~ f1()
+}
+
+case class AndInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = f1() & f2()
+}
+
+case class OrInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = f1() | f2()
+}
+
+case class XorInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
+  def apply(): Int = f1() ^ f2()
+}
+
+/**
+  * are all bits set
+  * @param f1 value to be `and` reduced
+  * @param width result bit size
+  */
+case class AndrInts(f1: FuncInt, width: Int) extends IntExpressionResult {
+  def apply(): Int = {
+    var uInt = f1() << 1
+    if((0 until width).exists { _ =>
+      uInt >>= 1
+      (uInt & 1) == 0
+    }) { 0 } else { 1 }
+  }
+}
+
+/**
+  * are any bits set
+  * @param f1 value to be `or` reduced
+  * @param width result bit size  */
+case class OrrInts(f1: FuncInt, width: Int) extends IntExpressionResult {
+  def apply(): Int = {
+    if(f1() != 0) { 0 } else { 1 }
+  }
+}
+
+/**
+  * are all bits set
+  * @param f1 value to be `xor` reduced
+  * @param width result bit size  */
+case class XorrInts(f1: FuncInt, width: Int) extends IntExpressionResult {
+  def apply(): Int = {
+    val uInt = f1()
+    (0 until width).map(n => (uInt >> n) & 1).reduce(_ ^ _)
+  }
+}
+
+case class CatInts(f1: FuncInt, f2: FuncInt, width2: Int) extends IntExpressionResult {
+  def apply(): Int = (f1() << width2) | f2()
+}
+
+case class BitsInts(f1: FuncInt, isSigned: Boolean, high: Int, low: Int, width: Int) extends IntExpressionResult {
+  private val mask = (1 << ((high - low) + 1)) - 1
+
+  def apply(): Int = {
+    val uInt = AsUIntInts(f1, isSigned, width).apply()
+    (uInt >> low) & mask
+  }
+}
+
+case class HeadInts(f1: FuncInt, isSigned: Boolean, high: Int, width: Int) extends IntExpressionResult {
+  private val mask = (1 << (high + 1)) - 1
+
+  def apply(): Int = {
+    val uInt = AsUIntInts(f1, isSigned, width).apply()
+    uInt & mask
+  }
+}
+
+case class TailInts(f1: FuncInt, isSigned: Boolean, toDrop: Int, width: Int) extends IntExpressionResult {
+  private val high = width - toDrop
+  private val mask = (1 << (high + 1)) - 1
+
+  def apply(): Int = {
+    val uInt = AsUIntInts(f1, isSigned, width).apply()
+    uInt & mask
+  }
+}
+
 case class AssignInt(uInt: IntValue, expression: FuncInt) extends Assigner {
   def apply(): Unit = {
-//    println(s"assign index $index ${state.names.values.find(_.index == index).get.name} ${expression()}")
     uInt.value = expression()
   }
 }

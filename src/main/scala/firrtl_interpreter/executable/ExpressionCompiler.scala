@@ -58,7 +58,16 @@ class ExpressionCompiler extends SimpleLogger {
               case Dshl => DshlInts(e1.apply, e2.apply)
               case Dshr => DshrInts(e1.apply, e2.apply)
 
-              case Pad => GeqInts(e1.apply, e2.apply)
+              case And  => AndBigs(e1.apply, e2.apply)
+              case Or   => OrBigs(e1.apply, e2.apply)
+              case Xor  => XorBigs(e1.apply, e2.apply)
+
+              case Cat =>
+                val width2 = args.tail.head.tpe match {
+                  case GroundType(IntWidth(n)) => n.toInt
+                  case _ => throw new InterpreterException(s"can't find width for Cat(${args.head}, ${args.tail.head})")
+                }
+                CatInts(e1.apply, e2.apply, width2)
 
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode)(${args.head}, ${args.tail.head})")
@@ -81,6 +90,17 @@ class ExpressionCompiler extends SimpleLogger {
               case Dshl => DshlBigs(e1.apply, ToBig(e2.apply).apply)
               case Dshr => DshrBigs(e1.apply, ToBig(e2.apply).apply)
 
+              case And  => AndBigs(e1.apply, ToBig(e2.apply).apply)
+              case Or   => OrBigs(e1.apply, ToBig(e2.apply).apply)
+              case Xor  => XorBigs(e1.apply, ToBig(e2.apply).apply)
+
+              case Cat =>
+                val width2 = args.tail.head.tpe match {
+                  case GroundType(IntWidth(n)) => n.toInt
+                  case _ => throw new InterpreterException(s"can't find width for Cat(${args.head}, ${args.tail.head})")
+                }
+                CatBigs(e1.apply, ToBig(e2.apply).apply, width2)
+
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
             }
@@ -101,6 +121,17 @@ class ExpressionCompiler extends SimpleLogger {
 
               case Dshl => DshlBigs(e1.apply, e2.apply)
               case Dshr => DshrBigs(e1.apply, e2.apply)
+
+              case And  => AndBigs(e1.apply, e2.apply)
+              case Or   => OrBigs(e1.apply, e2.apply)
+              case Xor  => XorBigs(e1.apply, e2.apply)
+
+              case Cat =>
+                val width2 = args.tail.head.tpe match {
+                  case GroundType(IntWidth(n)) => n.toInt
+                  case _ => throw new InterpreterException(s"can't find width for Cat(${args.head}, ${args.tail.head})")
+                }
+                CatBigs(e1.apply, e2.apply, width2)
 
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
@@ -127,15 +158,43 @@ class ExpressionCompiler extends SimpleLogger {
         arg1 match {
           case e1: IntExpressionResult =>
             op match {
+              case Head => HeadInts(e1.apply, isSigned, arg2.toInt, width)
               case Tail => TailInts(e1.apply, isSigned, arg2.toInt, width)
               case Shl  => ShlInts(e1.apply, GetIntConstant(arg2.toInt).apply)
               case Shr  => ShrInts(e1.apply, GetIntConstant(arg2.toInt).apply)
             }
           case e1: BigExpressionResult =>
             op match {
+              case Head => HeadBigs(e1.apply, isSigned, arg2.toInt, width)
               case Tail => TailBigs(e1.apply, isSigned, arg2.toInt, width)
               case Shl  => ShlBigs(e1.apply, GetBigConstant(arg2.toInt).apply)
               case Shr  => ShrBigs(e1.apply, GetBigConstant(arg2.toInt).apply)
+            }
+        }
+      }
+
+      def oneArgTwoParamOps(
+        op: PrimOp,
+        expressions: Seq[Expression],
+        ints: Seq[BigInt],
+        tpe: firrtl.ir.Type
+      ): ExpressionResult = {
+        val arg1 = processExpression(expressions.head)
+        val arg2 = ints.head
+        val arg3 = ints.tail.head
+        val (isSigned, width) = tpe match {
+          case UIntType(IntWidth(n)) => (false, n.toInt)
+          case SIntType(IntWidth(n)) => (true, n.toInt)
+        }
+
+        arg1 match {
+          case e1: IntExpressionResult =>
+            op match {
+              case Bits => BitsInts(e1.apply, isSigned, arg2.toInt, arg3.toInt, width)
+            }
+          case e1: BigExpressionResult =>
+            op match {
+              case Bits => BitsBigs(e1.apply, isSigned, arg2.toInt, arg3.toInt, width)
             }
         }
       }
@@ -158,6 +217,14 @@ class ExpressionCompiler extends SimpleLogger {
               case AsUInt  => e1
               case AsSInt  => e1
               case AsClock => e1
+
+              case Cvt     => e1
+              case Neg     => NegInts(e1.apply)
+              case Not     => NotInts(e1.apply)
+
+              case Andr    => AndrInts(e1.apply, width)
+              case Orr     => NotInts(e1.apply)
+              case Xorr    => NegInts(e1.apply)
             }
           case e1: BigExpressionResult =>
             op match {
@@ -165,6 +232,14 @@ class ExpressionCompiler extends SimpleLogger {
               case AsUInt  => e1
               case AsSInt  => e1
               case AsClock => e1
+
+              case Cvt     => e1
+              case Neg     => NegBigs(e1.apply)
+              case Not     => NotBigs(e1.apply)
+
+              case Andr    => AndrBigs(e1.apply, width)
+              case Orr     => NotBigs(e1.apply)
+              case Xorr    => NegBigs(e1.apply)
             }
         }
       }
@@ -230,23 +305,23 @@ class ExpressionCompiler extends SimpleLogger {
               case Dshl => binaryOps(op, args, tpe)
               case Dshr => binaryOps(op, args, tpe)
 
-//              case Cvt => oneArgOps(op, args, const, tpe)
-//              case Neg => oneArgOps(op, args, const, tpe)
-//              case Not => oneArgOps(op, args, const, tpe)
-//
-//              case And => binaryBitWise(op, args, tpe)
-//              case Or => binaryBitWise(op, args, tpe)
-//              case Xor => binaryBitWise(op, args, tpe)
-//
-//              case Andr => oneArgOps(op, args, const, tpe)
-//              case Orr => oneArgOps(op, args, const, tpe)
-//              case Xorr => oneArgOps(op, args, const, tpe)
-//
-//              case Cat => binaryBitWise(op, args, tpe)
-//
-//              case Bits => bitSelectOp(op, args, const, tpe)
-//
-//              case Head => bitOps(op, args, const, tpe)
+              case Cvt => unaryOps(op, args, tpe)
+              case Neg => unaryOps(op, args, tpe)
+              case Not => unaryOps(op, args, tpe)
+
+              case And => binaryOps(op, args, tpe)
+              case Or  => binaryOps(op, args, tpe)
+              case Xor => binaryOps(op, args, tpe)
+
+              case Andr => unaryOps(op, args, tpe)
+              case Orr =>  unaryOps(op, args, tpe)
+              case Xorr => unaryOps(op, args, tpe)
+
+              case Cat => binaryOps(op, args, tpe)
+
+              case Bits => oneArgTwoParamOps(op, args, const, tpe)
+
+              case Head => oneArgOneParamOps(op, args, const, tpe)
               case Tail => oneArgOneParamOps(op, args, const, tpe)
               case _ =>
                 throw new Exception(s"processExpression:error: unhandled expression $expression")
