@@ -16,6 +16,12 @@ case class GetInt(uInt: IntValue) extends IntExpressionResult {
   }
 }
 
+case class AssignInt(uInt: IntValue, expression: FuncInt) extends Assigner {
+  def apply(): Unit = {
+    uInt.value = expression()
+  }
+}
+
 case class ToBig(f: FuncInt) extends BigExpressionResult {
   def apply(): Big = Big(f())
 }
@@ -73,24 +79,39 @@ case class GeqInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
 }
 
 case class AsUIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
-  def apply(): Int = if(isSigned) applySigned() else applyUnsigned()
-  def applySigned(): Int = TailInts(f1, isSigned, 1, width).apply()
+  private val mask = 1 << (width - 1)
+
+  def apply(): Int = if (isSigned) applySigned() else applyUnsigned()
+
+  def applySigned(): Int = {
+    val sInt = f1()
+    if (sInt < 0) {
+      (mask + sInt) | mask
+    }
+    else {
+      sInt
+    }
+  }
+
   def applyUnsigned(): Int = f1()
 }
 
 case class AsSIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
-  def apply(): Int = if(isSigned) applySigned() else applyUnsigned()
+  def apply(): Int = if (isSigned) applySigned() else applyUnsigned()
+
   private val mask: Int = 1 << (width - 1)
+
   def applySigned(): Int = f1()
+
   def applyUnsigned(): Int = {
     val uInt = f1()
-    if(width == 1 && uInt == 1) {
+    if (width == 1 && uInt == 1) {
       -1
     }
-    else if((uInt & mask) > 0) {
-      uInt
+    else if ((uInt & mask) > 0) {
+      mask - uInt
     } else {
-      uInt - mask
+      uInt
     }
   }
 }
@@ -193,9 +214,9 @@ case class HeadInts(f1: FuncInt, isSigned: Boolean, high: Int, width: Int) exten
   }
 }
 
-case class TailInts(f1: FuncInt, isSigned: Boolean, toDrop: Int, width: Int) extends IntExpressionResult {
+case class TailInts2(f1: FuncInt, isSigned: Boolean, toDrop: Int, width: Int) extends IntExpressionResult {
   private val high = width - toDrop
-  private val mask = (1 << (high + 1)) - 1
+  private val mask = (1 << (high + (if(isSigned) 0 else -1))) - 1
 
   def apply(): Int = {
     val uInt = AsUIntInts(f1, isSigned, width).apply()
@@ -203,8 +224,18 @@ case class TailInts(f1: FuncInt, isSigned: Boolean, toDrop: Int, width: Int) ext
   }
 }
 
-case class AssignInt(uInt: IntValue, expression: FuncInt) extends Assigner {
-  def apply(): Unit = {
-    uInt.value = expression()
+case class TailInts(f1: FuncInt, isSigned: Boolean, toDrop: Int, width: Int) extends IntExpressionResult {
+
+  def apply(): Int = if (isSigned) applySigned() else applyUnsigned()
+
+  private val mask: Int = (1 << (width - toDrop)) - 1
+
+  def applyUnsigned(): Int = f1() & mask
+
+  def applySigned(): Int = {
+    val uInt = f1()
+
+    uInt.abs & mask
   }
 }
+

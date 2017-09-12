@@ -64,8 +64,17 @@ case class GeqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
 }
 
 case class AsUIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
+  private val mask = Big(1) << (width - 1)
   def apply(): Big = if(isSigned) applySigned() else applyUnsigned()
-  def applySigned(): Big = TailBigs(f1, isSigned, 1, width).apply()
+  def applySigned(): Big = {
+    val sInt = f1()
+    if(sInt < 0) {
+      (mask + sInt) | mask
+    }
+    else {
+      sInt
+    }
+  }
   def applyUnsigned(): Big = f1()
 }
 
@@ -78,7 +87,7 @@ case class AsSIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExp
     if(width == 1 && uInt == BigInt(1)) {
       BigInt(-1)
     }
-    else if((uInt & mask) > 0) {
+    else if((uInt & mask) >= 0) {
       uInt
     } else {
       uInt - mask
