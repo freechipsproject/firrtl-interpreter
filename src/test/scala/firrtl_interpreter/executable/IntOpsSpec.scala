@@ -17,7 +17,7 @@ class IntOpsSpec extends FreeSpec with Matchers {
   def fMinus4(): Int = -4
 
   def val1(): Int = Integer.parseInt("abcd", 16)
-  def val2(): Int = Integer.parseInt("1" * 9, 2)
+  def val2(): Int = Integer.parseInt("10" * 4, 2)
   def val3(): Int = Integer.parseInt("0", 2)
 
   "IntOps should pass a basic test" - {
@@ -39,6 +39,29 @@ class IntOpsSpec extends FreeSpec with Matchers {
 
       AsSIntInts(f3, isSigned = false, width = 2)() should be (-1)
       AsSIntInts(f3, isSigned = false, width = 3)() should be (3)
+    }
+
+    "bit ops should take arbitrary bits from a value" in {
+      BitsInts(val2, isSigned = false, high = 1, low = 0, originalWidth = 8)() should be (2)
+      BitsInts(val2, isSigned = false, high = 2, low = 0, originalWidth = 8)() should be (2)
+      BitsInts(val2, isSigned = false, high = 3, low = 0, originalWidth = 8)() should be (10)
+      BitsInts(val2, isSigned = false, high = 3, low = 1, originalWidth = 8)() should be (5)
+      BitsInts(val2, isSigned = false, high = 3, low = 2, originalWidth = 8)() should be (2)
+      BitsInts(val2, isSigned = false, high = 3, low = 3, originalWidth = 8)() should be (1)
+    }
+
+    "head ops should take bits from front of number" in {
+      HeadInts(f1, isSigned = false, takeBits = 1, originalWidth = 1)() should be (1)
+      HeadInts(f1, isSigned = false, takeBits = 1, originalWidth = 2)() should be (0)
+
+      HeadInts(fMinus1, isSigned = true, takeBits = 1, originalWidth = 1)() should be (1)
+      HeadInts(fMinus1, isSigned = true, takeBits = 1, originalWidth = 2)() should be (1)
+      HeadInts(f1, isSigned = true, takeBits = 1, originalWidth = 2)() should be (0)
+      HeadInts(f2, isSigned = true, takeBits = 1, originalWidth = 3)() should be (0)
+
+      HeadInts(val1, isSigned = true, takeBits = 9, originalWidth = 17)() should be (Integer.parseInt("ab", 16))
+      HeadInts(val1, isSigned = false, takeBits = 8, originalWidth = 16)() should be (Integer.parseInt("ab", 16))
+
     }
 
     "tail ops should drop leading bits from expression" in {

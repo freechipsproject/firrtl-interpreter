@@ -16,6 +16,12 @@ case class GetBig(uBig: BigValue) extends BigExpressionResult {
   }
 }
 
+case class AssignBig(uBig: BigValue, expression: FuncBig) extends Assigner {
+  def apply(): Unit = {
+    uBig.value = expression()
+  }
+}
+
 case class AddBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
   def apply(): Big = f1() + f2()
 }
@@ -177,38 +183,30 @@ case class CatBigs(f1: FuncBig, f2: FuncBig, width2: Int) extends BigExpressionR
   def apply(): Big = (f1() << width2) | f2()
 }
 
-case class BitsBigs(f1: FuncBig, isSigned: Boolean, width: Int, high: Int, low: Int) extends BigExpressionResult {
-  val mask = BigInt((1 << ((high - low) + 1)) - 1)
+case class BitsBigs(f1: FuncBig, isSigned: Boolean, high: Int, low: Int, width: Int) extends BigExpressionResult {
+  private val mask = (1 << ((high - low) + 1)) - 1
 
   def apply(): Big = {
-    val uInt = AsUIntBigs(f1, isSigned, width).apply()
-    (uInt >> low) & mask
+    val uBig = AsUIntBigs(f1, isSigned, width).apply()
+    (uBig >> low) & mask
   }
 }
 
-case class HeadBigs(f1: FuncBig, isSigned: Boolean, high: Int, width: Int) extends BigExpressionResult {
-  val mask = BigInt((1 << (high + 1)) - 1)
+case class HeadBigs(f1: FuncBig, isSigned: Boolean, takeBits: Int, originalWidth: Int) extends BigExpressionResult {
+  private val mask = (1 << takeBits) - 1
+  private val shift = originalWidth - takeBits
 
   def apply(): Big = {
-    val uInt = AsUIntBigs(f1, isSigned, width).apply()
+    val uBig = AsUIntBigs(f1, isSigned, originalWidth).apply()
+    (uBig >> shift) & mask
+  }
+}
+
+case class TailBigs(f1: FuncBig, isSigned: Boolean, toDrop: Int, originalWidth: Int) extends BigExpressionResult {
+  private val mask: Big = BigInt((1 << (originalWidth - toDrop)) - 1)
+
+  def apply(): Big = {
+    val uInt = AsUIntBigs(f1, isSigned, originalWidth).apply()
     uInt & mask
   }
 }
-
-case class TailBigs(f1: FuncBig, isSigned: Boolean, toDrop: Int, width: Int) extends BigExpressionResult {
-  val high: Int = width - toDrop
-  val mask = BigInt((1 << (high + 1)) - 1)
-
-  def apply(): Big = {
-    val uInt = AsUIntBigs(f1, isSigned, width).apply()
-    uInt & mask
-  }
-}
-
-case class AssignBig(uBig: BigValue, expression: FuncBig) extends Assigner {
-  def apply(): Unit = {
-    uBig.value = expression()
-  }
-}
-
-

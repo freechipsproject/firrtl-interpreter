@@ -192,31 +192,31 @@ case class XorrInts(f1: FuncInt, width: Int) extends IntExpressionResult {
   }
 }
 
-case class CatInts(f1: FuncInt, f2: FuncInt, width2: Int) extends IntExpressionResult {
-  def apply(): Int = (f1() << width2) | f2()
+case class CatInts(f1: FuncInt, f2: FuncInt, widthF2: Int) extends IntExpressionResult {
+  def apply(): Int = (f1() << widthF2) | f2()
 }
 
-case class BitsInts(f1: FuncInt, isSigned: Boolean, high: Int, low: Int, width: Int) extends IntExpressionResult {
+case class BitsInts(f1: FuncInt, isSigned: Boolean, high: Int, low: Int, originalWidth: Int)
+  extends IntExpressionResult {
   private val mask = (1 << ((high - low) + 1)) - 1
 
   def apply(): Int = {
-    val uInt = AsUIntInts(f1, isSigned, width).apply()
+    val uInt = AsUIntInts(f1, isSigned, originalWidth).apply()
     (uInt >> low) & mask
   }
 }
 
-case class HeadInts(f1: FuncInt, isSigned: Boolean, high: Int, width: Int) extends IntExpressionResult {
-  private val mask = (1 << (high + 1)) - 1
+case class HeadInts(f1: FuncInt, isSigned: Boolean, takeBits: Int, originalWidth: Int) extends IntExpressionResult {
+  private val mask = (1 << takeBits) - 1
+  private val shift = originalWidth - takeBits
 
   def apply(): Int = {
-    val uInt = AsUIntInts(f1, isSigned, width).apply()
-    uInt & mask
+    val uInt = AsUIntInts(f1, isSigned, originalWidth).apply()
+    (uInt >> shift) & mask
   }
 }
 
-
 case class TailInts(f1: FuncInt, isSigned: Boolean, toDrop: Int, originalWidth: Int) extends IntExpressionResult {
-
   private val mask: Int = (1 << (originalWidth - toDrop)) - 1
 
   def apply(): Int = {

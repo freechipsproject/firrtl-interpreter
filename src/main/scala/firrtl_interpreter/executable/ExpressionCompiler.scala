@@ -45,6 +45,16 @@ class ExpressionCompiler extends SimpleLogger {
     }
   }
 
+  def getSigned(expression: Expression): Boolean = {
+    expression.tpe match {
+      case  _: UIntType    => false
+      case  _: SIntType    => true
+      case  ClockType      => false
+      case _ =>
+        throw new InterpreterException(
+          s"Unsupported type ound in expression $expression of firrtl.ir.Type ${expression.tpe}")
+    }  }
+
   // scalastyle:off
   def processModule(modulePrefix: String, myModule: DefModule, circuit: Circuit): Unit = {
     def expand(name: String): String = if(modulePrefix.isEmpty) name else modulePrefix + "." + name
@@ -157,26 +167,23 @@ class ExpressionCompiler extends SimpleLogger {
       ): ExpressionResult = {
         val arg1 = processExpression(expressions.head)
         val arg1Width = getWidth(expressions.head)
-        val arg2 = ints.head
-        val (isSigned, width) = tpe match {
-          case UIntType(IntWidth(n)) => (false, n.toInt)
-          case SIntType(IntWidth(n)) => (true, n.toInt)
-        }
+        val isSigned = getSigned(expressions.head)
+        val param1 = ints.head.toInt
 
         arg1 match {
           case e1: IntExpressionResult =>
             op match {
-              case Head => HeadInts(e1.apply, isSigned, arg2.toInt, width)
-              case Tail => TailInts(e1.apply, isSigned, arg2.toInt, width)
-              case Shl  => ShlInts(e1.apply, GetIntConstant(arg2.toInt).apply)
-              case Shr  => ShrInts(e1.apply, GetIntConstant(arg2.toInt).apply)
+              case Head => HeadInts(e1.apply, isSigned, takeBits = param1, arg1Width)
+              case Tail => TailInts(e1.apply, isSigned, toDrop = param1, arg1Width)
+              case Shl  => ShlInts(e1.apply, GetIntConstant(param1).apply)
+              case Shr  => ShrInts(e1.apply, GetIntConstant(param1).apply)
             }
           case e1: BigExpressionResult =>
             op match {
-              case Head => HeadBigs(e1.apply, isSigned, arg2.toInt, width)
-              case Tail => TailBigs(e1.apply, isSigned, arg2.toInt, width)
-              case Shl  => ShlBigs(e1.apply, GetBigConstant(arg2.toInt).apply)
-              case Shr  => ShrBigs(e1.apply, GetBigConstant(arg2.toInt).apply)
+              case Head => HeadBigs(e1.apply, isSigned, takeBits = param1, arg1Width)
+              case Tail => TailBigs(e1.apply, isSigned, toDrop = param1, arg1Width)
+              case Shl  => ShlBigs(e1.apply, GetBigConstant(param1).apply)
+              case Shr  => ShrBigs(e1.apply, GetBigConstant(param1).apply)
             }
         }
       }
