@@ -192,8 +192,13 @@ case class XorrInts(f1: FuncInt, width: Int) extends IntExpressionResult {
   }
 }
 
-case class CatInts(f1: FuncInt, f2: FuncInt, widthF2: Int) extends IntExpressionResult {
-  def apply(): Int = (f1() << widthF2) | f2()
+case class CatInts(
+                    f1: FuncInt, f1IsSigned: Boolean, f1Width: Int,
+                    f2: FuncInt, f2IsSigned: Boolean, f2Width: Int
+                  ) extends IntExpressionResult {
+  def apply(): Int = {
+    (AsUIntInts(f1, f1IsSigned, f1Width)() << f2Width) | AsUIntInts(f2, f2IsSigned, f2Width)()
+  }
 }
 
 case class BitsInts(f1: FuncInt, isSigned: Boolean, high: Int, low: Int, originalWidth: Int)

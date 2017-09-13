@@ -41,6 +41,15 @@ class IntOpsSpec extends FreeSpec with Matchers {
       AsSIntInts(f3, isSigned = false, width = 3)() should be (3)
     }
 
+    "cat ops should combine bits from two numbers" in {
+      CatInts(f1, f1IsSigned = false, f1Width = 1, f1, f2IsSigned = false, f2Width = 1)() should be (3)
+      CatInts(fMinus1, f1IsSigned = true,  f1Width = 2, f1, f2IsSigned = false, f2Width = 1)() should be (7)
+
+      CatInts(fMinus1, f1IsSigned = true,  f1Width = 2, fMinus1, f2IsSigned = true, f2Width = 2)() should be (15)
+      CatInts(fMinus1, f1IsSigned = true,  f1Width = 2, fMinus2, f2IsSigned = true, f2Width = 2)() should be (14)
+      CatInts(f1, f1IsSigned = false,  f1Width = 1, fMinus1, f2IsSigned = true, f2Width = 2)() should be (7)
+    }
+
     "bit ops should take arbitrary bits from a value" in {
       BitsInts(val2, isSigned = false, high = 1, low = 0, originalWidth = 8)() should be (2)
       BitsInts(val2, isSigned = false, high = 2, low = 0, originalWidth = 8)() should be (2)

@@ -62,8 +62,11 @@ class ExpressionCompiler extends SimpleLogger {
     def processStatements(statement: firrtl.ir.Statement): Unit = {
 
       def binaryOps(opCode: PrimOp, args: Seq[Expression], tpe: Type): ExpressionResult = {
-        val arg1 = processExpression(args.head)
-        val arg2 = processExpression(args.tail.head)
+
+        def getParameters(e: Expression) = (processExpression(e), getSigned(e), getWidth(e))
+
+        val (arg1, arg1IsSigned, arg1Width) = getParameters(args.head)
+        val (arg2, arg2IsSigned, arg2Width) = getParameters(args.head)
 
         (arg1, arg2) match {
           case (e1: IntExpressionResult, e2: IntExpressionResult) =>
@@ -90,7 +93,7 @@ class ExpressionCompiler extends SimpleLogger {
 
               case Cat =>
                 val width2 = getWidth(args.tail.head)
-                CatInts(e1.apply, e2.apply, width2)
+                CatInts(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
 
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode)(${args.head}, ${args.tail.head})")
@@ -119,7 +122,7 @@ class ExpressionCompiler extends SimpleLogger {
 
               case Cat =>
                 val width2 = getWidth(args.tail.head)
-                CatBigs(e1.apply, ToBig(e2.apply).apply, width2)
+                CatBigs(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
 
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
@@ -148,7 +151,7 @@ class ExpressionCompiler extends SimpleLogger {
 
               case Cat =>
                 val width2 = getWidth(args.tail.head)
-                CatBigs(e1.apply, e2.apply, width2)
+                CatBigs(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
 
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")

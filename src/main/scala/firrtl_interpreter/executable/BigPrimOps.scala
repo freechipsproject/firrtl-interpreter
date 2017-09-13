@@ -185,8 +185,13 @@ case class XorrBigs(f1: FuncBig, width: Int) extends IntExpressionResult {
   }
 }
 
-case class CatBigs(f1: FuncBig, f2: FuncBig, width2: Int) extends BigExpressionResult {
-  def apply(): Big = (f1() << width2) | f2()
+case class CatBigs(
+                    f1: FuncBig, f1IsSigned: Boolean, f1Width: Int,
+                    f2: FuncBig, f2IsSigned: Boolean, f2Width: Int
+                  ) extends BigExpressionResult {
+  def apply(): Big = {
+    (AsUIntBigs(f1, f1IsSigned, f1Width)() << f2Width) | AsUIntBigs(f2, f2IsSigned, f2Width)()
+  }
 }
 
 case class BitsBigs(f1: FuncBig, isSigned: Boolean, high: Int, low: Int, originalWidth: Int)

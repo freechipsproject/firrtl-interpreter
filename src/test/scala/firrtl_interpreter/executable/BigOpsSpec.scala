@@ -41,6 +41,17 @@ class BigOpsSpec extends FreeSpec with Matchers {
       AsSIntBigs(f3, isSigned = false, width = 3)() should be (BigInt(3))
     }
 
+    "cat ops should combine bits from two numbers" in {
+      CatBigs(f1, f1IsSigned = false, f1Width = 1, f1, f2IsSigned = false, f2Width = 1)() should be (BigInt(3))
+      CatBigs(fMinus1, f1IsSigned = true,  f1Width = 2, f1, f2IsSigned = false, f2Width = 1)() should be (BigInt(7))
+
+      CatBigs(fMinus1, f1IsSigned = true,  f1Width = 2,
+        fMinus1, f2IsSigned = true, f2Width = 2)() should be (BigInt(15))
+      CatBigs(fMinus1, f1IsSigned = true,  f1Width = 2,
+        fMinus2, f2IsSigned = true, f2Width = 2)() should be (BigInt(14))
+      CatBigs(f1, f1IsSigned = false,  f1Width = 1, fMinus1, f2IsSigned = true, f2Width = 2)() should be (BigInt(7))
+    }
+
     "bit ops should take arbitrary bits from a value" in {
       BitsBigs(val2, isSigned = false, high = 1, low = 0, originalWidth = 8)() should be (BigInt(2))
       BitsBigs(val2, isSigned = false, high = 2, low = 0, originalWidth = 8)() should be (BigInt(2))
