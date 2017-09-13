@@ -71,32 +71,38 @@ case class GeqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
 
 case class AsUIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
   private val mask = Big(1) << (width - 1)
-  def apply(): Big = if(isSigned) applySigned() else applyUnsigned()
+
+  def apply(): Big = if (isSigned) applySigned() else applyUnsigned()
+
   def applySigned(): Big = {
     val sInt = f1()
-    if(sInt < 0) {
+    if (sInt < 0) {
       (mask + sInt) | mask
     }
     else {
       sInt
     }
   }
+
   def applyUnsigned(): Big = f1()
 }
 
 case class AsSIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
-  def apply(): Big = if(isSigned) applySigned() else applyUnsigned()
+  def apply(): Big = if (isSigned) applySigned() else applyUnsigned()
+
   val mask: Big = BigInt(1) << (width - 1)
+
   def applySigned(): Big = f1()
+
   def applyUnsigned(): Big = {
     val uInt = f1()
-    if(width == 1 && uInt == BigInt(1)) {
+    if (width == 1 && uInt == BigInt(1)) {
       BigInt(-1)
     }
-    else if((uInt & mask) >= 0) {
-      uInt
+    else if ((uInt & mask) > 0) {
+      mask - uInt
     } else {
-      uInt - mask
+      uInt
     }
   }
 }
@@ -183,12 +189,13 @@ case class CatBigs(f1: FuncBig, f2: FuncBig, width2: Int) extends BigExpressionR
   def apply(): Big = (f1() << width2) | f2()
 }
 
-case class BitsBigs(f1: FuncBig, isSigned: Boolean, high: Int, low: Int, width: Int) extends BigExpressionResult {
+case class BitsBigs(f1: FuncBig, isSigned: Boolean, high: Int, low: Int, originalWidth: Int)
+  extends BigExpressionResult {
   private val mask = (1 << ((high - low) + 1)) - 1
 
   def apply(): Big = {
-    val uBig = AsUIntBigs(f1, isSigned, width).apply()
-    (uBig >> low) & mask
+    val uInt = AsUIntBigs(f1, isSigned, originalWidth).apply()
+    (uInt >> low) & mask
   }
 }
 
