@@ -12,9 +12,18 @@ version := "1.1-SNAPSHOT"
 
 crossScalaVersions := Seq("2.11.11", "2.12.3")
 
+// Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
+val defaultVersions = Map(
+  "firrtl" -> "1.1-SNAPSHOT"
+)
+
+def chiselVersion(proj: String): String = {
+  sys.props.getOrElse(proj + "Version", defaultVersions(proj))
+}
+
 // The Chisel projects we're dependendent on.
 val chiselDeps = chisel.dependencies(Seq(
-    ("edu.berkeley.cs" %% "firrtl" % "1.1-SNAPSHOT", "firrtl")
+    ("edu.berkeley.cs" %% "firrtl" % chiselVersion("firrtl"), "firrtl")
 ))
 
 val dependentProjects = chiselDeps.projects
