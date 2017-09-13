@@ -50,7 +50,7 @@ class IntOpsSpec extends FreeSpec with Matchers {
       TailInts(fMinus4, isSigned = true, 1, 3)() should be (0)
 
       val tailOps = TailInts(val1, isSigned = false, toDrop = 8, width = 16)
-      println(f"${tailOps()}%16X")
+      println(f"TailInts(${val1()}%x, toDrop = 8) -> ${tailOps()}%x")
       tailOps() should be (Integer.parseInt("cd", 16))
     }
 
