@@ -29,6 +29,22 @@ class ExpressionCompiler extends SimpleLogger {
 
   val state = new ExecutableCircuit
 
+  def getWidth(tpe: firrtl.ir.Type): Int = {
+    tpe match {
+      case GroundType(IntWidth(width)) => width.toInt
+      case _ => throw new InterpreterException(s"Unresolved width found in firrtl.ir.Type $tpe")
+    }
+  }
+
+  def getWidth(expression: Expression): Int = {
+    expression.tpe match {
+      case GroundType(IntWidth(width)) => width.toInt
+      case _ =>
+        throw new InterpreterException(
+          s"Unresolved width found in expression $expression of firrtl.ir.Type ${expression.tpe}")
+    }
+  }
+
   // scalastyle:off
   def processModule(modulePrefix: String, myModule: DefModule, circuit: Circuit): Unit = {
     def expand(name: String): String = if(modulePrefix.isEmpty) name else modulePrefix + "." + name
@@ -63,10 +79,7 @@ class ExpressionCompiler extends SimpleLogger {
               case Xor  => XorBigs(e1.apply, e2.apply)
 
               case Cat =>
-                val width2 = args.tail.head.tpe match {
-                  case GroundType(IntWidth(n)) => n.toInt
-                  case _ => throw new InterpreterException(s"can't find width for Cat(${args.head}, ${args.tail.head})")
-                }
+                val width2 = getWidth(args.tail.head)
                 CatInts(e1.apply, e2.apply, width2)
 
               case _ =>
@@ -95,10 +108,7 @@ class ExpressionCompiler extends SimpleLogger {
               case Xor  => XorBigs(e1.apply, ToBig(e2.apply).apply)
 
               case Cat =>
-                val width2 = args.tail.head.tpe match {
-                  case GroundType(IntWidth(n)) => n.toInt
-                  case _ => throw new InterpreterException(s"can't find width for Cat(${args.head}, ${args.tail.head})")
-                }
+                val width2 = getWidth(args.tail.head)
                 CatBigs(e1.apply, ToBig(e2.apply).apply, width2)
 
               case _ =>
@@ -127,10 +137,7 @@ class ExpressionCompiler extends SimpleLogger {
               case Xor  => XorBigs(e1.apply, e2.apply)
 
               case Cat =>
-                val width2 = args.tail.head.tpe match {
-                  case GroundType(IntWidth(n)) => n.toInt
-                  case _ => throw new InterpreterException(s"can't find width for Cat(${args.head}, ${args.tail.head})")
-                }
+                val width2 = getWidth(args.tail.head)
                 CatBigs(e1.apply, e2.apply, width2)
 
               case _ =>
@@ -149,6 +156,7 @@ class ExpressionCompiler extends SimpleLogger {
         tpe: firrtl.ir.Type
       ): ExpressionResult = {
         val arg1 = processExpression(expressions.head)
+        val arg1Width = getWidth(expressions.head)
         val arg2 = ints.head
         val (isSigned, width) = tpe match {
           case UIntType(IntWidth(n)) => (false, n.toInt)

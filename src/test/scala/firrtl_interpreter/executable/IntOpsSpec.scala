@@ -42,14 +42,14 @@ class IntOpsSpec extends FreeSpec with Matchers {
     }
 
     "tail ops should drop leading bits from expression" in {
-      TailInts(f1, isSigned = true, 1, 2)() should be (1)
-      TailInts(f2, isSigned = false, 1, 3)() should be (2)
-      TailInts(f3, isSigned = true, 1, 3)() should be (3)
-      TailInts(f3, isSigned = true, 1, 2)() should be (1)
-      TailInts(fMinus3, isSigned = true, 1, 3)() should be (3)
-      TailInts(fMinus4, isSigned = true, 1, 3)() should be (0)
+      TailInts(f1, isSigned = true,  toDrop = 1, originalWidth = 2)() should be (1)
+      TailInts(f2, isSigned = false, toDrop = 1, originalWidth = 3)() should be (2)
+      TailInts(f3, isSigned = true,  toDrop = 1, originalWidth = 3)() should be (3)
+      TailInts(f3, isSigned = true,  toDrop = 1, originalWidth = 2)() should be (1)
+      TailInts(fMinus3, isSigned = true, toDrop = 1, originalWidth = 4)() should be (5)
+      TailInts(fMinus4, isSigned = true, toDrop = 1, originalWidth = 4)() should be (4)
 
-      val tailOps = TailInts(val1, isSigned = false, toDrop = 8, width = 16)
+      val tailOps = TailInts(val1, isSigned = true, toDrop = 9, originalWidth = 17)
       println(f"TailInts(${val1()}%x, toDrop = 8) -> ${tailOps()}%x")
       tailOps() should be (Integer.parseInt("cd", 16))
     }

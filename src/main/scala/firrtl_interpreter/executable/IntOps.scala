@@ -215,18 +215,13 @@ case class HeadInts(f1: FuncInt, isSigned: Boolean, high: Int, width: Int) exten
 }
 
 
-case class TailInts(f1: FuncInt, isSigned: Boolean, toDrop: Int, width: Int) extends IntExpressionResult {
+case class TailInts(f1: FuncInt, isSigned: Boolean, toDrop: Int, originalWidth: Int) extends IntExpressionResult {
 
-  def apply(): Int = if (isSigned) applySigned() else applyUnsigned()
+  private val mask: Int = (1 << (originalWidth - toDrop)) - 1
 
-  private val mask: Int = (1 << (width - toDrop)) - 1
-
-  def applyUnsigned(): Int = f1() & mask
-
-  def applySigned(): Int = {
-    val uInt = f1()
-
-    uInt.abs & mask
+  def apply(): Int = {
+    val uInt = AsUIntInts(f1, isSigned, originalWidth).apply()
+    uInt & mask
   }
 }
 
