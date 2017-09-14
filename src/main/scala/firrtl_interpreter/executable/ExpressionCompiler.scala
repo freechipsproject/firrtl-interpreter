@@ -28,6 +28,7 @@ class ExpressionCompiler extends SimpleLogger {
   }
 
   val state = new ExecutableCircuit
+  val dependencies = new DependencyManager
 
   def getWidth(tpe: firrtl.ir.Type): Int = {
     tpe match {
@@ -66,7 +67,7 @@ class ExpressionCompiler extends SimpleLogger {
         def getParameters(e: Expression) = (processExpression(e), getSigned(e), getWidth(e))
 
         val (arg1, arg1IsSigned, arg1Width) = getParameters(args.head)
-        val (arg2, arg2IsSigned, arg2Width) = getParameters(args.head)
+        val (arg2, arg2IsSigned, arg2Width) = getParameters(args.tail.head)
 
         (arg1, arg2) match {
           case (e1: IntExpressionResult, e2: IntExpressionResult) =>
@@ -300,6 +301,8 @@ class ExpressionCompiler extends SimpleLogger {
       def processExpression(expression: Expression): ExpressionResult = {
         val result: ExpressionResult = expression match {
           case Mux(condition, trueExpression, falseExpression, _) =>
+            dependencies.numberOfMuxes += 1
+
             processExpression(condition) match {
               case c: IntExpressionResult =>
                 (processExpression(trueExpression), processExpression(falseExpression)) match {
@@ -384,13 +387,14 @@ class ExpressionCompiler extends SimpleLogger {
         result
       }
 
+      dependencies.numberOfStatements += 1
       statement match {
         case block: Block =>
           block.stmts.foreach { subStatement =>
             processStatements(subStatement)
           }
         case con: Connect =>
-          // if it's a register we use the name of it's input side
+          // if it's a register we use the name of its input side
           def renameIfRegister(name: String): String = {
             if (state.isRegister(name)) {
               s"$name${ExpressionCompiler.RegisterInputSuffix}"
@@ -400,18 +404,16 @@ class ExpressionCompiler extends SimpleLogger {
             }
           }
 
-          val newWireValue = con.loc match {
-            case WRef(name, tpe, _, _) =>
-              state.newValue(renameIfRegister(expand(name)), tpe)
-            case (_: WSubField | _: WSubIndex) =>
-              state.newValue(renameIfRegister(expand(con.loc.serialize)), con.loc.tpe)
-          }
+          val lhsName = renameIfRegister(con.loc.serialize)
+          val newWireValue = state.newValue(lhsName, con.loc.tpe)
           state.assign(newWireValue, processExpression(con.expr))
+
         case WDefInstance(info, instanceName, moduleName, _) =>
           val subModule = findModule(moduleName, circuit)
           val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
           log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
           processModule(newPrefix, subModule, circuit)
+
         case DefNode(info, name, expression) =>
           log(s"declaration:DefNode:$name:${expression.serialize}")
 

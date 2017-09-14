@@ -30,6 +30,12 @@ class Compiler(ast: Circuit) {
       case i: BigValue => i.value = value
     }
   }
+  def peek(name: String): Big = {
+    out.namesToValues(name) match {
+      case i: IntValue => BigInt(i.value)
+      case i: BigValue => i.value
+    }
+  }
 
   def step(steps: Int = 1): Unit = {
     out.getTriggerExpressions.foreach { key => out.executeTriggeredAssigns(key) }
@@ -41,25 +47,21 @@ class Compiler(ast: Circuit) {
   println(s"h --  ${out.header}")
   println(s"i --  ${out.toString}")
 
-  poke("io_a", 11)
-  poke("io_b", 33)
+  poke("io_a", 33)
+  poke("io_b", 11)
   poke("io_e", 1)
 
   println(s"p --  ${out.toString}")
 
   step()
+  step()
 
   poke("io_e", 0)
   println(s"p --  ${out.toString}")
 
-  step()
-
-  step()
-
-  step()
-
-  step()
-
+  while(peek("io_v") == 0) {
+    step()
+  }
 }
 
 object Compiler {
