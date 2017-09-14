@@ -98,6 +98,35 @@ class ExpressionCompiler extends SimpleLogger {
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode)(${args.head}, ${args.tail.head})")
             }
+          case (e1: IntExpressionResult, e2: BigExpressionResult) =>
+            opCode match {
+              case Add => AddBigs(ToBig(e1.apply).apply, e2.apply)
+              case Sub => SubBigs(ToBig(e1.apply).apply, e2.apply)
+              case Mul => MulBigs(ToBig(e1.apply).apply, e2.apply)
+              case Div => DivBigs(ToBig(e1.apply).apply, e2.apply)
+              case Rem => RemBigs(ToBig(e1.apply).apply, e2.apply)
+
+              case Eq  => EqBigs(ToBig(e1.apply).apply, e2.apply)
+              case Neq => NeqBigs(ToBig(e1.apply).apply, e2.apply)
+              case Lt  => LtBigs(ToBig(e1.apply).apply, e2.apply)
+              case Leq => LeqBigs(ToBig(e1.apply).apply, e2.apply)
+              case Gt  => GtBigs(ToBig(e1.apply).apply, e2.apply)
+              case Geq => GeqBigs(ToBig(e1.apply).apply, e2.apply)
+
+              case Dshl => DshlBigs(ToBig(e1.apply).apply, e2.apply)
+              case Dshr => DshrBigs(ToBig(e1.apply).apply, e2.apply)
+
+              case And  => AndBigs(ToBig(e1.apply).apply, e2.apply)
+              case Or   => OrBigs(ToBig(e1.apply).apply, e2.apply)
+              case Xor  => XorBigs(ToBig(e1.apply).apply, e2.apply)
+
+              case Cat =>
+                val width2 = getWidth(args.tail.head)
+                CatBigs(ToBig(e1.apply).apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
+
+              case _ =>
+                throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
+            }
           case (e1: BigExpressionResult, e2: IntExpressionResult) =>
             opCode match {
               case Add => AddBigs(e1.apply, ToBig(e2.apply).apply)
@@ -122,7 +151,7 @@ class ExpressionCompiler extends SimpleLogger {
 
               case Cat =>
                 val width2 = getWidth(args.tail.head)
-                CatBigs(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
+                CatBigs(e1.apply, arg1IsSigned, arg1Width, ToBig(e2.apply).apply, arg2IsSigned, arg2Width)
 
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")

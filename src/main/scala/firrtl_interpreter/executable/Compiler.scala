@@ -33,31 +33,32 @@ class Compiler(ast: Circuit) {
 
   def step(steps: Int = 1): Unit = {
     out.getTriggerExpressions.foreach { key => out.executeTriggeredAssigns(key) }
+    println(s"r --  ${out.toString}")
     out.executeCombinational()
+    println(s"c --  ${out.toString}")
   }
 
-  println(out.header)
-  println(out.toString)
+  println(s"h --  ${out.header}")
+  println(s"i --  ${out.toString}")
 
   poke("io_a", 11)
   poke("io_b", 33)
   poke("io_e", 1)
 
+  println(s"p --  ${out.toString}")
+
   step()
-  println(out.toString)
 
   poke("io_e", 0)
-  step()
-  println(out.toString)
+  println(s"p --  ${out.toString}")
 
   step()
-  println(out.toString)
 
   step()
-  println(out.toString)
 
   step()
-  println(out.toString)
+
+  step()
 
 }
 
