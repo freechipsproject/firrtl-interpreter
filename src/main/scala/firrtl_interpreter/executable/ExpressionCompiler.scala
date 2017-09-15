@@ -9,26 +9,8 @@ import firrtl_interpreter._
 
 
 class ExpressionCompiler extends SimpleLogger {
-  /**
-    * finds the specified module name in the circuit
-    *
-    * @param moduleName name to find
-    * @param circuit circuit being analyzed
-    * @return the circuit, exception occurs in not found
-    */
-  def findModule(moduleName: String, circuit: Circuit): DefModule = {
-    circuit.modules.find(module => module.name == moduleName) match {
-      case Some(module: firrtl.ir.Module) =>
-        module
-      case Some(externalModule: firrtl.ir.ExtModule) =>
-        externalModule
-      case _ =>
-        throw InterpreterException(s"Could not find top level module in $moduleName")
-    }
-  }
-
   val state = new ExecutableCircuit
-  val dependencies = new DependencyManager
+//  val dependencies = new DependencyManager
 
   def getWidth(tpe: firrtl.ir.Type): Int = {
     tpe match {
@@ -53,7 +35,7 @@ class ExpressionCompiler extends SimpleLogger {
       case  ClockType      => false
       case _ =>
         throw new InterpreterException(
-          s"Unsupported type ound in expression $expression of firrtl.ir.Type ${expression.tpe}")
+          s"Unsupported type found in expression $expression of firrtl.ir.Type ${expression.tpe}")
     }  }
 
   // scalastyle:off
@@ -301,8 +283,6 @@ class ExpressionCompiler extends SimpleLogger {
       def processExpression(expression: Expression): ExpressionResult = {
         val result: ExpressionResult = expression match {
           case Mux(condition, trueExpression, falseExpression, _) =>
-            dependencies.numberOfMuxes += 1
-
             processExpression(condition) match {
               case c: IntExpressionResult =>
                 (processExpression(trueExpression), processExpression(falseExpression)) match {
@@ -387,7 +367,6 @@ class ExpressionCompiler extends SimpleLogger {
         result
       }
 
-      dependencies.numberOfStatements += 1
       statement match {
         case block: Block =>
           block.stmts.foreach { subStatement =>
@@ -409,7 +388,7 @@ class ExpressionCompiler extends SimpleLogger {
           state.assign(newWireValue, processExpression(con.expr))
 
         case WDefInstance(info, instanceName, moduleName, _) =>
-          val subModule = findModule(moduleName, circuit)
+          val subModule = FindModule(moduleName, circuit)
           val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
           log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
           processModule(newPrefix, subModule, circuit)
@@ -555,7 +534,7 @@ class ExpressionCompiler extends SimpleLogger {
 
   // scalastyle:off cyclomatic.complexity
   def compile(circuit: Circuit): ExecutableCircuit = {
-    val module = findModule(circuit.main, circuit) match {
+    val module = FindModule(circuit.main, circuit) match {
       case regularModule: firrtl.ir.Module => regularModule
       case externalModule: firrtl.ir.ExtModule =>
         throw InterpreterException(s"Top level module must be a regular module $externalModule")

@@ -11,6 +11,7 @@ import scala.collection.mutable.ArrayBuffer
 
 /**
   * This is the evaluation engine for the FirrtlTerp
+  * This is the evaluation engine for the FirrtlTerp
   * it requires the previousState of the system
   *
   * @param circuitState  the state of the system, should not be modified before all dependencies have been resolved

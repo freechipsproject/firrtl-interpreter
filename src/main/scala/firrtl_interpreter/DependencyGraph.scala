@@ -15,24 +15,6 @@ import scala.collection.mutable.ArrayBuffer
 object DependencyGraph extends SimpleLogger {
   val MaxColumnWidth = 100 // keeps displays of expressions readable
 
-  /**
-    * finds the specified module name in the circuit
-    *
-    * @param moduleName name to find
-    * @param circuit circuit being analyzed
-    * @return the circuit, exception occurs in not found
-    */
-  def findModule(moduleName: String, circuit: Circuit): DefModule = {
-    circuit.modules.find(module => module.name == moduleName) match {
-      case Some(module: Module) =>
-        module
-      case Some(externalModule: DefModule) =>
-        externalModule
-      case _ =>
-        throw InterpreterException(s"Could not find top level module in $moduleName")
-    }
-  }
-
   // scalastyle:off
   def processDependencyStatements(modulePrefix: String, s: Statement, dependencyGraph: DependencyGraph): Statement = {
     def expand(name: String): String = if(modulePrefix.isEmpty) name else modulePrefix + "." + name
@@ -78,7 +60,7 @@ object DependencyGraph extends SimpleLogger {
         }
         con
       case WDefInstance(info, instanceName, moduleName, _) =>
-        val subModule = findModule(moduleName, dependencyGraph.circuit)
+        val subModule = FindModule(moduleName, dependencyGraph.circuit)
         val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
         log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
         processModule(newPrefix, subModule, dependencyGraph)
@@ -214,7 +196,7 @@ object DependencyGraph extends SimpleLogger {
 
   // scalastyle:off cyclomatic.complexity
   def apply(circuit: Circuit, interpreter: FirrtlTerp): DependencyGraph = {
-    val module = findModule(circuit.main, circuit) match {
+    val module = FindModule(circuit.main, circuit) match {
       case regularModule: Module => regularModule
       case externalModule: ExtModule =>
         throw InterpreterException(s"Top level module must be a regular module $externalModule")
