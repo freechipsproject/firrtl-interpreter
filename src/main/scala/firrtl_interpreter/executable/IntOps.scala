@@ -79,21 +79,10 @@ case class GeqInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
 }
 
 case class AsUIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
-  private val mask = 1 << (width - 1)
+  private val mask = (1 << width) - 1
 
-  def apply(): Int = if (isSigned) applySigned() else applyUnsigned()
-
-  def applySigned(): Int = {
-    val sInt = f1()
-    if (sInt < 0) {
-      (mask + sInt) | mask
-    }
-    else {
-      sInt
-    }
-  }
-
-  def applyUnsigned(): Int = f1()
+//  def apply(): Int = if (isSigned) applySigned() else applyUnsigned()
+  def apply(): Int = f1() & mask
 }
 
 case class AsSIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {

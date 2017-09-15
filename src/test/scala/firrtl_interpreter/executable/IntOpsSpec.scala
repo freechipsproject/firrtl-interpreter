@@ -15,6 +15,7 @@ class IntOpsSpec extends FreeSpec with Matchers {
   def fMinus2(): Int = -2
   def fMinus3(): Int = -3
   def fMinus4(): Int = -4
+  def fMinus6(): Int = -6
 
   def val1(): Int = Integer.parseInt("abcd", 16)
   def val2(): Int = Integer.parseInt("10" * 4, 2)
@@ -22,6 +23,10 @@ class IntOpsSpec extends FreeSpec with Matchers {
 
   "IntOps should pass a basic test" - {
     "AsUIntInts should work" in {
+      AsUIntInts(fMinus6, isSigned = true, width = 4)() should be (10)
+      AsUIntInts(() => -22, isSigned = true, width = 16)() should be (65514)
+      AsUIntInts(fMinus4, isSigned = true, width = 4)() should be (12)
+
       AsUIntInts(f0, isSigned = true, width = 1)() should be (0)
       AsUIntInts(fMinus1, isSigned = true, width = 1)() should be (1)
       AsUIntInts(f0, isSigned = false, width = 1)() should be (0)
@@ -74,6 +79,8 @@ class IntOpsSpec extends FreeSpec with Matchers {
     }
 
     "tail ops should drop leading bits from expression" in {
+      TailInts(() => -22, isSigned = true, toDrop = 1, originalWidth = 16)() should be (32746)
+
       TailInts(f1, isSigned = true,  toDrop = 1, originalWidth = 2)() should be (1)
       TailInts(f2, isSigned = false, toDrop = 1, originalWidth = 3)() should be (2)
       TailInts(f3, isSigned = true,  toDrop = 1, originalWidth = 3)() should be (3)

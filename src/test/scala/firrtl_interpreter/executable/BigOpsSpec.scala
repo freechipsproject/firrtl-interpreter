@@ -15,6 +15,7 @@ class BigOpsSpec extends FreeSpec with Matchers {
   def fMinus2(): Int = -2
   def fMinus3(): Int = -3
   def fMinus4(): Int = -4
+  def fMinus6(): Int = -6
 
   def val1(): Int = Integer.parseInt("abcd", 16)
   def val2(): Int = Integer.parseInt("10" * 4, 2)
@@ -22,6 +23,11 @@ class BigOpsSpec extends FreeSpec with Matchers {
 
   "BigOps should pass a basic test" - {
     "AsUIntInts should work" in {
+      AsUIntBigs(fMinus6, isSigned = true, width = 4)() should be (10)
+      AsUIntBigs(() => -22, isSigned = true, width = 128)() should be (
+        BigInt("340282366920938463463374607431768211434", 10))
+      AsUIntBigs(fMinus4, isSigned = true, width = 4)() should be (12)
+
       AsUIntBigs(f0, isSigned = true, width = 1)() should be (BigInt(0))
       AsUIntBigs(fMinus1, isSigned = true, width = 1)() should be (BigInt(1))
       AsUIntBigs(f0, isSigned = false, width = 1)() should be (BigInt(0))
@@ -41,7 +47,7 @@ class BigOpsSpec extends FreeSpec with Matchers {
       AsSIntBigs(f3, isSigned = false, width = 3)() should be (BigInt(3))
     }
 
-    "cat ops should combine bits from two numbers" in {
+    "cat ops should combiapne bits from two numbers" in {
       CatBigs(f1, f1IsSigned = false, f1Width = 1, f1, f2IsSigned = false, f2Width = 1)() should be (BigInt(3))
       CatBigs(fMinus1, f1IsSigned = true,  f1Width = 2, f1, f2IsSigned = false, f2Width = 1)() should be (BigInt(7))
 

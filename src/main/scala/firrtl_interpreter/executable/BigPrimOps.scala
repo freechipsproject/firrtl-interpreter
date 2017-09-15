@@ -70,21 +70,10 @@ case class GeqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
 }
 
 case class AsUIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
-  private val mask = Big(1) << (width - 1)
+  private val mask = (BigInt(1) << width) - 1
 
-  def apply(): Big = if (isSigned) applySigned() else applyUnsigned()
-
-  def applySigned(): Big = {
-    val sInt = f1()
-    if (sInt < 0) {
-      (mask + sInt) | mask
-    }
-    else {
-      sInt
-    }
-  }
-
-  def applyUnsigned(): Big = f1()
+  //  def apply(): Int = if (isSigned) applySigned() else applyUnsigned()
+  def apply(): Big = f1() & mask
 }
 
 case class AsSIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
