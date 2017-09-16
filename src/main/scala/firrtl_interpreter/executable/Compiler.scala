@@ -7,6 +7,7 @@ package firrtl_interpreter.executable
 
 import firrtl._
 import firrtl.ir.Circuit
+import firrtl_interpreter.{DependencyTracker, FindModule, InterpreterException}
 
 //noinspection ScalaStyle
 class Compiler(ast: Circuit) {
@@ -23,6 +24,18 @@ class Compiler(ast: Circuit) {
   val x = new ExpressionCompiler
 
   private val out = x.compile(loweredAst)
+
+  private val dependencyTracker: DependencyTracker = {
+    val module = FindModule(loweredAst.main, loweredAst) match {
+      case regularModule: firrtl.ir.Module => regularModule
+      case externalModule: firrtl.ir.ExtModule =>
+        throw InterpreterException(s"Top level module must be a regular module $externalModule")
+      case x =>
+        throw InterpreterException(s"Top level module is not the right kind of module $x")
+    }
+    new DependencyTracker(loweredAst, module)
+  }
+  println(s"Dependency Tracker Info:\n${dependencyTracker.getInfo}")
 
   def poke(name: String, value: Int): Unit = {
     out.namesToValues(name) match {
