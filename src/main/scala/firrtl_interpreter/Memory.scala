@@ -106,6 +106,15 @@ class Memory(
     }
   }
 
+  def forceWrite(offset: Int, value: BigInt): Unit = {
+    val concrete = TypeInstanceFactory(dataType, value)
+    if(offset > depth) {
+      throw InterpreterException(
+        s"Memory ${this.name}.forceWrite(offset = $offset, value = $value) offset too big, max is $depth")
+    }
+    dataStore(offset) = concrete
+  }
+
   /**
     * used to inform this memory that a cycle has passed
     */

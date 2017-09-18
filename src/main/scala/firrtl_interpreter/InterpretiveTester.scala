@@ -118,6 +118,24 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     }
   }
 
+  /**
+    * Pokes value to the named memory at offset
+    *
+    * @param name  the name of a memory
+    * @param offset the offset in the memory
+    * @param value a value to put on that port
+    */
+  def pokeMemory(name: String, offset: Int, value: BigInt): Unit = {
+    if (interpreter.checkStopped(s"pokeMemory($name, $value)")) return
+
+    interpreter.circuitState.memories.get(name) match {
+      case Some(memory) =>
+        memory.forceWrite(offset, value)
+      case _ =>
+        throw InterpreterException(s"Error: memory $name.forceWrite($offset, $value). memory not found")
+    }
+  }
+
   /** inspect a value of a named circuit component
     *
     * @param name the name of a circuit component
@@ -131,6 +149,23 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
       case ConcreteSInt(value, _, _) => value
       case _ =>
         fail(new InterpreterException(s"Error:peek($name) value not found"))
+    }
+  }
+
+  def peekMemory(name: String, offset: Int): BigInt = {
+    // println(s"signal $mem")
+
+    interpreter.circuitState.memories.get(name) match {
+      case Some(memory) =>
+        memory.dataStore(offset) match {
+          case ConcreteUInt(value, _, _) => value
+          case ConcreteSInt(value, _, _) => value
+          case x =>
+            throw new InterpreterException(s"Error:peekMemory($name, $offset) unknow value $x found")
+
+        }
+      case _ =>
+        throw InterpreterException(s"Error: peekMemory($name, $offset). memory not found")
     }
   }
 
