@@ -32,8 +32,6 @@ organization := "edu.berkeley.cs"
 
 version := "1.1-SNAPSHOT"
 
-val chiselVersion = System.getProperty("chiselVersion", "3.0")
-
 scalaVersion := "2.11.11"
 
 crossScalaVersions := Seq("2.11.11", "2.12.3")
@@ -58,5 +56,50 @@ libraryDependencies ++= Seq(
 
 //javaOptions in run ++= Seq(
     //"-Xms2G", "-Xmx4G", "-XX:MaxPermSize=1024M", "-XX:+UseConcMarkSweepGC")
+//)
+
+publishMavenStyle := true
+
+publishArtifact in Test := false
+pomIncludeRepository := { x => false }
+
+pomExtra := (<url>http://chisel.eecs.berkeley.edu/</url>
+<licenses>
+  <license>
+    <name>BSD-style</name>
+    <url>http://www.opensource.org/licenses/bsd-license.php</url>
+    <distribution>repo</distribution>
+  </license>
+</licenses>
+<scm>
+  <url>https://github.com/freechipsproject/firrtl-interpreter.git</url>
+  <connection>scm:git:github.com/freechipsproject/firrlt-interpreter.git</connection>
+</scm>
+<developers>
+  <developer>
+    <id>chick</id>
+    <name>Charles Markley</name>
+    <url>https://aspire.eecs.berkeley.edu/author/chick/</url>
+  </developer>
+</developers>)
+
+publishTo := {
+  val v = version.value
+  val nexus = "https://oss.sonatype.org/"
+  if (v.trim.endsWith("SNAPSHOT")) {
+    Some("snapshots" at nexus + "content/repositories/snapshots")
+  }
+  else {
+    Some("releases" at nexus + "service/local/staging/deploy/maven2")
+  }
+}
+
+scalacOptions in Compile in doc ++= Seq(
+  "-diagrams",
+  "-diagrams-max-classes", "25",
+  "-doc-version", version.value,
+  "-sourcepath", baseDirectory.value.getAbsolutePath,
+  "-doc-source-url", "https://github.com/ucb-bar/chisel-testers/tree/master/€{FILE_PATH}.scala"
+) ++ scalacOptionsVersion(scalaVersion.value)
 
 javacOptions ++= javacOptionsVersion(scalaVersion.value)
