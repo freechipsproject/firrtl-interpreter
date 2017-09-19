@@ -206,4 +206,60 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
     }
     tester.report()
   }
+
+  behavior of "pokeMemory and peekMemory"
+
+  it should "allow poking and peeking directly to memories" in {
+    val firrtl =
+      """
+        |;buildInfoPackage: chisel3, version: 3.1-SNAPSHOT, scalaVersion: 2.11.11, sbtVersion: 0.13.16, builtAtString: 2017-09-18 18:09:26.579, builtAtMillis: 1505758166579
+        |circuit OuterMemModule :
+        |  module InnerMemModule :
+        |    input clock : Clock
+        |    input reset : UInt<1>
+        |    output io : {}
+        |
+        |    clock is invalid
+        |    reset is invalid
+        |    io is invalid
+        |    cmem nelly : UInt<32>[1024] @[MemPokeSpec.scala 11:18]
+        |
+        |  module OuterMemModule :
+        |    input clock : Clock
+        |    input reset : UInt<1>
+        |    output io : {}
+        |
+        |    clock is invalid
+        |    reset is invalid
+        |    io is invalid
+        |    cmem billy : UInt<32>[1024] @[MemPokeSpec.scala 16:18]
+        |    inst inner of InnerMemModule @[MemPokeSpec.scala 17:21]
+        |    inner.io is invalid
+        |    inner.clock <= clock
+        |    inner.reset <= reset
+        |
+        |
+      """.stripMargin
+
+    val tester = new InterpretiveTester(firrtl)
+
+    tester.step(10)
+    for(i <- 0 until 1024) {
+      tester.pokeMemory("billy", offset = i, value = i)
+      tester.pokeMemory("inner.nelly", offset = i, value = i + 1)
+    }
+
+    tester.step()
+
+    for(i <- 0 until 1024) {
+      tester.peekMemory("billy", offset = i) should be (BigInt(i))
+      tester.peekMemory("inner.nelly", offset = i) should be (BigInt(i + 1))
+    }
+
+    println(s"${tester.interpreter.circuitState.memories("billy")}")
+    println(s"${tester.interpreter.circuitState.memories("inner.nelly")}")
+
+    tester.finish
+
+  }
 }
