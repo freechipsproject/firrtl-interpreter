@@ -118,6 +118,38 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     circuitState.setValue(name, value, registerPoke = registerPoke)
   }
 
+  def setMemory(memoryName: String, index: Int, value: BigInt): Unit = {
+    circuitState.memories.get(memoryName) match {
+      case Some(memory) =>
+        memory.forceWrite(index, value)
+      case _ =>
+        throw InterpreterException(s"Error: memory $memoryName.forceWrite($index, $value). memory not found")
+    }
+  }
+
+  def getMemory(memoryName: String, index: Int): BigInt = {
+    circuitState.memories.get(memoryName) match {
+      case Some(memory) =>
+        memory.dataStore(index) match {
+          case ConcreteUInt(value, _, _) => value
+          case ConcreteSInt(value, _, _) => value
+          case x =>
+            throw new InterpreterException(s"Error:peekMemory($memoryName, $index) unknow value $x found")
+        }
+      case _ =>
+        throw InterpreterException(s"Error: peekMemory($memoryName, $index). memory not found")
+    }
+  }
+
+  def getMemoryConcrete(memoryName: String, index: Int): Concrete = {
+    circuitState.memories.get(memoryName) match {
+      case Some(memory) =>
+        memory.dataStore(index)
+      case _ =>
+        throw InterpreterException(s"Error: peekMemory($memoryName, $index). memory not found")
+    }
+  }
+
   /**
     * Creates a concrete based on current circuit and the value and poisoned state
     * It uses the type of any existing value for name and if it can't find that it
