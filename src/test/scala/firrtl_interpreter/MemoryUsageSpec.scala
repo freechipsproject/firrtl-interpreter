@@ -245,15 +245,15 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
 
     tester.step(10)
     for(i <- 0 until 1024) {
-      tester.pokeMemory("billy", offset = i, value = i)
-      tester.pokeMemory("inner.nelly", offset = i, value = i + 1)
+      tester.pokeMemory("billy", index = i, value = i)
+      tester.pokeMemory("inner.nelly", index = i, value = i + 1)
     }
 
     tester.step()
 
     for(i <- 0 until 1024) {
-      tester.peekMemory("billy", offset = i) should be (BigInt(i))
-      tester.peekMemory("inner.nelly", offset = i) should be (BigInt(i + 1))
+      tester.peekMemory("billy", index = i) should be (BigInt(i))
+      tester.peekMemory("inner.nelly", index = i) should be (BigInt(i + 1))
     }
 
     println(s"${tester.interpreter.circuitState.memories("billy")}")
