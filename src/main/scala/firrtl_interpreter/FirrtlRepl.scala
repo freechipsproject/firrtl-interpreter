@@ -408,6 +408,38 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
           }
         }
       },
+      new Command("mempoke") {
+        def usage: (String, String) = ("mempoke memory-instance-name index value", "set memory at index to value")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpreterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({
+                "mempoke"
+              }),
+              new StringsCompleter(
+                jlist(interpreter.circuitState.memories.keys.toSeq)
+              )
+            ))
+          }
+        }
+        def run(args: Array[String]): Unit = {
+          getThreeArgs("poke inputPortName value") match {
+            case Some((memoryName, indexString, valueString)) =>
+              try {
+                val index = indexString.toInt
+                val value = parseNumber(valueString)
+                interpreter.setMemory(memoryName, index, value)              }
+              catch {
+                case e: Exception =>
+                  error(s"exception ${e.getMessage} $e")
+              }
+            case _ =>
+          }
+        }
+      },
       new Command("rpoke") {
         private def settableThings = {
           interpreter.dependencyGraph.inputPorts.toSeq ++ interpreter.dependencyGraph.registerNames
@@ -484,6 +516,39 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
                   error(s"exception ${e.getMessage}")
                 case a: AssertionError =>
                   error(s"exception ${a.getMessage}")
+              }
+            case _ =>
+          }
+        }
+      },
+      new Command("mempeek") {
+        def usage: (String, String) = ("mempeek memory-instance-name index", "peek memory at index")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpreterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({
+                "mempeek"
+              }),
+              new StringsCompleter(
+                jlist(interpreter.circuitState.memories.keys.toSeq)
+              )
+            ))
+          }
+        }
+        def run(args: Array[String]): Unit = {
+          getTwoArgs("poke inputPortName value") match {
+            case (Some(memoryName), Some(indexString)) =>
+              try {
+                val index = indexString.toInt
+                val value = interpreter.getMemoryConcrete(memoryName, index)
+                console.println(s"peek $memoryName($index)  ${value.showValue}")
+              }
+              catch {
+                case e: Exception =>
+                  error(s"exception ${e.getMessage} $e")
               }
             case _ =>
           }
