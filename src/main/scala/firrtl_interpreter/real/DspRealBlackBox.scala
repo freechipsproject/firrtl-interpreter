@@ -22,7 +22,7 @@ abstract class DspRealTwoArgumentToDouble extends BlackBoxImplementation {
 
   def outputDependencies(outputName: String): Seq[(String)] = {
     outputName match {
-      case "out" => Seq(fullName("in1"), fullName("in2"))
+      case "out" => Seq("in1", "in2")
       case _ => Seq.empty
     }
   }
@@ -50,7 +50,7 @@ abstract class DspRealOneArgumentToDouble extends BlackBoxImplementation {
 
   def outputDependencies(outputName: String): Seq[(String)] = {
     outputName match {
-      case "out" => Seq(fullName("in"))
+      case "out" => Seq("in")
       case _ => Seq.empty
     }
   }
@@ -76,7 +76,7 @@ abstract class DspRealTwoArgumentToBoolean extends BlackBoxImplementation {
 
   def outputDependencies(outputName: String): Seq[(String)] = {
     outputName match {
-      case "out" => Seq(fullName("in1"), fullName("in2"))
+      case "out" => Seq("in1", "in2")
       case _ => Seq.empty
     }
   }
@@ -141,7 +141,7 @@ class DspRealIntPart(val name: String) extends DspRealOneArgumentToDouble {
 class DspRealToInt(val name: String) extends BlackBoxImplementation {
   def outputDependencies(outputName: String): Seq[(String)] = {
     outputName match {
-      case "out" => Seq(fullName("in"))
+      case "out" => Seq("in")
       case _ => Seq.empty
     }
   }
@@ -156,7 +156,7 @@ class DspRealToInt(val name: String) extends BlackBoxImplementation {
 class DspRealFromInt(val name: String) extends BlackBoxImplementation {
   def outputDependencies(outputName: String): Seq[(String)] = {
     outputName match {
-      case "out" => Seq(fullName("in"))
+      case "out" => Seq("in")
       case _ => Seq.empty
     }
   }

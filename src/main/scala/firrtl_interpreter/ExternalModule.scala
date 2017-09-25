@@ -79,10 +79,10 @@ abstract class BlackBoxImplementation {
   * }}}
   */
 abstract class BlackBoxFactory {
-  val boxes: mutable.HashMap[String, BlackBoxImplementation] = new mutable.HashMap[String, BlackBoxImplementation]
+  var boxes: List[BlackBoxImplementation] = List.empty
 
   def add(blackBox: BlackBoxImplementation): BlackBoxImplementation = {
-    boxes(blackBox.name) = blackBox
+    boxes = blackBox :: boxes
     blackBox
   }
   def createInstance(instanceName: String, blackBoxName: String): Option[BlackBoxImplementation]
@@ -92,6 +92,6 @@ abstract class BlackBoxFactory {
     * cycle methods of each one
     */
   def cycle(): Unit = {
-    boxes.values.foreach { box => box.cycle() }
+    boxes.foreach { box => box.cycle() }
   }
 }

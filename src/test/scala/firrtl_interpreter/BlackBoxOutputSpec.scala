@@ -127,15 +127,15 @@ class BlackBoxOutputSpec extends FreeSpec with Matchers {
         |  module CounterTest :
         |    input clk : Clock
         |    input reset : UInt<1>
-        |    input clear : UInt<64>
+        |    input clear1 : UInt<64>
         |    output counter : UInt<64>
         |
         |    inst bbc of BlackBoxCounter
-        |    bbc.clear <= clear
+        |    bbc.clear <= clear1
         |    counter <= bbc.counter
       """.stripMargin
 
-    "each output should hold a different values" in {
+    "counter holds internal state that is retrieved by parent" in {
 
       val factory = new BlackBoxCounterFactory
 
@@ -146,12 +146,71 @@ class BlackBoxOutputSpec extends FreeSpec with Matchers {
       tester.interpreter.verbose = true
       tester.interpreter.setVerbose()
 
-      tester.poke("clear", 1)
+      tester.poke("clear1", 1)
       tester.step()
-      tester.poke("clear", 0)
+      tester.poke("clear1", 0)
 
       for(i <- 0 until 10) {
         tester.expect("counter", i)
+        tester.step()
+      }
+    }
+  }
+
+  "this test a circuit with two black box accumulators that implements reset" - {
+    val input =
+      """
+        |circuit CounterTest :
+        |  extmodule BlackBoxCounter :
+        |    output counter : UInt<64>
+        |    input clear : UInt<1>
+        |
+        |  module CounterTest :
+        |    input clk : Clock
+        |    input reset : UInt<1>
+        |    input clear1 : UInt<64>
+        |    input clear2 : UInt<64>
+        |    output counter1 : UInt<64>
+        |    output counter2 : UInt<64>
+        |
+        |    inst bbc1 of BlackBoxCounter
+        |    bbc1.clear <= clear1
+        |    counter1 <= bbc1.counter
+
+        |    inst bbc2 of BlackBoxCounter
+        |    bbc2.clear <= clear2
+        |    counter2 <= bbc2.counter
+      """.stripMargin
+
+    "each counter should hold a different value" in {
+
+      val factory = new BlackBoxCounterFactory
+
+      val optionsManager = new InterpreterOptionsManager {
+        interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(factory), randomSeed = 0L)
+      }
+      val tester = new InterpretiveTester(input, optionsManager)
+      tester.interpreter.verbose = true
+      tester.interpreter.setVerbose()
+
+      tester.poke("clear1", 1)
+      tester.step()
+      tester.poke("clear1", 0)
+
+//      tester.step(4)
+
+      for(i <- 0 until 10) {
+        tester.expect("counter1", i)
+        tester.step()
+      }
+      tester.poke("clear2", 1)
+      tester.step()
+      tester.poke("clear2", 0)
+
+
+      for(i <- 0 until 10) {
+        tester.expect("counter1", i + 11)
+        tester.expect("counter2", i)
         tester.step()
       }
     }
