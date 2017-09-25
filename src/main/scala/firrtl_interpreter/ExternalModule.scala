@@ -35,6 +35,7 @@ case class BlackBoxOutput(name: String,
   */
 abstract class BlackBoxImplementation {
   def name: String
+  @deprecated("Do not use.  This was formerly used to add BlackBox name to io, just use un-prefixed input names")
   def fullName(componentName: String): String = s"$name.$componentName"
 
   /**

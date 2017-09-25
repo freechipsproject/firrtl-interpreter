@@ -182,7 +182,7 @@ class BlackBoxOutputSpec extends FreeSpec with Matchers {
         |    counter2 <= bbc2.counter
       """.stripMargin
 
-    "each counter should hold a different value" in {
+    "each counter should hold a different value in internal state" in {
 
       val factory = new BlackBoxCounterFactory
 
