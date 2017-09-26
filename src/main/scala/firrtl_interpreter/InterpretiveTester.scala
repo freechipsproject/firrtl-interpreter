@@ -49,6 +49,7 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
   private var failureTime = -1L
   private var failCode: Option[Int] = None
   def fail(code: Int): Unit = {
+    interpreter.circuitState.writeVCD()
     if (failCode.isEmpty) {
       failureTime = System.nanoTime()
       failCode = Some(code)
