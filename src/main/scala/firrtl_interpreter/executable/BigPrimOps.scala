@@ -211,3 +211,8 @@ case class TailBigs(f1: FuncBig, isSigned: Boolean, toDrop: Int, originalWidth: 
     uInt & mask
   }
 }
+
+case class UndefinedBigs(width: Int) {
+  def apply(): Big = BigInt(width, util.Random)
+}
+

@@ -6,6 +6,7 @@ import firrtl._
 import firrtl.ir._
 import firrtl_interpreter.DependencyTracker._
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -169,7 +170,7 @@ class DependencyTracker(val circuit: Circuit,
         case ValidIf(condition, value, tpe) =>
           expressionToReferences(condition) ++ expressionToReferences(value)
         case DoPrim(op, args, const, tpe) =>
-          args.foldLeft(Set.empty[String]) { case (accum, expression) => accum ++ expressionToReferences(expression) }
+          args.foldLeft(Set.empty[String]) { case (accum, expr) => accum ++ expressionToReferences(expr) }
         case c: UIntLiteral =>
           Set.empty[String]
         case c: SIntLiteral =>
@@ -183,14 +184,21 @@ class DependencyTracker(val circuit: Circuit,
     numberOfStatements += 1
     s match {
       case block: Block =>
-        block.stmts.map { subStatement =>
+        block.stmts.foreach { subStatement =>
           processDependencyStatements(modulePrefix, subStatement)
         }
 
       case con: Connect =>
         con.loc match {
           case (_: WRef | _: WSubField | _: WSubIndex) =>
-            dependencies(expand(con.loc.serialize)) = expressionToReferences(con.expr)
+            val name = if(registerDependencies.contains(expand(con.loc.serialize))) {
+              expand(con.loc.serialize) + "/in"
+            }
+            else {
+              expand(con.loc.serialize)
+            }
+
+            dependencies(name) = expressionToReferences(con.expr)
         }
 
       case WDefInstance(info, instanceName, moduleName, _) =>
@@ -347,9 +355,55 @@ class DependencyTracker(val circuit: Circuit,
     log(s"  $k -> (" + v.toString.take(MaxColumnWidth) + ")")
   }
 
+  def topologicalSort(stringToStrings: Map[String, Set[String]], strings: Iterable[String]): Iterable[String] = {
+    @tailrec
+    def innerSort(toPreds: Map[String, Set[String]], done: Iterable[String]): Iterable[String] = {
+      println(s"Partion: $toPreds")
+      val (noPreds, hasPreds) = toPreds.partition {
+        _._2.isEmpty
+      }
+      if (noPreds.isEmpty) {
+        if (hasPreds.isEmpty){
+          done
+        }
+        else {
+          val start = hasPreds.keys.head
+
+          sys.error(hasPreds.toString)
+        }
+      } else {
+        val found = noPreds.keys
+        innerSort(hasPreds.mapValues {
+          _ -- found
+        }, done ++ found)
+      }
+    }
+
+    val allSets:        Iterable[Set[String]] = stringToStrings.values
+    val allValues:      Iterable[String]      = allSets.flatten
+    val distinctValues: List[String]          = allValues.toList.distinct
+    val newPairs:       List[(String, Set[String])] = distinctValues.flatMap { value =>
+        if(stringToStrings.contains(value)) {
+          None
+        }
+        else {
+          Some(value -> Set.empty[String])
+        }
+      }
+    println(s"New Pairs: $newPairs")
+    val fullMap = stringToStrings ++ newPairs.toMap
+
+    innerSort(fullMap, Seq())
+
+  }
+
   for(key <- dependencies.keys.toSeq.sorted) {
     println(f"$key%-30s ${dependencies(key).toSeq.sorted.mkString(",")}")
   }
+
+  val sorted: Iterable[String] = topologicalSort(dependencies.toMap, Seq())
+
+  println(s"Sorted elements\n${sorted.mkString("\n")}")
   println(s"End of dependency graph")
   // scalastyle:on cyclomatic.complexity
 

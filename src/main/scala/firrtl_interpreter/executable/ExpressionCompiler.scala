@@ -288,6 +288,10 @@ class ExpressionCompiler extends SimpleLogger {
                 (processExpression(trueExpression), processExpression(falseExpression)) match {
                   case (t: IntExpressionResult, f: IntExpressionResult) =>
                     MuxInts(c.apply, t.apply, f.apply)
+                  case (t: BigExpressionResult, f: IntExpressionResult) =>
+                    MuxBigs(c.apply, t.apply, ToBig(f.apply).apply)
+                  case (t: IntExpressionResult, f: BigExpressionResult) =>
+                    MuxBigs(c.apply, ToBig(t.apply).apply, f.apply)
                   case (t: BigExpressionResult, f: BigExpressionResult) =>
                     MuxBigs(c.apply, t.apply, f.apply)
                 }
@@ -309,7 +313,20 @@ class ExpressionCompiler extends SimpleLogger {
               case v: IntValue => GetInt(v)
               case v: BigValue => GetBig(v)
             }
-          //          TODO:(chick) case ValidIf(condition, value, tpe) => ValidIf(processExpression(condition), processExpression(value), tpe)
+          case ValidIf(condition, value, tpe) =>
+            processExpression(condition) match {
+              case c: IntExpressionResult =>
+                processExpression(value) match {
+                  case t: IntExpressionResult =>
+                    MuxInts(c.apply, t.apply, UndefinedInts(getWidth(tpe)).apply)
+                  case t: BigExpressionResult =>
+                    MuxBigs(c.apply, t.apply, UndefinedBigs(getWidth(tpe)).apply)
+                  case _ =>
+                    throw InterpreterException(s"Mux condition is not 1 bit $condition parsed as $c")
+                }
+              case c =>
+                throw InterpreterException(s"Mux condition is not 1 bit $condition parsed as $c")
+            }
           case DoPrim(op, args, const, tpe) =>
             val v = op match {
               case Add => binaryOps(op, args, tpe)

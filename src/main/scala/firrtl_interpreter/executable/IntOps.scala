@@ -219,3 +219,8 @@ case class TailInts(f1: FuncInt, isSigned: Boolean, toDrop: Int, originalWidth: 
   }
 }
 
+case class UndefinedInts(width: Int) {
+  val maxValue: Int = 1 << width
+  def apply(): Int = util.Random.nextInt(maxValue)
+}
+
