@@ -55,7 +55,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 
   val dependencyGraph = DependencyGraph(loweredAst, this)
   /**
-    * Once a stop has occured, the intepreter will not allow pokes until
+    * Once a stop has occured, the interpreter will not allow pokes until
     * the stop has been cleared
     */
   def clearStop(): Unit = {lastStopResult = None}
@@ -83,15 +83,22 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
   setVerbose(interpreterOptions.setVerbose)
 
   def getValue(name: String): Concrete = {
-    assert(dependencyGraph.validNames.contains(name),
-      s"Error: getValue($name) is not an element of this circuit")
+    try {
+      assert(dependencyGraph.validNames.contains(name),
+        s"Error: getValue($name) is not an element of this circuit")
 
-    if(circuitState.isStale) {
+      if (circuitState.isStale) {
         evaluateCircuit()
       }
-    circuitState.getValue(name) match {
-      case Some(value) => value
-      case _ => throw InterpreterException(s"Error: getValue($name) returns value not found")
+      circuitState.getValue(name) match {
+        case Some(value) => value
+        case _ => throw InterpreterException(s"Error: getValue($name) returns value not found")
+      }
+    }
+    catch {
+      case e: Throwable =>
+        circuitState.writeVCD()
+        throw e
     }
   }
 
@@ -116,6 +123,38 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     }
 
     circuitState.setValue(name, value, registerPoke = registerPoke)
+  }
+
+  def setMemory(memoryName: String, index: Int, value: BigInt): Unit = {
+    circuitState.memories.get(memoryName) match {
+      case Some(memory) =>
+        memory.forceWrite(index, value)
+      case _ =>
+        throw InterpreterException(s"Error: memory $memoryName.forceWrite($index, $value). memory not found")
+    }
+  }
+
+  def getMemory(memoryName: String, index: Int): BigInt = {
+    circuitState.memories.get(memoryName) match {
+      case Some(memory) =>
+        memory.dataStore(index) match {
+          case ConcreteUInt(value, _, _) => value
+          case ConcreteSInt(value, _, _) => value
+          case x =>
+            throw new InterpreterException(s"Error:peekMemory($memoryName, $index) unknow value $x found")
+        }
+      case _ =>
+        throw InterpreterException(s"Error: peekMemory($memoryName, $index). memory not found")
+    }
+  }
+
+  def getMemoryConcrete(memoryName: String, index: Int): Concrete = {
+    circuitState.memories.get(memoryName) match {
+      case Some(memory) =>
+        memory.dataStore(index)
+      case _ =>
+        throw InterpreterException(s"Error: peekMemory($memoryName, $index). memory not found")
+    }
   }
 
   /**
@@ -185,47 +224,54 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
   }
 
   def cycle(showState: Boolean = false): Unit = {
-    log("interpreter cycle called " + "="*80)
-    if(checkStopped("cycle")) return
+    try {
+      log("interpreter cycle called " + "=" * 80)
+      if (checkStopped("cycle")) return
 
-    circuitState.vcdLowerClock()
-    circuitState.vcdRaiseClock()
+      circuitState.vcdLowerClock()
+      circuitState.vcdRaiseClock()
 
-    if(circuitState.isStale) {
-      log("interpreter cycle() called, state is stale, re-evaluate Circuit")
-      log(circuitState.prettyString())
+      if (circuitState.isStale) {
+        log("interpreter cycle() called, state is stale, re-evaluate Circuit")
+        log(circuitState.prettyString())
 
-      log(s"process reset")
-      evaluateCircuit()
-    }
-    else {
-      log(s"interpreter cycle() called, state is fresh")
-    }
-
-    circuitState.cycle()
-
-    for (elem <- blackBoxFactories) {
-      elem.cycle()
-    }
-
-    log(s"check prints")
-    evaluator.checkPrints()
-    log(s"check stops")
-    lastStopResult = evaluator.checkStops()
-
-    if(stopped) {
-      if(stopResult == 0) {
-        throw StopException(s"Success: Stop result $stopResult")
+        log(s"process reset")
+        evaluateCircuit()
       }
       else {
-        throw StopException(s"Failure: Stop result $stopResult")
+        log(s"interpreter cycle() called, state is fresh")
       }
+
+      circuitState.cycle()
+
+      for (elem <- blackBoxFactories) {
+        elem.cycle()
+      }
+
+      log(s"check prints")
+      evaluator.checkPrints()
+      log(s"check stops")
+      lastStopResult = evaluator.checkStops()
+
+      if (stopped) {
+        if (stopResult == 0) {
+          throw StopException(s"Success: Stop result $stopResult")
+        }
+        else {
+          throw StopException(s"Failure: Stop result $stopResult")
+        }
+      }
+
+      evaluateCircuit()
+      log(s"cycle complete:\n${circuitState.prettyString()}")
+
+      if (showState) println(s"FirrtlTerp: next state computed ${"=" * 80}\n${circuitState.prettyString()}")
     }
-
-    evaluateCircuit()
-    log(s"cycle complete:\n${circuitState.prettyString()}")
-
-    if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${circuitState.prettyString()}")
+    catch {
+      case e: Throwable =>
+        circuitState.writeVCD()
+        throw e
+    }
   }
 
   def doCycles(n: Int): Unit = {

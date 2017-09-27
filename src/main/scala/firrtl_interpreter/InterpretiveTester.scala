@@ -49,6 +49,7 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
   private var failureTime = -1L
   private var failCode: Option[Int] = None
   def fail(code: Int): Unit = {
+    interpreter.circuitState.writeVCD()
     if (failCode.isEmpty) {
       failureTime = System.nanoTime()
       failCode = Some(code)
@@ -118,6 +119,24 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     }
   }
 
+  /**
+    * Pokes value to the named memory at offset
+    *
+    * @param name  the name of a memory
+    * @param index the offset in the memory
+    * @param value a value to put on that port
+    */
+  def pokeMemory(name: String, index: Int, value: BigInt): Unit = {
+    if (interpreter.checkStopped(s"pokeMemory($name, $value)")) return
+
+    interpreter.circuitState.memories.get(name) match {
+      case Some(memory) =>
+        memory.forceWrite(index, value)
+      case _ =>
+        throw InterpreterException(s"Error: memory $name.forceWrite($index, $value). memory not found")
+    }
+  }
+
   /** inspect a value of a named circuit component
     *
     * @param name the name of a circuit component
@@ -132,6 +151,12 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
       case _ =>
         fail(new InterpreterException(s"Error:peek($name) value not found"))
     }
+  }
+
+  def peekMemory(name: String, index: Int): BigInt = {
+    // println(s"signal $mem")
+
+    interpreter.getMemory(name, index)
   }
 
   /** inspect a value of a named circuit component

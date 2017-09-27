@@ -30,7 +30,7 @@ name := "firrtl-interpreter"
 
 organization := "edu.berkeley.cs"
 
-version := "1.0-SNAPSHOT_2017-09-14"
+version := "1.0-SNAPSHOT_2017-09-27"
 
 scalaVersion := "2.11.11"
 
@@ -43,7 +43,7 @@ resolvers ++= Seq(
 )
 
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
-val defaultVersions = Map("firrtl" -> "1.0-SNAPSHOT_2017-09-14")
+val defaultVersions = Map("firrtl" -> "1.0-SNAPSHOT_2017-09-27")
 
 libraryDependencies ++= (Seq("firrtl").map {
   dep: String => "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", defaultVersions(dep)) })
@@ -72,14 +72,14 @@ pomExtra := (<url>http://chisel.eecs.berkeley.edu/</url>
   </license>
 </licenses>
 <scm>
-  <url>https://github.com/ucb-bar/firrtl-interpreter.git</url>
-  <connection>scm:git:github.com/ucb-bar/firrlt-interpreter.git</connection>
+  <url>https://github.com/freechipsproject/firrtl-interpreter.git</url>
+  <connection>scm:git:github.com/freechipsproject/firrlt-interpreter.git</connection>
 </scm>
 <developers>
   <developer>
-    <id>jackbackrack</id>
-    <name>Jonathan Bachrach</name>
-    <url>http://www.eecs.berkeley.edu/~jrb/</url>
+    <id>chick</id>
+    <name>Charles Markley</name>
+    <url>https://aspire.eecs.berkeley.edu/author/chick/</url>
   </developer>
 </developers>)
 
