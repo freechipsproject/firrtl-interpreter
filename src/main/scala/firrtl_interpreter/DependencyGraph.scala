@@ -82,6 +82,28 @@ object DependencyGraph extends SimpleLogger {
         val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
         log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
         processModule(newPrefix, subModule, dependencyGraph)
+
+        subModule match {
+          case module: Module =>
+          case extModule: ExtModule => // Look to see if we have an implementation for this
+            log(s"got external module ${extModule.name} instance $modulePrefix")
+            /* use exists while looking for the right factory, short circuits iteration when found */
+            log(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
+            val implementationFound = dependencyGraph.blackBoxFactories.exists { factory =>
+              log("Found an existing factory")
+              factory.createInstance(modulePrefix, extModule.defname) match {
+                case Some(implementation) =>
+                  processExternalInstance(extModule, newPrefix, instanceName, implementation, dependencyGraph)
+                  true
+                case _ => false
+              }
+            }
+            if(! implementationFound) {
+              println( s"""WARNING: external module "${extModule.defname}"($modulePrefix:${extModule.name})""" +
+                """was not matched with an implementation""")
+            }
+        }
+
         dependencyGraph.addSourceInfo(newPrefix, info)
         dependencyGraph.addInstanceName(instanceName, moduleName)
         s
@@ -152,6 +174,7 @@ object DependencyGraph extends SimpleLogger {
 
   def processExternalInstance(extModule: ExtModule,
                               modulePrefix: String,
+                              instanceName: String,
                               instance: BlackBoxImplementation,
                               dependencyGraph: DependencyGraph): Unit = {
     def expand(name: String): String = modulePrefix + "." + name
@@ -159,7 +182,8 @@ object DependencyGraph extends SimpleLogger {
     for(port <- extModule.ports) {
       if(port.direction == Output) {
         val outputDependencies = instance.outputDependencies(port.name)
-        dependencyGraph(expand(port.name)) = BlackBoxOutput(port.name, instance, outputDependencies, port.tpe)
+        val dependendInputs = outputDependencies.map(s => s"$instanceName.$s")
+        dependencyGraph(expand(port.name)) = BlackBoxOutput(port.name, instance, dependendInputs, port.tpe)
       }
     }
   }
@@ -194,21 +218,6 @@ object DependencyGraph extends SimpleLogger {
       case extModule: ExtModule => // Look to see if we have an implementation for this
         log(s"got external module ${extModule.name} instance $modulePrefix")
         processPorts(extModule)
-        /* use exists while looking for the right factory, short circuits iteration when found */
-        log(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
-        val implementationFound = dependencyGraph.blackBoxFactories.exists { factory =>
-          log("Found an existing factory")
-          factory.createInstance(modulePrefix, extModule.defname) match {
-            case Some(implementation) =>
-              processExternalInstance(extModule, modulePrefix, implementation, dependencyGraph)
-              true
-            case _ => false
-          }
-        }
-        if(! implementationFound) {
-          println( s"""WARNING: external module "${extModule.defname}"($modulePrefix:${extModule.name})""" +
-              """was not matched with an implementation""")
-        }
     }
   }
 

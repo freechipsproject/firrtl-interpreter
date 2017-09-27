@@ -84,6 +84,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
       }
     }
     val input = io.Source.fromFile(file).mkString
+    console.println(s"loaded firrtl file $fileName")
     loadSource(input)
   }
 
@@ -104,6 +105,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
     try {
       currentVcdScript = Some(VCD.read(fileName, dutName))
       replVcdController = Some(new ReplVcdController(this, this.interpreter, currentVcdScript.get))
+      console.println(s"loaded vcd script file $fileName\n${replVcdController.get.vcd.info}")
     }
     catch {
       case e: Exception =>
@@ -284,13 +286,13 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
 
       },
       new Command("vcd") {
-        def usage: (String, String) = ("vcd [run|list|test|help]", "control vcd input file")
+        def usage: (String, String) = ("vcd [load|run|list|test|help]", "control vcd input file")
         override def completer: Option[ArgumentCompleter] = {
           Some(new ArgumentCompleter(
             new StringsCompleter({"vcd"}),
             new ArgumentCompleter(
               new ArgumentCompleter(
-                new StringsCompleter(jlist(Seq("run", "inputs", "list", "test")))
+                new StringsCompleter(jlist(Seq("load", "run", "inputs", "list", "test")))
               ),
               new ArgumentCompleter(
                 new StringsCompleter({"load"}),
@@ -302,7 +304,13 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
         def run(args: Array[String]): Unit = {
           replVcdController match {
             case Some(controller) => controller.processListCommand(args)
-            case _ => error(s"No current script")
+            case _ =>
+              args.toList match {
+                case "load" :: fileName :: Nil =>
+                  loadVcdScript(fileName)
+                case _ =>
+                  error(s"No current script")
+              }
           }
         }
       },
@@ -484,6 +492,43 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
               catch {
                 case e: Exception =>
                   error(s"exception ${e.getMessage} $e")
+              }
+            case _ =>
+          }
+        }
+      },
+      new Command("eval") {
+        def usage: (String, String) = ("eval componentName", "show the computation of the component")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpreterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({
+                "eval"
+              }),
+              new StringsCompleter(jlist(interpreter.circuitState.validNames.toSeq))
+            ))
+          }
+        }
+        def run(args: Array[String]): Unit = {
+          getOneArg("eval componentName") match {
+            case Some(componentName) =>
+              try {
+                val saveVerbose = interpreter.verbose
+                val saveExec = interpreter.evaluator.useTopologicalSortedKeys
+                interpreter.evaluator.useTopologicalSortedKeys = true
+                interpreter.setVerbose()
+                interpreter.evaluateCircuit(Seq(componentName))
+                interpreter.setVerbose(saveVerbose)
+                interpreter.evaluator.useTopologicalSortedKeys = saveExec
+              }
+              catch {
+                case e: Exception =>
+                  sys.error(s"exception ${e.getMessage}")
+                case a: AssertionError =>
+                  sys.error(s"exception ${a.getMessage}")
               }
             case _ =>
           }
@@ -1049,6 +1094,9 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
     else if(replConfig.firrtlSourceName.nonEmpty) {
       loadFile(replConfig.firrtlSourceName)
     }
+    else if(optionsManager.commonOptions.programArgs.nonEmpty) {
+      loadFile(optionsManager.commonOptions.programArgs.head)
+    }
     if(replConfig.scriptName.nonEmpty) {
       loadScript(replConfig.scriptName)
     }
@@ -1073,18 +1121,21 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
       try {
         val line = getNextLine
 
-        args = line.split(" +")
+        line.split(""";""").foreach { subLine =>
 
-        if (args.length > 0) {
-          if (Commands.commandMap.contains(args.head)) {
-            Commands.commandMap(args.head).run(args.tail)
+          args = subLine.trim.split(" +")
+
+          if (args.length > 0) {
+            if (Commands.commandMap.contains(args.head)) {
+              Commands.commandMap(args.head).run(args.tail)
+            }
+            else {
+              if (subLine.nonEmpty) error(s"unknown command $subLine, try help")
+            }
           }
           else {
-            if(line.nonEmpty) error(s"unknown command $line, try help")
+            error(s"unknown command: $subLine")
           }
-        }
-        else {
-          error("unknown command")
         }
       }
       catch {
