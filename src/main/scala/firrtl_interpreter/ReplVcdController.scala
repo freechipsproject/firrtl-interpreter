@@ -148,15 +148,21 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
           vcdCircuitState.setValue(fullName, interpreter.getValue(fullName))
         }
         else if(interpreter.circuitState.nameToConcreteValue.contains(fullName)) {
-          val isRegister = interpreter.circuitState.registers.contains(fullName)
-          val newConcreteValue = interpreter.makeConcreteValue(fullName, newValue)
+          try {
+            val isRegister = interpreter.circuitState.registers.contains(fullName)
+            val newConcreteValue = interpreter.makeConcreteValue(fullName, newValue)
 
-          if(currentTimeIndex == 0) {
-            /* if first time increment populate components other than inputs */
-            interpreter.setValue(fullName, newConcreteValue, registerPoke = isRegister)
+            if (currentTimeIndex == 0) {
+              /* if first time increment populate components other than inputs */
+              interpreter.setValue(fullName, newConcreteValue, registerPoke = isRegister)
+            }
+            vcdCircuitState.setValue(fullName, newConcreteValue, registerPoke = isRegister)
+            showProgress(s"recording: $fullName to ${newConcreteValue.value} $message")
           }
-          vcdCircuitState.setValue(fullName, newConcreteValue, registerPoke = isRegister)
-          showProgress(s"recording: $fullName to ${newConcreteValue.value} $message")
+          catch {
+            case t: Throwable =>
+              println(s"Problem setting $fullName to $newValue, maybe transient init problem")
+          }
         }
         else {
           // showProgress(s"Don't know how to process entry: change $fullName to $newValue")
