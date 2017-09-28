@@ -292,7 +292,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
             new StringsCompleter({"vcd"}),
             new ArgumentCompleter(
               new ArgumentCompleter(
-                new StringsCompleter(jlist(Seq("load", "run", "inputs", "list", "test")))
+                new StringsCompleter(jlist(Seq("run", "inputs", "list", "test")))
               ),
               new ArgumentCompleter(
                 new StringsCompleter({"load"}),
