@@ -25,7 +25,7 @@ class DataStoreSpec extends FreeSpec with Matchers {
     "can store data and retrieve for ints with 4 buffer" in {
       val numInts = 10
       val buffers = 4
-      val ds = new DataStore(numberOfInts = 10, numberOfLongs = 0, numberOfBigs = 0, numberOfBuffers = 4)
+      val ds = new DataStore(numberOfInts = numInts, numberOfLongs = 0, numberOfBigs = 0, numberOfBuffers = buffers)
 
       for(pass <- 0 until 20) {
         val assigns = Seq.tabulate(numInts) { n => ds.AssignInt(n, () => n * 7 + pass) }
