@@ -15,6 +15,11 @@ class SymbolTable {
   indexFor(LongSize) = 0
   indexFor(BigSize) = 0
 
+  def size: Int = table.size
+
+  def getSizes: (Int, Int, Int) = {
+    (indexFor(IntSize), indexFor(LongSize), indexFor(BigSize))
+  }
 
   /**
     * Based on width allocate slots at the current index, bumping the index for
@@ -29,14 +34,24 @@ class SymbolTable {
     index
   }
 
-  def addSymbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int): Symbol = {
-    val symbol = Symbol(name, dataSize, dataType, bitWidth)
-    table(name) = symbol
+  def assignIndex(symbol: Symbol): Unit = {
+    symbol.index = getIndex(symbol.dataSize)
+  }
+
+  def addSymbol(symbol: Symbol): Symbol = {
+    table(symbol.name) = symbol
+    assignIndex(symbol)
     symbol
+  }
+
+  def addSymbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int): Symbol = {
+    addSymbol(Symbol(name, dataSize, dataType, bitWidth))
   }
 }
 
-case class Symbol(name: String, dataSize: DataSize, dataType: DataType, width: Int)
+case class Symbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int) {
+  var index: Int = -1
+}
 
 object Symbol {
   def apply(name: String, firrtlType: firrtl.ir.Type): Symbol = {
