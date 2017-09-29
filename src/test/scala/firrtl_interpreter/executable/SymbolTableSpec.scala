@@ -12,7 +12,7 @@ class SymbolTableSpec extends FreeSpec with Matchers {
       val s = new SymbolTable()
       s.size should be (0)
     }
-    "Symbol table can Int entries" in {
+    "Symbol table can accept Int entries" in {
       val s = new SymbolTable()
       s.size should be (0)
       s.addSymbol(Symbol("int1", firrtl.ir.SIntType(IntWidth(22))))
@@ -21,7 +21,7 @@ class SymbolTableSpec extends FreeSpec with Matchers {
       s.size should be (2)
       s.getSizes should be ((2, 0, 0))
     }
-    "Symbol table can BigInt entries" in {
+    "Symbol table can accept BigInt entries" in {
       val s = new SymbolTable()
       s.size should be (0)
       s.addSymbol(Symbol("bigInt1", firrtl.ir.SIntType(IntWidth(99))))

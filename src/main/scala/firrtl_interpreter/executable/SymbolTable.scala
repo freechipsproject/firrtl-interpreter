@@ -2,7 +2,6 @@
 
 package firrtl_interpreter.executable
 
-import firrtl.getWidth
 import firrtl.ir.IntWidth
 import firrtl_interpreter.InterpreterException
 
@@ -10,15 +9,15 @@ import scala.collection.mutable
 
 class SymbolTable {
   private val table = new mutable.HashMap[String, Symbol]
-  private val indexFor = new mutable.HashMap[DataSize, Int]
-  indexFor(IntSize) = 0
-  indexFor(LongSize) = 0
-  indexFor(BigSize) = 0
+  private val nextIndexFor = new mutable.HashMap[DataSize, Int]
+  nextIndexFor(IntSize) = 0
+  nextIndexFor(LongSize) = 0
+  nextIndexFor(BigSize) = 0
 
   def size: Int = table.size
 
   def getSizes: (Int, Int, Int) = {
-    (indexFor(IntSize), indexFor(LongSize), indexFor(BigSize))
+    (nextIndexFor(IntSize), nextIndexFor(LongSize), nextIndexFor(BigSize))
   }
 
   /**
@@ -29,8 +28,8 @@ class SymbolTable {
     * @return the index assigned
     */
   def getIndex(dataSize: DataSize, slots: Int = 1): Int = {
-    val index = indexFor(dataSize)
-    indexFor(dataSize) += slots
+    val index = nextIndexFor(dataSize)
+    nextIndexFor(dataSize) += slots
     index
   }
 
