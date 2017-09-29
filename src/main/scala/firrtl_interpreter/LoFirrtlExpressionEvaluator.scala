@@ -522,7 +522,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
         val resolvedArgs = printStatement.args.map { arg =>
           evaluate(arg).value
         }
-        val formatString = printStatement.string.array.map(_.toChar).mkString("")
+        val formatString = printStatement.string.toString
         printf(formatString, resolvedArgs:_*)
       }
     }
