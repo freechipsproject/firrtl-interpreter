@@ -20,8 +20,6 @@ class Scheduler {
     }
   }
 
-
-
   def executeCombinational(): Unit = {
     combinationalAssigns.foreach {
       assign => assign()
@@ -37,10 +35,6 @@ class Scheduler {
   def getTriggerExpressions: Iterable[ExpressionResult] = {
     triggeredAssigns.keys
   }
-
-
-
-
 }
 
 object Scheduler {

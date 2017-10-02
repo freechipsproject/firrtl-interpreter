@@ -53,6 +53,7 @@ class Compiler(ast: Circuit) {
     println(s"r --  ${out.dataInColumns}")
     out.scheduler.executeCombinational()
     println(s"c --  ${out.dataInColumns}")
+    out.dataStore.advanceBuffers()
   }
 
   println(s"h --  ${out.header}")

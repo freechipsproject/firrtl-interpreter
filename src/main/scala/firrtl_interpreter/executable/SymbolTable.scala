@@ -9,7 +9,7 @@ import scala.collection.mutable
 
 class SymbolTable {
   private val table = new mutable.HashMap[String, Symbol]
-  val dataStore: DataStore = new DataStore(numberOfBuffers = 1)
+  val dataStore: DataStore = new DataStore(numberOfBuffers = 4)
 
   def size: Int = table.size
   def keys:Iterable[String] = table.keys
