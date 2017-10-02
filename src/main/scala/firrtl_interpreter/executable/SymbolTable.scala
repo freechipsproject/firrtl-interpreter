@@ -135,6 +135,8 @@ object DataSize {
     }
   }
 
+  def apply(bitWidth: BigInt): DataSize = apply(bitWidth.toInt)
+
   def apply(firrtlType: firrtl.ir.Type): DataSize = {
     apply(getBitWidth(firrtlType))
   }

@@ -24,7 +24,7 @@ class Compiler(ast: Circuit) {
 
   val compiler = new ExpressionCompiler
 
-  private val out = compiler.compile(loweredAst)
+  private val program = compiler.compile(loweredAst)
 
   private val dependencyTracker: DependencyTracker = {
     val module = FindModule(loweredAst.main, loweredAst) match {
@@ -37,39 +37,39 @@ class Compiler(ast: Circuit) {
     new DependencyTracker(loweredAst, module)
   }
   println(s"Dependency Tracker Info:\n${dependencyTracker.getInfo}")
-  println(s"SymbolTable:\n${out.symbolTable.render}")
+  println(s"SymbolTable:\n${program.symbolTable.render}")
 
   def poke(name: String, value: Int): Unit = {
-    val symbol = out.symbolTable(name)
-    out.dataStore(symbol) = value
+    val symbol = program.symbolTable(name)
+    program.dataStore(symbol) = value
   }
   def peek(name: String): Big = {
-    val symbol = out.symbolTable(name)
-    out.dataStore(symbol)
+    val symbol = program.symbolTable(name)
+    program.dataStore(symbol)
   }
 
   def step(steps: Int = 1): Unit = {
-    out.scheduler.getTriggerExpressions.foreach { key => out.scheduler.executeTriggeredAssigns(key) }
-    println(s"r --  ${out.dataInColumns}")
-    out.scheduler.executeCombinational()
-    println(s"c --  ${out.dataInColumns}")
-    out.dataStore.advanceBuffers()
+    program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
+    println(s"r --  ${program.dataInColumns}")
+    program.scheduler.executeCombinational()
+    println(s"c --  ${program.dataInColumns}")
+    program.dataStore.advanceBuffers()
   }
 
-  println(s"h --  ${out.header}")
-  println(s"i --  ${out.dataInColumns}")
+  println(s"h --  ${program.header}")
+  println(s"i --  ${program.dataInColumns}")
 
   poke("io_a", 33)
   poke("io_b", 11)
   poke("io_e", 1)
 
-  println(s"p --  ${out.dataInColumns}")
+  println(s"p --  ${program.dataInColumns}")
 
   step()
   step()
 
   poke("io_e", 0)
-  println(s"p --  ${out.dataInColumns}")
+  println(s"p --  ${program.dataInColumns}")
 
   var count = 0
   while(peek("io_v") == 0 && count < 20) {

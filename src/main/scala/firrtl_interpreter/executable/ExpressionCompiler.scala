@@ -37,7 +37,8 @@ class ExpressionCompiler extends logger.LazyLogging {
       case _ =>
         throw new InterpreterException(
           s"Unsupported type found in expression $expression of firrtl.ir.Type ${expression.tpe}")
-    }  }
+    }
+  }
 
   // scalastyle:off
   def processModule(modulePrefix: String, myModule: DefModule, circuit: Circuit): Unit = {
@@ -378,10 +379,17 @@ class ExpressionCompiler extends logger.LazyLogging {
             }
             v
           case UIntLiteral(value, IntWidth(width)) =>
-            if(Value.isBig(width.toInt))  GetBigConstant(value) else GetIntConstant(value.toInt)
+            DataSize(width) match {
+              case IntSize => GetIntConstant(value.toInt)
+              //              case LongSize => GetLongConstant(value.toInt)
+              case BigSize => GetBigConstant(value.toInt)
+            }
           case SIntLiteral(value, IntWidth(width)) =>
-            if(Value.isBig(width.toInt))  GetBigConstant(value) else GetIntConstant(value.toInt)
-          case _ =>
+            DataSize(width) match {
+              case IntSize => GetIntConstant(value.toInt)
+              //              case LongSize => GetLongConstant(value.toInt)
+              case BigSize => GetBigConstant(value.toInt)
+            }          case _ =>
             throw new InterpreterException(s"bad expression $expression")
         }
         result

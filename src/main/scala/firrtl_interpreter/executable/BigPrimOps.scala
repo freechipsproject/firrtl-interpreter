@@ -10,18 +10,6 @@ case class GetBigConstant(n: Big) extends BigExpressionResult {
   def apply(): Big = n
 }
 
-case class GetBig(uBig: BigValue) extends BigExpressionResult {
-  def apply(): Big = {
-    uBig.value
-  }
-}
-
-case class AssignBig(uBig: BigValue, expression: FuncBig) extends Assigner {
-  def apply(): Unit = {
-    uBig.value = expression()
-  }
-}
-
 case class AddBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
   def apply(): Big = f1() + f2()
 }

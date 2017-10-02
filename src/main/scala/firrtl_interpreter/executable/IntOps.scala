@@ -10,18 +10,6 @@ case class GetIntConstant(n: Int) extends IntExpressionResult {
   def apply(): Int = n
 }
 
-case class GetInt(uInt: IntValue) extends IntExpressionResult {
-  def apply(): Int = {
-    uInt.value
-  }
-}
-
-case class AssignInt(uInt: IntValue, expression: FuncInt) extends Assigner {
-  def apply(): Unit = {
-    uInt.value = expression()
-  }
-}
-
 case class ToBig(f: FuncInt) extends BigExpressionResult {
   def apply(): Big = Big(f())
 }
