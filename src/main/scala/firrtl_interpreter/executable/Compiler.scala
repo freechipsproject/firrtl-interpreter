@@ -9,7 +9,7 @@ import firrtl._
 import firrtl.ir.Circuit
 import firrtl_interpreter.{DependencyTracker, FindModule, InterpreterException}
 
-//noinspection ScalaStyle
+//scalastyle:off magic.number
 class Compiler(ast: Circuit) {
   def lower(c: Circuit): Circuit = {
     val compiler = new LowFirrtlCompiler
@@ -22,7 +22,7 @@ class Compiler(ast: Circuit) {
 
   val loweredAst: Circuit = lower(ast)
 
-  val compiler = new ExpressionCompiler
+  val compiler = new ExpressionCompiler(numberOfBuffers = 4)
 
   private val program = compiler.compile(loweredAst)
 

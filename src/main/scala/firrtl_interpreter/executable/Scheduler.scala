@@ -4,7 +4,7 @@ package firrtl_interpreter.executable
 
 import scala.collection.mutable
 
-class Scheduler {
+class Scheduler(dataStore: DataStore) {
   val combinationalAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
 
   /**
@@ -18,6 +18,15 @@ class Scheduler {
         this(key)
       }
     }
+  }
+
+  def scheduleCopy(symbol: Symbol): Unit = {
+    val assigner = symbol.dataSize match {
+      case IntSize => dataStore.AssignInt(symbol.index, dataStore.GetInt(symbol.index).apply)
+      //      case LongSize => dataStore.AssignLong(symbol.index, dataStore.GetLong(symbol.index).apply)
+      case BigSize => dataStore.AssignBig(symbol.index, dataStore.GetBig(symbol.index).apply)
+    }
+    combinationalAssigns += assigner
   }
 
   def executeCombinational(): Unit = {
@@ -38,5 +47,5 @@ class Scheduler {
 }
 
 object Scheduler {
-  def apply(): Scheduler = new Scheduler
+  def apply(dataStore: DataStore): Scheduler = new Scheduler(dataStore)
 }

@@ -7,9 +7,8 @@ import firrtl_interpreter.InterpreterException
 
 import scala.collection.mutable
 
-class SymbolTable {
+class SymbolTable(dataStore: DataStore) {
   private val table = new mutable.HashMap[String, Symbol]
-  val dataStore: DataStore = new DataStore(numberOfBuffers = 4)
 
   def size: Int = table.size
   def keys:Iterable[String] = table.keys
@@ -80,7 +79,7 @@ class SymbolTable {
 }
 
 object SymbolTable {
-  def apply(): SymbolTable = new SymbolTable()
+  def apply(dataStore: DataStore): SymbolTable = new SymbolTable(dataStore)
 }
 
 case class Symbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int) {

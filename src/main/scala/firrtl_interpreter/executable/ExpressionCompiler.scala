@@ -8,10 +8,10 @@ import firrtl.ir._
 import firrtl_interpreter._
 
 
-class ExpressionCompiler extends logger.LazyLogging {
-  val symbolTable: SymbolTable = SymbolTable()
-  val dataStore:   DataStore   = symbolTable.dataStore
-  val scheduler:   Scheduler   = Scheduler()
+class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
+  val dataStore:   DataStore   = DataStore(numberOfBuffers)
+  val symbolTable: SymbolTable = SymbolTable(dataStore)
+  val scheduler:   Scheduler   = Scheduler(dataStore)
 
   def getWidth(tpe: firrtl.ir.Type): Int = {
     tpe match {
@@ -560,7 +560,10 @@ class ExpressionCompiler extends logger.LazyLogging {
 
     def processPorts(module: DefModule): Unit = {
       for(port <- module.ports) {
-        symbolTable.addSymbol(expand(port.name), port.tpe)
+        val symbol = symbolTable.addSymbol(expand(port.name), port.tpe)
+        if(numberOfBuffers > 1) {
+          scheduler.scheduleCopy(symbol)
+        }
       }
     }
 
@@ -601,27 +604,6 @@ class ExpressionCompiler extends logger.LazyLogging {
 
 
     processModule("", module, circuit)
-
-//    for(name <- dependencyGraph.validNames) {
-//      if(! dependencyGraph.nameToExpression.contains(name)) {
-//        val defaultValue = dependencyGraph.nameToType(name) match {
-//          case UIntType(width) => UIntLiteral(0, width)
-//          case SIntType(width) => SIntLiteral(0, width)
-//          case ClockType       => UIntLiteral(0, IntWidth(1))
-//          case _ =>
-//            throw new Exception(s"error can't find default value for $name.type = ${dependencyGraph.nameToType(name)}")
-//        }
-//        dependencyGraph.nameToExpression(name) = defaultValue
-//      }
-//    }
-//
-//    logger.debug(s"For module ${module.name} dependencyGraph =")
-//    dependencyGraph.nameToExpression.keys.toSeq.sorted foreach { k =>
-//      val v = dependencyGraph.nameToExpression(k).serialize
-//      logger.debug(s"  $k -> (" + v.toString.take(MaxColumnWidth) + ")")
-//    }
-//    println(s"End of dependency graph")
-//    dependencyGraph
     dataStore.allocateBuffers()
     Program(symbolTable, dataStore, scheduler)
   }

@@ -16,9 +16,9 @@ class DataStore(numberOfBuffers: Int) {
   assert(numberOfBuffers > 0, s"DataStore: numberOfBuffers $numberOfBuffers must be > 0")
 
   private val nextIndexFor = new mutable.HashMap[DataSize, Int]
-  nextIndexFor(IntSize) = 0
+  nextIndexFor(IntSize)  = 0
   nextIndexFor(LongSize) = 0
-  nextIndexFor(BigSize) = 0
+  nextIndexFor(BigSize)  = 0
 
   def numberOfInts: Int  = nextIndexFor(IntSize)
   def numberOfLongs: Int = nextIndexFor(LongSize)
@@ -150,6 +150,4 @@ object DataStore {
   def apply(numberOfBuffers: Int): DataStore = {
     new DataStore(numberOfBuffers)
   }
-  def marshall(): String = { ??? }
-  def unmarshall(dataString: String): Unit = { ??? }
 }
