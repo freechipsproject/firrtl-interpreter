@@ -2,6 +2,7 @@
 package firrtl_interpreter
 
 import firrtl.ir._
+import logger._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.matching.Regex
@@ -35,7 +36,7 @@ class Memory(
               val writers: Seq[String],
               val readWriters: Seq[String],
               val readUnderWrite: String
-            ) extends SimpleLogger {
+            ) extends LazyLogging {
   import Memory._
 
   val dataWidth: Int    = typeToWidth(dataType)
@@ -79,7 +80,7 @@ class Memory(
   def getValue(key: String): Concrete = {
     key match {
       case Memory.KeyPattern(memoryName, portName, fieldName) =>
-        log(s"In memory($memoryName).port($portName).getValue($fieldName) => ${ports(portName).getValue(fieldName)})")
+        logger.debug(s"In memory($memoryName).port($portName).getValue($fieldName) => ${ports(portName).getValue(fieldName)})")
         ports(portName).getValue(fieldName)
       case _ =>
         throw new InterpreterException(s"Error: bad memory($key).getValue($key)")
@@ -97,7 +98,7 @@ class Memory(
     key match {
       case KeyPattern(memoryName, portName, fieldName) =>
         assert(name == memoryName, s"Error:bad dispatch memory($name).setValue($key, $concreteValue)")
-        log(s"In memory($memoryName).port($portName).setValue($fieldName, $concreteValue)")
+        logger.debug(s"In memory($memoryName).port($portName).setValue($fieldName, $concreteValue)")
         ports(portName) match {
           case p: ReadPort      => p.setValue(fieldName, concreteValue)
           case p: WritePort     => p.setValue(fieldName, concreteValue)
@@ -114,7 +115,7 @@ class Memory(
     for(reader <- readPorts) reader.cycle()
     for(readWriter <- readWritePorts) readWriter.cycle()
 
-    log(s"memory cycled $toString")
+    logger.debug(s"memory cycled $toString")
   }
 
   def getAllFieldDependencies: Seq[String] = {
@@ -153,7 +154,7 @@ class Memory(
         case _  =>
           throw new Exception(s"error:bad field specifier memory $fullName.setValue($fieldName, $concreteValue)")
       }
-      log(s"port is now en $enable addr $address data $data")
+      logger.debug(s"port is now en $enable addr $address data $data")
     }
     def getValue(fieldName: String): Concrete = {
       fieldName match {
@@ -189,7 +190,7 @@ class Memory(
     override def setValue(fieldName: String, concreteValue: Concrete): Unit = {
       super.setValue(fieldName, concreteValue)
       inputHasChanged()
-      log(s"port is now en $enable addr $address data $data")
+      logger.debug(s"port is now en $enable addr $address data $data")
     }
     def inputHasChanged(): Unit = {
       if(latency == 0) {
@@ -238,7 +239,7 @@ class Memory(
     def inputHasChanged(): Unit = {
       if(latency > 0) {
         val newElement = elementFromSnapshot
-        log(s"memory $fullName input changed $newElement")
+        logger.debug(s"memory $fullName input changed $newElement")
         pipeLine(0) =  newElement
       }
     }
@@ -260,11 +261,11 @@ class Memory(
       if(latency > 0) {
         val element = pipeLine.remove(0)
         if (element.enable && element.mask.value > 0) {
-          log(s"memory $fullName cycle element is $element, executed")
+          logger.debug(s"memory $fullName cycle element is $element, executed")
           dataStore(element.address) = element.data
         }
         else {
-          log(s"memory $fullName cycle element is $element, REJECTED")
+          logger.debug(s"memory $fullName cycle element is $element, REJECTED")
         }
         pipeLine += elementFromSnapshot
       }
@@ -308,7 +309,7 @@ class Memory(
       if(writeMode) {
         if (latency > 0) {
           val newElement = writeElementFromSnapshot
-          log(s"memory $fullName input changed $newElement")
+          logger.debug(s"memory $fullName input changed $newElement")
           writePipeLine(0) = newElement
         }
       }
@@ -352,11 +353,11 @@ class Memory(
       if(writeLatency > 0) {
         val element = writePipeLine.remove(0)
         if (element.enable && element.mask.value > 0) {
-          log(s"memory $fullName cycle element is $element, executed")
+          logger.debug(s"memory $fullName cycle element is $element, executed")
           dataStore(element.address) = element.data
         }
         else {
-          log(s"memory $fullName cycle element is $element, REJECTED")
+          logger.debug(s"memory $fullName cycle element is $element, REJECTED")
         }
         writePipeLine += writeElementFromSnapshot
       }

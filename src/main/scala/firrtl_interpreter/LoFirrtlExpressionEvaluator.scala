@@ -6,6 +6,8 @@ import firrtl._
 import firrtl.ir._
 import firrtl.PrimOps._
 
+import logger._
+
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -17,8 +19,10 @@ import scala.collection.mutable.ArrayBuffer
   * @param circuitState  the state of the system, should not be modified before all dependencies have been resolved
   */
 class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circuitState: CircuitState)
-  extends SimpleLogger {
+  extends LazyLogging {
   var toResolve = mutable.HashSet(dependencyGraph.keys.toSeq:_*)
+
+  var verbose = false
 
   var evaluateAll = false
 
@@ -29,6 +33,10 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
   var allowCombinationalLoops = false
 
   val evaluationStack = new ExpressionExecutionStack(this)
+
+  def setVerbose(value: Boolean): Unit = {
+    verbose = value
+  }
 
   var defaultKeysToResolve: Array[String] = {
     val keys = new mutable.HashSet[String]
@@ -530,7 +538,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
   private var resolveDepth = 0
   private def indent(): Unit = resolveDepth += 1
   private def dedent(): Unit = resolveDepth -= 1
-  override def log(message: => String): Unit = {
+  def log(message: => String): Unit = {
     if(verbose) {
       println(s"${" "*(resolveDepth*2)}$message")
     }

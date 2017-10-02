@@ -21,9 +21,9 @@ class Compiler(ast: Circuit) {
 
   val loweredAst: Circuit = lower(ast)
 
-  val x = new ExpressionCompiler
+  val compiler = new ExpressionCompiler
 
-  private val out = x.compile(loweredAst)
+  private val out = compiler.compile(loweredAst)
 
   private val dependencyTracker: DependencyTracker = {
     val module = FindModule(loweredAst.main, loweredAst) match {
@@ -38,22 +38,18 @@ class Compiler(ast: Circuit) {
   println(s"Dependency Tracker Info:\n${dependencyTracker.getInfo}")
 
   def poke(name: String, value: Int): Unit = {
-    out.namesToValues(name) match {
-      case i: IntValue => i.value = value
-      case i: BigValue => i.value = value
-    }
+    val symbol = out.symbolTable(name)
+    out.dataStore(symbol) = value
   }
   def peek(name: String): Big = {
-    out.namesToValues(name) match {
-      case i: IntValue => BigInt(i.value)
-      case i: BigValue => i.value
-    }
+    val symbol = out.symbolTable(name)
+    out.dataStore(symbol)
   }
 
   def step(steps: Int = 1): Unit = {
-    out.getTriggerExpressions.foreach { key => out.executeTriggeredAssigns(key) }
+    out.scheduler.getTriggerExpressions.foreach { key => out.scheduler.executeTriggeredAssigns(key) }
     println(s"r --  ${out.toString}")
-    out.executeCombinational()
+    out.scheduler.executeCombinational()
     println(s"c --  ${out.toString}")
   }
 

@@ -5,6 +5,8 @@ package firrtl_interpreter
 import firrtl_interpreter.real.DspRealFactory
 import firrtl.ir._
 
+import logger._
+
 // TODO: consider adding x-state
 // TODO: Support forced values on nodes (don't recompute them if forced)
 // TODO: How do zero width wires affect interpreter
@@ -22,11 +24,13 @@ import firrtl.ir._
   *
   * @param ast the circuit to be simulated
   */
-class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) extends SimpleLogger {
+class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) extends LazyLogging {
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
 
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
+  var verbose: Boolean = false
+
   def stopResult: Int  = lastStopResult.get
 
   val loweredAst: Circuit = if(interpreterOptions.lowCompileAtLoad) {
@@ -48,8 +52,8 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     *
     * @param value  The desired verbose setting
     */
-  override def setVerbose(value: Boolean): Unit = {
-    super.setVerbose(value)
+  def setVerbose(value: Boolean = true): Unit = {
+    Logger.setLevel(classOf[FirrtlTerp], LogLevel.Debug)
     evaluator.setVerbose(value)
   }
 
@@ -161,10 +165,10 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
   def hasOutput(name: String): Boolean = dependencyGraph.hasOutput(name)
 
   def evaluateCircuit(specificDependencies: Seq[String] = Seq()): Unit = {
-    log(s"clear ephemera")
+    logger.debug(s"clear ephemera")
     circuitState.prepareForDependencyResolution()
-    log(circuitState.prettyString())
-    log(s"resolve dependencies")
+    logger.debug(circuitState.prettyString())
+    logger.debug(s"resolve dependencies")
     evaluator.resolveDependencies(specificDependencies)
 
     if(specificDependencies.isEmpty) {
@@ -179,27 +183,27 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 
   def checkStopped(attemptedCommand: String = "command"): Boolean = {
     if(stopped) {
-      log(s"circuit has been stopped: ignoring $attemptedCommand")
+      logger.debug(s"circuit has been stopped: ignoring $attemptedCommand")
     }
     stopped
   }
 
   def cycle(showState: Boolean = false): Unit = {
-    log("interpreter cycle called " + "="*80)
+    logger.debug("interpreter cycle called " + "="*80)
     if(checkStopped("cycle")) return
 
     circuitState.vcdLowerClock()
     circuitState.vcdRaiseClock()
 
     if(circuitState.isStale) {
-      log("interpreter cycle() called, state is stale, re-evaluate Circuit")
-      log(circuitState.prettyString())
+      logger.debug("interpreter cycle() called, state is stale, re-evaluate Circuit")
+      logger.debug(circuitState.prettyString())
 
-      log(s"process reset")
+      logger.debug(s"process reset")
       evaluateCircuit()
     }
     else {
-      log(s"interpreter cycle() called, state is fresh")
+      logger.debug(s"interpreter cycle() called, state is fresh")
     }
 
     circuitState.cycle()
@@ -208,9 +212,9 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
       elem.cycle()
     }
 
-    log(s"check prints")
+    logger.debug(s"check prints")
     evaluator.checkPrints()
-    log(s"check stops")
+    logger.debug(s"check stops")
     lastStopResult = evaluator.checkStops()
 
     if(stopped) {
@@ -223,7 +227,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     }
 
     evaluateCircuit()
-    log(s"cycle complete:\n${circuitState.prettyString()}")
+    logger.debug(s"cycle complete:\n${circuitState.prettyString()}")
 
     if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${circuitState.prettyString()}")
   }

@@ -2,22 +2,41 @@
 
 package firrtl_interpreter.executable
 
+import scala.collection.mutable
+
 /**
   * Creates a data store for the three underlying data types.
   * The numberOfBuffers is used to control the ability to rollback execution.
   * The meaning of the values of each slot must be maintained outside of this class.
   * This class only supports (2 ** 31) - 1 of any ints, longs or bigs.
-  * @param numberOfInts    Number of Ints needed
-  * @param numberOfLongs   Number of Longs needed
-  * @param numberOfBigs    Number of Bigs needed
+  *
   * @param numberOfBuffers Number of buffers
   */
-class DataStore(numberOfInts: Int, numberOfLongs: Int, numberOfBigs: Int, numberOfBuffers: Int) {
+class DataStore(numberOfBuffers: Int) {
   assert(numberOfBuffers > 0, s"DataStore: numberOfBuffers $numberOfBuffers must be > 0")
 
-  val intData:  Array[Array[Int]]  = Array.fill(numberOfBuffers, numberOfInts)(0)
-  val longData: Array[Array[Long]] = Array.fill(numberOfBuffers, numberOfLongs)(0L)
-  val bigData:  Array[Array[Big]]  = Array.fill(numberOfBuffers, numberOfBigs)(Big(0))
+  private val nextIndexFor = new mutable.HashMap[DataSize, Int]
+  nextIndexFor(IntSize) = 0
+  nextIndexFor(LongSize) = 0
+  nextIndexFor(BigSize) = 0
+
+  def numberOfInts: Int  = nextIndexFor(IntSize)
+  def numberOfLongs: Int = nextIndexFor(LongSize)
+  def numberOfBigs: Int  = nextIndexFor(BigSize)
+
+  def getSizes: (Int, Int, Int) = {
+    (nextIndexFor(IntSize), nextIndexFor(LongSize), nextIndexFor(BigSize))
+  }
+
+  def getIndex(dataSize: DataSize, slots: Int = 1): Int = {
+    val index = nextIndexFor(dataSize)
+    nextIndexFor(dataSize) += slots
+    index
+  }
+
+  var intData:  Array[Array[Int]]  = Array.fill(numberOfBuffers, numberOfInts)(0)
+  var longData: Array[Array[Long]] = Array.fill(numberOfBuffers, numberOfLongs)(0L)
+  var bigData:  Array[Array[Big]]  = Array.fill(numberOfBuffers, numberOfBigs)(Big(0))
 
   private var targetBufferIndex = if(numberOfBuffers > 1) 1 else 0
   private var sourceBufferIndex = 0
@@ -28,6 +47,19 @@ class DataStore(numberOfInts: Int, numberOfLongs: Int, numberOfBigs: Int, number
   private var currentIntSource  = intData(sourceBufferIndex)
   private var currentLongSource = longData(sourceBufferIndex)
   private var currentBigSource  = bigData(sourceBufferIndex)
+
+  def allocateBuffers(): Unit = {
+    intData  = Array.fill(numberOfBuffers, numberOfInts)(0)
+    longData = Array.fill(numberOfBuffers, numberOfLongs)(0L)
+    bigData  = Array.fill(numberOfBuffers, numberOfBigs)(Big(0))
+
+    currentIntTarget  = intData(targetBufferIndex)
+    currentLongTarget = longData(targetBufferIndex)
+    currentBigTarget  = bigData(targetBufferIndex)
+    currentIntSource  = intData(sourceBufferIndex)
+    currentLongSource = longData(sourceBufferIndex)
+    currentBigSource  = bigData(sourceBufferIndex)
+  }
 
   /**
     * Get the three source buffers
@@ -72,6 +104,15 @@ class DataStore(numberOfInts: Int, numberOfLongs: Int, numberOfBigs: Int, number
     }
   }
 
+//  case class GetLong(index: Int) extends LongExpressionResult {
+//    def apply(): Long = currentLongSource(index)
+//  }
+//  case class AssignLong(index: Int, expression: FuncLong) extends Assigner {
+//    def apply(): Unit = {
+//      currentLongTarget(index) = expression()
+//    }
+//  }
+
   case class GetBig(index: Int) extends BigExpressionResult {
     def apply(): Big = currentBigSource(index)
   }
@@ -87,11 +128,27 @@ class DataStore(numberOfInts: Int, numberOfLongs: Int, numberOfBigs: Int, number
       intData(adjustedHistoryIndex)(index)
     }
   }
+
+  def apply(symbol: Symbol): Big = {
+    symbol.dataSize match {
+      case IntSize  => currentIntTarget(symbol.index)
+      case LongSize => currentLongTarget(symbol.index)
+      case BigSize  => currentBigTarget(symbol.index)
+    }
+  }
+
+  def update(symbol: Symbol, value: Big): Unit = {
+    symbol.dataSize match {
+      case IntSize  => currentIntTarget(symbol.index) = value.toInt
+      case LongSize => currentLongTarget(symbol.index) = value.toLong
+      case BigSize  => currentBigTarget(symbol.index) = value
+    }
+  }
 }
 
 object DataStore {
-  def apply(numberOfInts: Int, numberOfLongs: Int, numberOfBigs: Int, numberOfBuffers: Int): DataStore = {
-    new DataStore(numberOfInts, numberOfLongs, numberOfBigs, numberOfBuffers)
+  def apply(numberOfBuffers: Int): DataStore = {
+    new DataStore(numberOfBuffers)
   }
   def marshall(): String = { ??? }
   def unmarshall(dataString: String): Unit = { ??? }

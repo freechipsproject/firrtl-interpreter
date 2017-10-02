@@ -10,7 +10,7 @@ package object firrtl_interpreter {
   val Big0 = BigInt(0)
   val Big1 = BigInt(1)
   val DangerShiftSize = 27
-  val BitsRequiredOverflowSizeBigInt = Big1 << DangerShiftSize
+  val BitsRequiredOverflowSizeBigInt: BigInt = Big1 << DangerShiftSize
 
   val random = new scala.util.Random
   random.setSeed(System.currentTimeMillis())
@@ -158,14 +158,14 @@ package object firrtl_interpreter {
   }
 
 
-  trait SimpleLogger {
-    var verbose = false
-    def setVerbose(value: Boolean = true): Unit = {
-      verbose = value
-    }
-
-    def log(msg: => String): Unit = {
-      if(verbose) println(msg)
-    }
-  }
+//  trait SimpleLogger {
+//    var verbose = false
+//    def setVerbose(value: Boolean = true): Unit = {
+//      verbose = value
+//    }
+//
+//    def log(msg: => String): Unit = {
+//      if(verbose) println(msg)
+//    }
+//  }
 }

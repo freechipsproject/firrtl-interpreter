@@ -5,6 +5,8 @@ package firrtl_interpreter
 import firrtl._
 import firrtl.ir._
 
+import logger._
+
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -12,7 +14,7 @@ import scala.collection.mutable.ArrayBuffer
   * contains the constructor for a dependency graph.  The code for traversing a circuit
   * and discovering the components and the expressions lives here
   */
-object DependencyGraph extends SimpleLogger {
+object DependencyGraph extends LazyLogging {
   val MaxColumnWidth = 100 // keeps displays of expressions readable
 
   // scalastyle:off
@@ -62,13 +64,13 @@ object DependencyGraph extends SimpleLogger {
       case WDefInstance(info, instanceName, moduleName, _) =>
         val subModule = FindModule(moduleName, dependencyGraph.circuit)
         val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
-        log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
+        logger.debug(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
         processModule(newPrefix, subModule, dependencyGraph)
         dependencyGraph.addSourceInfo(newPrefix, info)
         dependencyGraph.addInstanceName(instanceName, moduleName)
         s
       case DefNode(info, name, expression) =>
-        log(s"declaration:DefNode:$name:${expression.serialize} ${renameExpression(expression).serialize}")
+        logger.debug(s"declaration:DefNode:$name:${expression.serialize} ${renameExpression(expression).serialize}")
         val expandedName = expand(name)
         dependencyGraph.nodes += expandedName
         dependencyGraph.recordName(expandedName)
@@ -76,7 +78,7 @@ object DependencyGraph extends SimpleLogger {
         dependencyGraph.addSourceInfo(expandedName, info)
         s
       case DefWire(info, name, tpe) =>
-        log(s"declaration:DefWire:$name")
+        logger.debug(s"declaration:DefWire:$name")
         val expandedName = expand(name)
         dependencyGraph.wires += expandedName
         dependencyGraph.recordName(expandedName)
@@ -84,9 +86,9 @@ object DependencyGraph extends SimpleLogger {
         dependencyGraph.addSourceInfo(expandedName, info)
         s
       case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
-        log(s"declaration:DefRegister:$name clock <- ${clockExpression.serialize} ${renameExpression(clockExpression).serialize}")
-        log(s"declaration:DefRegister:$name reset <- ${resetExpression.serialize} ${renameExpression(resetExpression).serialize}")
-        log(s"declaration:DefRegister:$name init  <- ${initValueExpression.serialize} ${renameExpression(initValueExpression).serialize}")
+        logger.debug(s"declaration:DefRegister:$name clock <- ${clockExpression.serialize} ${renameExpression(clockExpression).serialize}")
+        logger.debug(s"declaration:DefRegister:$name reset <- ${resetExpression.serialize} ${renameExpression(resetExpression).serialize}")
+        logger.debug(s"declaration:DefRegister:$name init  <- ${initValueExpression.serialize} ${renameExpression(initValueExpression).serialize}")
         val renamedDefRegister = DefRegister(
           info, expand(name), tpe,
           renameExpression(clockExpression),
@@ -102,7 +104,7 @@ object DependencyGraph extends SimpleLogger {
         s
       case defMemory: DefMemory =>
         val expandedName = expand(defMemory.name)
-        log(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
+        logger.debug(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
         val newDefMemory = defMemory.copy(name = expandedName)
         dependencyGraph.addMemory(newDefMemory)
         dependencyGraph.addSourceInfo(expandedName, defMemory.info)
@@ -123,7 +125,7 @@ object DependencyGraph extends SimpleLogger {
       case EmptyStmt =>
         s
       case conditionally: Conditionally =>
-        // log(s"got a conditionally $conditionally")
+        // logger.debug(s"got a conditionally $conditionally")
         throw new InterpreterException(s"conditionally unsupported in interpreter $conditionally")
       case _ =>
         println(s"TODO: Unhandled statement $s")
@@ -174,12 +176,12 @@ object DependencyGraph extends SimpleLogger {
         processPorts(module)
         processDependencyStatements(modulePrefix, module.body, dependencyGraph)
       case extModule: ExtModule => // Look to see if we have an implementation for this
-        log(s"got external module ${extModule.name} instance $modulePrefix")
+        logger.debug(s"got external module ${extModule.name} instance $modulePrefix")
         processPorts(extModule)
         /* use exists while looking for the right factory, short circuits iteration when found */
-        log(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
+        logger.debug(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
         val implementationFound = dependencyGraph.blackBoxFactories.exists { factory =>
-          log("Found an existing factory")
+          logger.debug("Found an existing factory")
           factory.createInstance(modulePrefix, extModule.defname) match {
             case Some(implementation) =>
               processExternalInstance(extModule, modulePrefix, implementation, dependencyGraph)
@@ -226,10 +228,10 @@ object DependencyGraph extends SimpleLogger {
       }
     }
 
-    log(s"For module ${module.name} dependencyGraph =")
+    logger.debug(s"For module ${module.name} dependencyGraph =")
     dependencyGraph.nameToExpression.keys.toSeq.sorted foreach { k =>
       val v = dependencyGraph.nameToExpression(k).serialize
-      log(s"  $k -> (" + v.toString.take(MaxColumnWidth) + ")")
+      logger.debug(s"  $k -> (" + v.toString.take(MaxColumnWidth) + ")")
     }
     println(s"End of dependency graph")
     dependencyGraph

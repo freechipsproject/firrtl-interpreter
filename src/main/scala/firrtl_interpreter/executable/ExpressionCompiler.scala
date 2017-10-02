@@ -8,9 +8,10 @@ import firrtl.ir._
 import firrtl_interpreter._
 
 
-class ExpressionCompiler extends SimpleLogger {
-  val state = new ExecutableCircuit
-//  val dependencies = new DependencyManager
+class ExpressionCompiler extends logger.LazyLogging {
+  val symbolTable: SymbolTable = SymbolTable()
+  val dataStore:   DataStore   = symbolTable.dataStore
+  val scheduler:   Scheduler   = Scheduler()
 
   def getWidth(tpe: firrtl.ir.Type): Int = {
     tpe match {
@@ -281,6 +282,15 @@ class ExpressionCompiler extends SimpleLogger {
         * @return
         */
       def processExpression(expression: Expression): ExpressionResult = {
+        def getSymbolAndAccessor(name: String, firrtlType: firrtl.ir.Type): ExpressionResult = {
+          val symbol = symbolTable.addSymbol(Symbol(name, firrtlType))
+          symbol.dataSize match {
+            case IntSize => dataStore.GetInt(symbol.index)
+//            case LongSize => dataStore.GetLong(symbol.index)
+            case BigSize => dataStore.GetBig(symbol.index)
+          }
+        }
+
         val result: ExpressionResult = expression match {
           case Mux(condition, trueExpression, falseExpression, _) =>
             processExpression(condition) match {
@@ -298,21 +308,14 @@ class ExpressionCompiler extends SimpleLogger {
               case c =>
                 throw InterpreterException(s"Mux condition is not 1 bit $condition parsed as $c")
             }
-          case WRef(name, tpe, kind, gender) =>
-            state.newValue(name, tpe) match {
-              case v: IntValue => GetInt(v)
-              case v: BigValue => GetBig(v)
-            }
+
+          case WRef(name, tpe, _, _) =>
+            getSymbolAndAccessor(name, tpe)
           case subfield: WSubField =>
-            state.newValue(subfield.serialize, subfield.tpe) match {
-              case v: IntValue => GetInt(v)
-              case v: BigValue => GetBig(v)
-            }
+            getSymbolAndAccessor(subfield.serialize, subfield.tpe)
           case subIndex: WSubIndex =>
-            state.newValue(subIndex.serialize, subIndex.tpe) match {
-              case v: IntValue => GetInt(v)
-              case v: BigValue => GetBig(v)
-            }
+            getSymbolAndAccessor(subIndex.serialize, subIndex.tpe)
+
           case ValidIf(condition, value, tpe) =>
             processExpression(condition) match {
               case c: IntExpressionResult =>
@@ -384,83 +387,106 @@ class ExpressionCompiler extends SimpleLogger {
         result
       }
 
+      def getSymbolAndAssigner(
+                                name: String,
+                                firrtlType: firrtl.ir.Type,
+                                expressionResult: ExpressionResult): Assigner = {
+        val symbol = symbolTable.getSymbol(name, firrtlType)
+        (symbol.dataSize, expressionResult) match {
+          case (IntSize, result: IntExpressionResult) => dataStore.AssignInt(symbol.index, result.apply)
+//          case (LongSize, result: LongExpressionResult) => dataStore.AssignLong(symbol.index, result.apply)
+          case (BigSize, result: BigExpressionResult) => dataStore.AssignBig(symbol.index, result.apply)
+        }
+      }
+
+      def triggeredAssign(
+                           triggerExpression: ExpressionResult,
+                           value: Symbol,
+                           expressionResult: ExpressionResult
+                         ): Unit = {
+        val assignment = (value.dataSize, expressionResult) match {
+          case (IntSize, e: IntExpressionResult) => dataStore.AssignInt(value.index, e.apply)
+//          case (LongSize, e: LongExpressionResult) => dataStore.AssignLong(value.index, e.apply)
+          case (BigSize, e: BigExpressionResult) => dataStore.AssignBig(value.index, e.apply)
+        }
+        scheduler.triggeredAssigns(triggerExpression) += assignment
+      }
+
       statement match {
         case block: Block =>
           block.stmts.foreach { subStatement =>
             processStatements(subStatement)
           }
+
         case con: Connect =>
           // if it's a register we use the name of its input side
           def renameIfRegister(name: String): String = {
-            if (state.isRegister(name)) {
+            if (symbolTable.isRegister(name)) {
               s"$name${ExpressionCompiler.RegisterInputSuffix}"
             }
             else {
               name
             }
           }
-
           val lhsName = renameIfRegister(con.loc.serialize)
-          val newWireValue = state.newValue(lhsName, con.loc.tpe)
-          state.assign(newWireValue, processExpression(con.expr))
+          getSymbolAndAssigner(lhsName, con.loc.tpe, processExpression(con.expr))
 
         case WDefInstance(info, instanceName, moduleName, _) =>
           val subModule = FindModule(moduleName, circuit)
           val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
-          log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
+          logger.debug(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
           processModule(newPrefix, subModule, circuit)
 
         case DefNode(info, name, expression) =>
-          log(s"declaration:DefNode:$name:${expression.serialize}")
+          logger.debug(s"declaration:DefNode:$name:${expression.serialize}")
+          getSymbolAndAssigner(name, expression.tpe, processExpression(expression))
 
-          processExpression(expression) match {
-            case e: IntExpressionResult =>
-              val value = state.newValue(expand(name), isSigned = true, width = Value.BigThreshold)  //TODO:(chick) compute
-              state.assign(value, e)
-            case e: BigExpressionResult =>
-              val value = state.newValue(expand(name), isSigned = true, width = Value.BigThreshold * 2) //TODO:(chick) compute
-              state.assign(value, e)
-            case _ =>
-              throw InterpreterException(s"bad expression $expression")
-          }
         case DefWire(info, name, tpe) =>
-          log(s"declaration:DefWire:$name")
-          state.newValue(expand(name), tpe)
+          logger.debug(s"declaration:DefWire:$name")
+          symbolTable.addSymbol(name, tpe)
+
         case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
-          log(s"declaration:DefRegister:$name")
-//          log(s"declaration:DefRegister:$name clock <- ${clockExpression.serialize} ${processExpression(clockExpression).serialize}")
-//          log(s"declaration:DefRegister:$name reset <- ${resetExpression.serialize} ${processExpression(resetExpression).serialize}")
-//          log(s"declaration:DefRegister:$name init  <- ${initValueExpression.serialize} ${processExpression(initValueExpression).serialize}")
+          logger.debug(s"declaration:DefRegister:$name")
+//          logger.debug(s"declaration:DefRegister:$name clock <- ${clockExpression.serialize} ${processExpression(clockExpression).serialize}")
+//          logger.debug(s"declaration:DefRegister:$name reset <- ${resetExpression.serialize} ${processExpression(resetExpression).serialize}")
+//          logger.debug(s"declaration:DefRegister:$name init  <- ${initValueExpression.serialize} ${processExpression(initValueExpression).serialize}")
           val expandedName = expand(name)
 
           val clockResult = processExpression(clockExpression)
           val resetResult = processExpression(resetExpression)
           val resetValue  = processExpression(initValueExpression)
 
-          val registerIn  = state.newValue(s"$expandedName${ExpressionCompiler.RegisterInputSuffix}", tpe)
-          val registerOut = state.newValue(s"$expandedName", tpe)
+          val registerIn  = symbolTable.addSymbol(s"$expandedName${ExpressionCompiler.RegisterInputSuffix}", tpe)
+          val registerOut = symbolTable.addSymbol(expandedName, tpe)
 
-          state.registerNames += expandedName
+          symbolTable.registerNames += expandedName
 
-          registerIn match {
-            case e: BigValue =>
-              state.triggeredAssign(clockResult, registerOut, GetBig(e))
+          registerIn.dataSize match {
+            case IntSize =>
+              triggeredAssign(clockResult, registerOut, dataStore.GetInt(registerIn.index))
               resetValue match {
-                case rv: IntExpressionResult => state.triggeredAssign(resetResult, registerOut, ToBig(rv.apply))
-                case rv: BigExpressionResult => state.triggeredAssign(resetResult, registerOut, rv)
+                case rv: IntExpressionResult => triggeredAssign(resetResult, registerOut, rv)
+                case rv: BigExpressionResult => triggeredAssign(resetResult, registerOut, ToInt(rv.apply))
               }
-            case e: IntValue =>
-              state.triggeredAssign(clockResult, registerOut, GetInt(e))
+            case LongSize =>
+//              triggeredAssign(clockResult, registerOut, dataStore.GetLong(registerIn.index))
+//              resetValue match {
+//                case rv: IntExpressionResult => triggeredAssign(resetResult, registerOut, ToLong(rv.apply))
+//                case rv: LongExpressionResult => triggeredAssign(resetResult, registerOut, rv)
+//              }
+              ???
+            case BigSize =>
+              triggeredAssign(clockResult, registerOut, dataStore.GetBig(registerIn.index))
               resetValue match {
-                case rv: IntExpressionResult => state.triggeredAssign(resetResult, registerOut, rv)
-                case rv: BigExpressionResult => state.triggeredAssign(resetResult, registerOut, ToInt(rv.apply))
+                case rv: IntExpressionResult => triggeredAssign(resetResult, registerOut, ToBig(rv.apply))
+                case rv: BigExpressionResult => triggeredAssign(resetResult, registerOut, rv)
               }
             case _ =>
               throw InterpreterException(s"bad register $statement")
           }
         case defMemory: DefMemory =>
           val expandedName = expand(defMemory.name)
-          log(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
+          logger.debug(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
           val newDefMemory = defMemory.copy(name = expandedName)
         case IsInvalid(info, expression) =>
 //          IsInvalid(info, processExpression(expression))
@@ -477,7 +503,7 @@ class ExpressionCompiler extends SimpleLogger {
 //          s
         case EmptyStmt =>
         case conditionally: Conditionally =>
-          // log(s"got a conditionally $conditionally")
+          // logger.debug(s"got a conditionally $conditionally")
           throw new InterpreterException(s"conditionally unsupported in interpreter $conditionally")
         case _ =>
           println(s"TODO: Unhandled statement $statement")
@@ -520,7 +546,7 @@ class ExpressionCompiler extends SimpleLogger {
 
     def processPorts(module: DefModule): Unit = {
       for(port <- module.ports) {
-        state.newValue(expand(port.name), port.tpe)
+        symbolTable.addSymbol(expand(port.name), port.tpe)
       }
     }
 
@@ -529,12 +555,12 @@ class ExpressionCompiler extends SimpleLogger {
         processPorts(module)
         processStatements(module.body)
       case extModule: ExtModule => // Look to see if we have an implementation for this
-        log(s"got external module ${extModule.name} instance $modulePrefix")
+        logger.debug(s"got external module ${extModule.name} instance $modulePrefix")
         processPorts(extModule)
         /* use exists while looking for the right factory, short circuits iteration when found */
-//        log(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
+//        logger.debug(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
 //        val implementationFound = dependencyGraph.blackBoxFactories.exists { factory =>
-//          log("Found an existing factory")
+//          logger.debug("Found an existing factory")
 //          factory.createInstance(modulePrefix, extModule.defname) match {
 //            case Some(implementation) =>
 //              processExternalInstance(extModule, modulePrefix, implementation, dependencyGraph)
@@ -550,7 +576,7 @@ class ExpressionCompiler extends SimpleLogger {
   }
 
   // scalastyle:off cyclomatic.complexity
-  def compile(circuit: Circuit): ExecutableCircuit = {
+  def compile(circuit: Circuit): Program = {
     val module = FindModule(circuit.main, circuit) match {
       case regularModule: firrtl.ir.Module => regularModule
       case externalModule: firrtl.ir.ExtModule =>
@@ -575,14 +601,14 @@ class ExpressionCompiler extends SimpleLogger {
 //      }
 //    }
 //
-//    log(s"For module ${module.name} dependencyGraph =")
+//    logger.debug(s"For module ${module.name} dependencyGraph =")
 //    dependencyGraph.nameToExpression.keys.toSeq.sorted foreach { k =>
 //      val v = dependencyGraph.nameToExpression(k).serialize
-//      log(s"  $k -> (" + v.toString.take(MaxColumnWidth) + ")")
+//      logger.debug(s"  $k -> (" + v.toString.take(MaxColumnWidth) + ")")
 //    }
 //    println(s"End of dependency graph")
 //    dependencyGraph
-    state
+    Program(symbolTable, dataStore, scheduler)
   }
 }
 

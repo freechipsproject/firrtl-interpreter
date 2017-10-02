@@ -4,17 +4,19 @@ package firrtl_interpreter
 
 import firrtl._
 import firrtl.ir._
-import firrtl_interpreter.DependencyTracker._
+import logger.LazyLogging
 
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
+import logger._
+
 /**
   * contains the constructor for a dependency graph.  The code for traversing a circuit
   * and discovering the components and the expressions lives here
   */
-object DependencyTracker extends SimpleLogger {
+object DependencyTracker extends LazyLogging {
   val MaxColumnWidth = 100 // keeps displays of expressions readable
 
   type DependencySet = Set[String]
@@ -204,13 +206,13 @@ class DependencyTracker(val circuit: Circuit,
       case WDefInstance(info, instanceName, moduleName, _) =>
         val subModule = FindModule(moduleName, circuit)
         val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
-        log(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
+        logger.debug(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
         processModule(newPrefix, subModule)
         addSourceInfo(newPrefix, info)
         addInstanceName(instanceName, moduleName)
 
       case DefNode(info, name, expression) =>
-        log(s"declaration:DefNode:$name:${expression.serialize} ${expressionToReferences(expression)}")
+        logger.debug(s"declaration:DefNode:$name:${expression.serialize} ${expressionToReferences(expression)}")
         val expandedName = expand(name)
         nodes += expandedName
         recordName(expandedName)
@@ -218,7 +220,7 @@ class DependencyTracker(val circuit: Circuit,
         dependencies(expand(name)) = expressionToReferences(expression)
 
       case DefWire(info, name, tpe) =>
-        log(s"declaration:DefWire:$name")
+        logger.debug(s"declaration:DefWire:$name")
         val expandedName = expand(name)
         wires += expandedName
         recordName(expandedName)
@@ -239,7 +241,7 @@ class DependencyTracker(val circuit: Circuit,
 
       case defMemory: DefMemory =>
         val expandedName = expand(defMemory.name)
-        log(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
+        logger.debug(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
         val newDefMemory = defMemory.copy(name = expandedName)
         addMemory(newDefMemory)
         addSourceInfo(expandedName, defMemory.info)
@@ -260,7 +262,7 @@ class DependencyTracker(val circuit: Circuit,
       case EmptyStmt =>
 
       case conditionally: Conditionally =>
-        // log(s"got a conditionally $conditionally")
+        // logger.debug(s"got a conditionally $conditionally")
         throw new InterpreterException(s"conditionally unsupported in interpreter $conditionally")
       case _ =>
         println(s"TODO: Unhandled statement $s")
@@ -309,12 +311,12 @@ class DependencyTracker(val circuit: Circuit,
         processPorts(module)
         processDependencyStatements(modulePrefix, module.body)
       case extModule: ExtModule => // Look to see if we have an implementation for this
-        log(s"got external module ${extModule.name} instance $modulePrefix")
+        logger.debug(s"got external module ${extModule.name} instance $modulePrefix")
         processPorts(extModule)
         /* use exists while looking for the right factory, short circuits iteration when found */
-        log(s"Factories: ${blackBoxFactories.mkString("\n")}")
+        logger.debug(s"Factories: ${blackBoxFactories.mkString("\n")}")
         val implementationFound = blackBoxFactories.exists { factory =>
-          log("Found an existing factory")
+          logger.debug("Found an existing factory")
           factory.createInstance(modulePrefix, extModule.defname) match {
             case Some(implementation) =>
               processExternalInstance(extModule, modulePrefix, implementation)
@@ -349,10 +351,10 @@ class DependencyTracker(val circuit: Circuit,
 //    }
 //  }
 
-  log(s"For module ${module.name} dependencyGraph =")
+  logger.debug(s"For module ${module.name} dependencyGraph =")
   nameToExpression.keys.toSeq.sorted foreach { k =>
     val v = nameToExpression(k).serialize
-    log(s"  $k -> (" + v.toString.take(MaxColumnWidth) + ")")
+    logger.debug(s"  $k -> (" + v.toString.take(MaxColumnWidth) + ")")
   }
 
   def topologicalSort(stringToStrings: Map[String, Set[String]], strings: Iterable[String]): Iterable[String] = {

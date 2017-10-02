@@ -9,15 +9,13 @@ import scala.collection.mutable
 
 class SymbolTable {
   private val table = new mutable.HashMap[String, Symbol]
-  private val nextIndexFor = new mutable.HashMap[DataSize, Int]
-  nextIndexFor(IntSize) = 0
-  nextIndexFor(LongSize) = 0
-  nextIndexFor(BigSize) = 0
+  val dataStore: DataStore = new DataStore(numberOfBuffers = 4)
 
   def size: Int = table.size
+  def keys:Iterable[String] = table.keys
 
   def getSizes: (Int, Int, Int) = {
-    (nextIndexFor(IntSize), nextIndexFor(LongSize), nextIndexFor(BigSize))
+    dataStore.getSizes
   }
 
   /**
@@ -27,25 +25,56 @@ class SymbolTable {
     * @param slots not sure if we need this but allows multiple assigns with 1 call
     * @return the index assigned
     */
-  def getIndex(dataSize: DataSize, slots: Int = 1): Int = {
-    val index = nextIndexFor(dataSize)
-    nextIndexFor(dataSize) += slots
-    index
-  }
+  def getIndex(dataSize: DataSize, slots: Int = 1): Int = dataStore.getIndex(dataSize, slots)
 
   def assignIndex(symbol: Symbol): Unit = {
     symbol.index = getIndex(symbol.dataSize)
   }
 
   def addSymbol(symbol: Symbol): Symbol = {
-    table(symbol.name) = symbol
-    assignIndex(symbol)
+    if(!table.contains(symbol.name)) {
+      table(symbol.name) = symbol
+      assignIndex(symbol)
+    }
     symbol
   }
 
-  def addSymbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int): Symbol = {
-    addSymbol(Symbol(name, dataSize, dataType, bitWidth))
+  def addSymbol(name: String, firrtlType: firrtl.ir.Type): Symbol = {
+    if(!table.contains(name)) {
+      addSymbol(Symbol(name, firrtlType))
+    }
+    else {
+      table(name)
+    }
   }
+
+  def getSymbol(name: String, firrtlType: firrtl.ir.Type): Symbol = {
+    if(table.contains(name)) {
+      table(name)
+    }
+    else {
+      addSymbol(Symbol(name, firrtlType))
+    }
+  }
+
+  def getSymbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int): Symbol = {
+    if(table.contains(name)) {
+      table(name)
+    }
+    else {
+      addSymbol(Symbol(name, dataSize, dataType, bitWidth))
+    }
+  }
+
+  val registerNames: mutable.HashSet[String] = new mutable.HashSet[String]
+
+  def isRegister(name: String): Boolean = registerNames.contains(name)
+
+  def apply(name: String): Symbol = table(name)
+}
+
+object SymbolTable {
+  def apply(): SymbolTable = new SymbolTable()
 }
 
 case class Symbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int) {
@@ -78,6 +107,7 @@ object DataSize {
     firrtlType match {
       case firrtl.ir.SIntType(IntWidth(bitWidth)) => bitWidth.toInt
       case firrtl.ir.UIntType(IntWidth(bitWidth)) => bitWidth.toInt
+      case firrtl.ir.ClockType                    => 1
       case _ =>
         throw InterpreterException(s"Error:DataSize doesn't know size of $firrtlType")
     }
@@ -116,6 +146,7 @@ object DataType {
     tpe match {
       case _: firrtl.ir.SIntType => SignedInt
       case _: firrtl.ir.UIntType => UnsignedInt
+      case firrtl.ir.ClockType   => UnsignedInt
       case t =>
         throw new InterpreterException(s"DataType does not know firrtl type $t")
     }
