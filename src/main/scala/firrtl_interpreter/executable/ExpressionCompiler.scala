@@ -471,6 +471,10 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
 
           symbolTable.registerNames += expandedName
 
+          if(numberOfBuffers > 1) {
+            scheduler.scheduleCopy(registerIn)
+          }
+
           registerIn.dataSize match {
             case IntSize =>
               triggeredAssign(clockResult, registerOut, dataStore.GetInt(registerIn.index))

@@ -54,6 +54,7 @@ class Compiler(ast: Circuit) {
     program.scheduler.executeCombinational()
     println(s"c --  ${program.dataInColumns}")
     program.dataStore.advanceBuffers()
+    program.scheduler.executeBufferAdvances()
   }
 
   println(s"h --  ${program.header}")
@@ -65,6 +66,8 @@ class Compiler(ast: Circuit) {
 
   println(s"p --  ${program.dataInColumns}")
 
+  step()
+  step()
   step()
   step()
 

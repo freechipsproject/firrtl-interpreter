@@ -6,6 +6,7 @@ import scala.collection.mutable
 
 class Scheduler(dataStore: DataStore) {
   val combinationalAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
+  val bufferAdvanceAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
 
   /**
     * associates an ExpressionResult (probably some kind of clock) with a bunch of assignments
@@ -26,11 +27,17 @@ class Scheduler(dataStore: DataStore) {
       //      case LongSize => dataStore.AssignLong(symbol.index, dataStore.GetLong(symbol.index).apply)
       case BigSize => dataStore.AssignBig(symbol.index, dataStore.GetBig(symbol.index).apply)
     }
-    combinationalAssigns += assigner
+    bufferAdvanceAssigns += assigner
   }
 
   def executeCombinational(): Unit = {
     combinationalAssigns.foreach {
+      assign => assign()
+    }
+  }
+
+  def executeBufferAdvances(): Unit = {
+    bufferAdvanceAssigns.foreach {
       assign => assign()
     }
   }
