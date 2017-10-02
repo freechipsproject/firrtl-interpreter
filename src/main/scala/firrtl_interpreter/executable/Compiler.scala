@@ -12,12 +12,13 @@ import firrtl_interpreter.{DependencyTracker, FindModule, InterpreterException}
 //noinspection ScalaStyle
 class Compiler(ast: Circuit) {
   def lower(c: Circuit): Circuit = {
-      val compiler = new LowFirrtlCompiler
+    val compiler = new LowFirrtlCompiler
 
-      val annotationMap = AnnotationMap(Seq.empty)
-      val compileResult = compiler.compileAndEmit(firrtl.CircuitState(c, ChirrtlForm, Some(annotationMap)))
-      compileResult.circuit
-    }
+    val annotationMap = AnnotationMap(Seq.empty)
+    val compileResult = compiler.compileAndEmit(firrtl.CircuitState(c, ChirrtlForm, Some(annotationMap)))
+    println(compileResult.emittedCircuitOption.get)
+    compileResult.circuit
+  }
 
   val loweredAst: Circuit = lower(ast)
 
@@ -36,6 +37,7 @@ class Compiler(ast: Circuit) {
     new DependencyTracker(loweredAst, module)
   }
   println(s"Dependency Tracker Info:\n${dependencyTracker.getInfo}")
+  println(s"SymbolTable:\n${out.symbolTable.render}")
 
   def poke(name: String, value: Int): Unit = {
     val symbol = out.symbolTable(name)
@@ -48,27 +50,29 @@ class Compiler(ast: Circuit) {
 
   def step(steps: Int = 1): Unit = {
     out.scheduler.getTriggerExpressions.foreach { key => out.scheduler.executeTriggeredAssigns(key) }
-    println(s"r --  ${out.toString}")
+    println(s"r --  ${out.dataInColumns}")
     out.scheduler.executeCombinational()
-    println(s"c --  ${out.toString}")
+    println(s"c --  ${out.dataInColumns}")
   }
 
   println(s"h --  ${out.header}")
-  println(s"i --  ${out.toString}")
+  println(s"i --  ${out.dataInColumns}")
 
   poke("io_a", 33)
   poke("io_b", 11)
   poke("io_e", 1)
 
-  println(s"p --  ${out.toString}")
+  println(s"p --  ${out.dataInColumns}")
 
   step()
   step()
 
   poke("io_e", 0)
-  println(s"p --  ${out.toString}")
+  println(s"p --  ${out.dataInColumns}")
 
-  while(peek("io_v") == 0) {
+  var count = 0
+  while(peek("io_v") == 0 && count < 20) {
+    count += 1
     step()
   }
 }

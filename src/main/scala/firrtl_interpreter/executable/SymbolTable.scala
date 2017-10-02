@@ -9,7 +9,7 @@ import scala.collection.mutable
 
 class SymbolTable {
   private val table = new mutable.HashMap[String, Symbol]
-  val dataStore: DataStore = new DataStore(numberOfBuffers = 4)
+  val dataStore: DataStore = new DataStore(numberOfBuffers = 1)
 
   def size: Int = table.size
   def keys:Iterable[String] = table.keys
@@ -71,6 +71,12 @@ class SymbolTable {
   def isRegister(name: String): Boolean = registerNames.contains(name)
 
   def apply(name: String): Symbol = table(name)
+
+  def render: String = {
+    keys.toArray.sorted.map { name =>
+      table(name)
+    }.mkString("\n")
+  }
 }
 
 object SymbolTable {
@@ -79,6 +85,10 @@ object SymbolTable {
 
 case class Symbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int) {
   var index: Int = -1
+
+  override def toString: String = {
+    f"${s"$dataType<$bitWidth>"}%12s $dataSize index $index%5d $name%-40.40s"
+  }
 }
 
 object Symbol {

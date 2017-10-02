@@ -23,11 +23,15 @@ class Scheduler {
 
 
   def executeCombinational(): Unit = {
-    combinationalAssigns.foreach { assign => assign()}
+    combinationalAssigns.foreach {
+      assign => assign()
+    }
   }
 
   def executeTriggeredAssigns(triggerExpression: ExpressionResult): Unit = {
-    triggeredAssigns(triggerExpression).foreach { assign => assign() }
+    triggeredAssigns(triggerExpression).foreach {
+      assign => assign()
+    }
   }
 
   def getTriggerExpressions: Iterable[ExpressionResult] = {
