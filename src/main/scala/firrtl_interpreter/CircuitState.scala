@@ -105,7 +105,7 @@ case class CircuitState(
     vcd.timeStamp = -1
     for((name, concreteValue) <- circuitState.nameToConcreteValue) {
       if(concreteValue.poisoned) {
-        vcd.wireChanged(name, -1, concreteValue.width)
+        vcd.wireChanged(name, concreteValue.value, concreteValue.width)
       }
       else {
         vcd.wireChanged(name, concreteValue.value, concreteValue.width)

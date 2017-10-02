@@ -39,7 +39,7 @@ trait HasInterpreterOptions {
     .foreach { _ =>
       interpreterOptions = interpreterOptions.copy(writeVCD = true)
     }
-    .text("writes vcd execution log, filename will be base on top")
+    .text("writes vcd execution log, filename will be based on top circuit name")
 
   parser.opt[Unit]("fint-vcd-show-underscored-vars")
     .abbr("fivsuv")

@@ -41,7 +41,7 @@ trait HasReplConfig {
     .foreach { _ =>
       replConfig = replConfig.copy(useVcdScript = true)
     }
-    .text("load vcd file as script, default is false")
+    .text("Currently unsupported, use --fr-vcd-script-override <vcd-file-name> instead")
 
   parser.opt[String]("fr-vcd-script-override")
     .abbr("frvso")
@@ -49,11 +49,10 @@ trait HasReplConfig {
     .foreach { x =>
       replConfig = replConfig.copy(vcdScriptOverride = x, useVcdScript = true)
     }
-    .text("load vcd file as script, default is false")
+    .text("load vcd file as script")
 
   parser.opt[Unit]("fr-run-script-on-startup")
     .abbr("frrsos")
-    .valueName("<vcd-file>")
     .foreach { _ =>
       replConfig = replConfig.copy(runScriptAtStart = true)
     }
