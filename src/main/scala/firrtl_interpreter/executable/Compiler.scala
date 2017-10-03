@@ -7,10 +7,10 @@ package firrtl_interpreter.executable
 
 import firrtl._
 import firrtl.ir.Circuit
-import firrtl_interpreter.{DependencyTracker, FindModule, InterpreterException}
+import firrtl_interpreter.{BlackBoxFactory, FindModule, InterpreterException}
 
 //scalastyle:off magic.number
-class Compiler(ast: Circuit) {
+class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
   def lower(c: Circuit): Circuit = {
     val compiler = new LowFirrtlCompiler
 
@@ -22,9 +22,9 @@ class Compiler(ast: Circuit) {
 
   val loweredAst: Circuit = lower(ast)
 
-  val compiler = new ExpressionCompiler(numberOfBuffers = 4)
+  val compiler = new ExpressionCompiler(numberOfBuffers = 1)
 
-  private val program = compiler.compile(loweredAst)
+  private val program = compiler.compile(loweredAst, blackBoxFactories)
 
   private val dependencyTracker: DependencyTracker = {
     val module = FindModule(loweredAst.main, loweredAst) match {
@@ -75,7 +75,7 @@ class Compiler(ast: Circuit) {
   println(s"p --  ${program.dataInColumns}")
 
   var count = 0
-  while(peek("io_v") == 0 && count < 20) {
+  while(peek("io_v") == 0 && count < 50) {
     count += 1
     step()
   }
@@ -84,7 +84,7 @@ class Compiler(ast: Circuit) {
 object Compiler {
   def apply(input: String): Compiler = {
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
-    val circuit = new Compiler(ast)
+    val circuit = new Compiler(ast, Seq.empty)
     circuit
   }
 

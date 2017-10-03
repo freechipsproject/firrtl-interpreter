@@ -2,7 +2,12 @@
 
 package firrtl_interpreter.executable
 
-case class Program(symbolTable: SymbolTable, dataStore: DataStore, scheduler: Scheduler) {
+case class Program(
+                    symbolTable: SymbolTable,
+                    dataStore: DataStore,
+                    scheduler: Scheduler,
+                    dependencyTracker: DependencyTracker
+                  ) {
   def header: String = {
     symbolTable.keys.toArray.sorted.map { name => f"$name%10.10s" }.mkString("")
   }

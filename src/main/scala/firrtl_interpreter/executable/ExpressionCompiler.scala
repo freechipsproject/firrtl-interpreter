@@ -597,7 +597,7 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
   }
 
   // scalastyle:off cyclomatic.complexity
-  def compile(circuit: Circuit): Program = {
+  def compile(circuit: Circuit, blackBoxFactories: Seq[BlackBoxFactory]): Program = {
     val module = FindModule(circuit.main, circuit) match {
       case regularModule: firrtl.ir.Module => regularModule
       case externalModule: firrtl.ir.ExtModule =>
@@ -609,7 +609,9 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
 
     processModule("", module, circuit)
     dataStore.allocateBuffers()
-    Program(symbolTable, dataStore, scheduler)
+
+    val dependencyTracker = new DependencyTracker(circuit,module, blackBoxFactories)
+    Program(symbolTable, dataStore, scheduler, dependencyTracker)
   }
 }
 

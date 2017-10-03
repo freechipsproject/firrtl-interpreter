@@ -1,28 +1,16 @@
 // See LICENSE for license details.
 
-package firrtl_interpreter
+package firrtl_interpreter.executable
 
-import firrtl._
 import firrtl.ir._
-import logger.LazyLogging
+import firrtl.{WDefInstance, WRef, WSubField, WSubIndex}
+import firrtl_interpreter._
+
+import logger._
 
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-
-import logger._
-
-/**
-  * contains the constructor for a dependency graph.  The code for traversing a circuit
-  * and discovering the components and the expressions lives here
-  */
-object DependencyTracker extends LazyLogging {
-  val MaxColumnWidth = 100 // keeps displays of expressions readable
-
-  type DependencySet = Set[String]
-}
-
-import DependencyTracker._
 
 /**
   * A (probably overly complex) map of the names to expressions that occur in @circuit
@@ -34,9 +22,11 @@ import DependencyTracker._
   * @param circuit the AST being analyzed
   * @param module top level module in the AST, used elsewhere to find top level ports
   */
-class DependencyTracker(val circuit: Circuit,
-                      val module: Module,
-                      val blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty) {
+class DependencyTracker(
+    val circuit: Circuit,
+    val module: Module,
+    val blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty
+  ) extends LazyLogging {
 
   val MaxColumnWidth = 100 // keeps displays of expressions readable
 
