@@ -22,7 +22,7 @@ class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
 
   val loweredAst: Circuit = lower(ast)
 
-  val compiler = new ExpressionCompiler(numberOfBuffers = 1)
+  val compiler = new ExpressionCompiler(numberOfBuffers = 4)
 
   private val program = compiler.compile(loweredAst, blackBoxFactories)
 

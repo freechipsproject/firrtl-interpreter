@@ -92,6 +92,8 @@ class DataStore(numberOfBuffers: Int) {
       currentIntSource  = intData(sourceBufferIndex)
       currentLongSource = longData(sourceBufferIndex)
       currentBigSource  = bigData(sourceBufferIndex)
+
+      for(i <- currentIntTarget.indices) { currentIntTarget(i) = currentIntSource(i) }
     }
   }
 

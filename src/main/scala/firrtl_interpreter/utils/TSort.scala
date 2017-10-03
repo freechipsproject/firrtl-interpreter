@@ -28,6 +28,10 @@ object TSort {
       }
     }
 
+    innerSort(stringToStrings, Seq())
+  }
+
+  def addMissingTerminals(stringToStrings: Map[String, Set[String]]): Map[String, Set[String]] = {
     val allSets: Iterable[Set[String]] = stringToStrings.values
     val allValues: Iterable[String] = allSets.flatten
     val distinctValues: List[String] = allValues.toList.distinct
@@ -40,9 +44,7 @@ object TSort {
       }
     }
     println(s"New Pairs: $newPairs")
-    val fullMap = stringToStrings ++ newPairs.toMap
-
-    innerSort(fullMap, Seq())
+    stringToStrings ++ newPairs.toMap
   }
 
   def findLoops(graph: Map[String, Set[String]]): Seq[Seq[String]] = {
