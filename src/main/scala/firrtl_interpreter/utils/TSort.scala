@@ -6,9 +6,9 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 
 object TSort {
-  def apply(stringToStrings: Map[String, Set[String]], strings: Iterable[String]): Iterable[String] = {
+  def apply[T](mapSet: Map[T, Set[T]], strings: Iterable[T]): Iterable[T] = {
     @tailrec
-    def innerSort(toPreds: Map[String, Set[String]], done: Iterable[String]): Iterable[String] = {
+    def innerSort(toPreds: Map[T, Set[T]], done: Iterable[T]): Iterable[T] = {
       println(s"Partion: $toPreds")
       val (noPreds, hasPreds) = toPreds.partition {
         _._2.isEmpty
@@ -28,15 +28,15 @@ object TSort {
       }
     }
 
-    innerSort(stringToStrings, Seq())
+    innerSort(mapSet, Seq())
   }
 
-  def addMissingTerminals(stringToStrings: Map[String, Set[String]]): Map[String, Set[String]] = {
-    val allSets: Iterable[Set[String]] = stringToStrings.values
+  def addMissingTerminals(mapSet: Map[String, Set[String]]): Map[String, Set[String]] = {
+    val allSets: Iterable[Set[String]] = mapSet.values
     val allValues: Iterable[String] = allSets.flatten
     val distinctValues: List[String] = allValues.toList.distinct
     val newPairs: List[(String, Set[String])] = distinctValues.flatMap { value =>
-      if (stringToStrings.contains(value)) {
+      if (mapSet.contains(value)) {
         None
       }
       else {
@@ -44,14 +44,29 @@ object TSort {
       }
     }
     println(s"New Pairs: $newPairs")
-    stringToStrings ++ newPairs.toMap
+    mapSet ++ newPairs.toMap
   }
 
-  def findLoops(graph: Map[String, Set[String]]): Seq[Seq[String]] = {
-    val loops = new mutable.HashSet[List[String]]
+  def showMissingTerminals[T](mapSet: Map[T, Set[T]]): Unit = {
+    val allSets: Iterable[Set[T]] = mapSet.values
+    val allValues: Iterable[T] = allSets.flatten
+    val distinctValues: List[T] = allValues.toList.distinct
+    val newPairs: List[(T, Set[T])] = distinctValues.flatMap { value =>
+      if (mapSet.contains(value)) {
+        None
+      }
+      else {
+        Some(value -> Set.empty[T])
+      }
+    }
+    println(s"Missing terminals: $newPairs")
+  }
 
-    def walk(children: Set[String], traversed: List[String]): Unit = {
-      children.foreach { child: String =>
+  def findLoops[T](graph: Map[T, Set[T]]): Seq[Seq[T]] = {
+    val loops = new mutable.HashSet[List[T]]
+
+    def walk(children: Set[T], traversed: List[T]): Unit = {
+      children.foreach { child: T =>
         if (traversed.contains(child)) {
           loops += (child :: traversed).reverse.dropWhile(child.!=)
         }

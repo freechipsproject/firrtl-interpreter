@@ -34,6 +34,8 @@ class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
       case x =>
         throw InterpreterException(s"Top level module is not the right kind of module $x")
     }
+    println("X" * 80)
+    val st = new SymbolTableFactory(loweredAst, module, Seq.empty)
     new DependencyTracker(loweredAst, module)
   }
   println(s"Dependency Tracker Info:\n${dependencyTracker.getInfo}")

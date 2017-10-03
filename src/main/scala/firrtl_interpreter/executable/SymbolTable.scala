@@ -90,11 +90,26 @@ object SymbolTable {
   def apply(dataStore: DataStore): SymbolTable = new SymbolTable(dataStore)
 }
 
-case class Symbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int) {
+case class Symbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int) extends Ordering[Symbol] {
   var index: Int = -1
 
-  override def toString: String = {
-    f"${s"$dataType<$bitWidth>"}%12s $dataSize index $index%5d $name%-40.40s"
+  override def hashCode(): Int = {
+    name.hashCode
+  }
+  override def equals(that: Any): Boolean = that match {
+    case that: Symbol => this.hashCode() == that.hashCode()
+    case _ =>
+      throw new InterpreterException((s"Can't compare Symbol $this to $that"))
+  }
+
+//  override def toString: String = {
+//    f"${s"$dataType<$bitWidth>"}%12s $dataSize index $index%5d $name%-40.40s"
+//  }
+
+  override def compare(x: Symbol, y: Symbol): Int = {
+    if(x == y) { 0 }
+    else if(x < y) { -1 }
+    else { 1 }
   }
 }
 
