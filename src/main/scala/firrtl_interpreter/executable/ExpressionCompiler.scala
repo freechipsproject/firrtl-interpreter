@@ -11,7 +11,7 @@ import firrtl_interpreter._
 class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
   val dataStore:   DataStore   = DataStore(numberOfBuffers)
   val symbolTable: SymbolTable = SymbolTable(dataStore)
-  val scheduler:   Scheduler   = Scheduler(dataStore)
+  val scheduler:   Scheduler   = Scheduler(dataStore, symbolTable)
 
   def getWidth(tpe: firrtl.ir.Type): Int = {
     tpe match {

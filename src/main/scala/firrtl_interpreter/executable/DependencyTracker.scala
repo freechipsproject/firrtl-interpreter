@@ -210,6 +210,8 @@ class DependencyTracker(
 
   val sorted: Iterable[String] = TSort(dependencies.toMap, Seq())
 
+  val symbolSortKey: Map[String, Int] = sorted.zipWithIndex.toMap
+
   println(s"Sorted elements\n${sorted.mkString("\n")}")
   println(s"End of dependency graph")
   // scalastyle:on cyclomatic.complexity

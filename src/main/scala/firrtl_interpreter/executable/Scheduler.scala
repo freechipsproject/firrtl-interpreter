@@ -4,7 +4,7 @@ package firrtl_interpreter.executable
 
 import scala.collection.mutable
 
-class Scheduler(dataStore: DataStore) {
+class Scheduler(dataStore: DataStore, symbolTable: SymbolTable) {
   val combinationalAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
   val bufferAdvanceAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
 
@@ -51,8 +51,19 @@ class Scheduler(dataStore: DataStore) {
   def getTriggerExpressions: Iterable[ExpressionResult] = {
     triggeredAssigns.keys
   }
+
+  def sortCombinational(dependencyTracker: DependencyTracker): Unit = {
+    def compare(a: Assigner, b: Assigner): Boolean = {
+      (a, b) match {
+        case (aa: dataStore.AssignInt, bb: dataStore.AssignInt) =>
+          dependencyTracker.symbolSortKey(symbolTable(IntSize, aa.index).name) <
+            dependencyTracker.symbolSortKey(symbolTable(IntSize, bb.index).name)
+        case _ => false
+      }
+    }
+  }
 }
 
 object Scheduler {
-  def apply(dataStore: DataStore): Scheduler = new Scheduler(dataStore)
+  def apply(dataStore: DataStore, symbolTable: SymbolTable): Scheduler = new Scheduler(dataStore, symbolTable)
 }

@@ -9,6 +9,12 @@ import scala.collection.mutable
 
 class SymbolTable(dataStore: DataStore) {
   private val table = new mutable.HashMap[String, Symbol]
+  private val sizeAndIndexToSymbol = new mutable.HashMap[DataSize, mutable.HashMap[Int, Symbol]] {
+    override def default(key: DataSize): mutable.HashMap[Int, Symbol] = {
+      this(key) = new mutable.HashMap[Int, Symbol]
+      this(key)
+    }
+  }
 
   def size: Int = table.size
   def keys:Iterable[String] = table.keys
@@ -28,6 +34,7 @@ class SymbolTable(dataStore: DataStore) {
 
   def assignIndex(symbol: Symbol): Unit = {
     symbol.index = getIndex(symbol.dataSize)
+    sizeAndIndexToSymbol(symbol.dataSize)(symbol.index) = symbol
   }
 
   def addSymbol(symbol: Symbol): Symbol = {
@@ -70,6 +77,7 @@ class SymbolTable(dataStore: DataStore) {
   def isRegister(name: String): Boolean = registerNames.contains(name)
 
   def apply(name: String): Symbol = table(name)
+  def apply(dataSize: DataSize, index: Int): Symbol = sizeAndIndexToSymbol(dataSize)(index)
 
   def render: String = {
     keys.toArray.sorted.map { name =>
