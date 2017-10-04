@@ -206,10 +206,16 @@ class SymbolTableFactory(
     println(f"$symbol%-30.30s ${dependencies(symbol).map(_.name).mkString(",").take(100)}")
   }
 
-  TSort.showMissingTerminals(dependencies.toMap)
-  println(s"Loops: ${TSort.findLoops(dependencies.toMap)}")
-
-  val sorted: Iterable[Symbol] = TSort(dependencies.toMap, Seq.empty[Symbol])
+  val sorted: Iterable[Symbol] = try {
+    TSort(dependencies.toMap, Seq.empty[Symbol])
+  }
+  catch {
+    case e: Throwable =>
+      println(s"Exception during topological sort, most likely missing terminals, or loops")
+      TSort.showMissingTerminals(dependencies.toMap)
+      println(s"Loops: ${TSort.findLoops(dependencies.toMap)}")
+      throw e
+  }
 
   println(s"Sorted elements\n${sorted.map(_.name).mkString("\n")}")
   println(s"End of dependency graph")

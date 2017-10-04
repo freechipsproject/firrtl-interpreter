@@ -9,7 +9,7 @@ object TSort {
   def apply[T](mapSet: Map[T, Set[T]], strings: Iterable[T]): Iterable[T] = {
     @tailrec
     def innerSort(toPreds: Map[T, Set[T]], done: Iterable[T]): Iterable[T] = {
-      println(s"Partion: $toPreds")
+      // println(s"Partition: $toPreds")
       val (noPreds, hasPreds) = toPreds.partition {
         _._2.isEmpty
       }
