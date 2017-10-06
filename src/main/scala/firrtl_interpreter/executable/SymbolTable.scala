@@ -142,7 +142,12 @@ object SymbolTable extends LazyLogging {
         case defMemory: DefMemory =>
           val expandedName = expand(defMemory.name)
           logger.debug(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
-          val newDefMemory = defMemory.copy(name = expandedName)
+
+          Memory.buildSymbols(defMemory, expandedName).foreach { symbol =>
+            nameToSymbol(symbol.name) = symbol
+            dependencies(symbol) = Set.empty
+          }
+
 
         //      case IsInvalid(info, expression) =>
         //        IsInvalid(info, expressionToReferences(expression))
@@ -236,7 +241,7 @@ object SymbolTable extends LazyLogging {
     logger.debug(s"For module ${module.name} dependencyGraph =")
     nameToSymbol.keys.toSeq.sorted foreach { k =>
       val symbol = nameToSymbol(k)
-      println(f"$symbol%-30.30s ${dependencies(symbol).map(_.name).mkString(",").take(100)}")
+      println(f"$symbol%-50.50s ${dependencies(symbol).map(_.name).mkString(",").take(100)}")
     }
 
     val sorted: Iterable[Symbol] = try {

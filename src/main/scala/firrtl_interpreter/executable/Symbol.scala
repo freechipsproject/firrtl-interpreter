@@ -12,7 +12,7 @@ case class Symbol(
     dataType: DataType,
     dataKind: Kind,
     bitWidth: Int,
-    slots: Int = 1
+    slots:    Int
 ) {
   var index: Int = -1
   var cardinalNumber: Int = -1
@@ -26,8 +26,8 @@ case class Symbol(
 }
 
 object Symbol {
-  def apply(name: String, firrtlType: firrtl.ir.Type, firrtlKind: Kind): Symbol = {
-    Symbol(name, DataSize(firrtlType), DataType(firrtlType), firrtlKind, DataSize.getBitWidth(firrtlType))
+  def apply(name: String, firrtlType: firrtl.ir.Type, firrtlKind: Kind, slots: Int = 1): Symbol = {
+    Symbol(name, DataSize(firrtlType), DataType(firrtlType), firrtlKind, DataSize.getBitWidth(firrtlType), slots)
   }
 }
 

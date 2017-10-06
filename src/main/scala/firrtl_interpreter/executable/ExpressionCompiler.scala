@@ -72,9 +72,9 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
               case Dshl => DshlInts(e1.apply, e2.apply)
               case Dshr => DshrInts(e1.apply, e2.apply)
 
-              case And  => AndBigs(e1.apply, e2.apply)
-              case Or   => OrBigs(e1.apply, e2.apply)
-              case Xor  => XorBigs(e1.apply, e2.apply)
+              case And  => AndInts(e1.apply, e2.apply)
+              case Or   => OrInts(e1.apply, e2.apply)
+              case Xor  => XorInts(e1.apply, e2.apply)
 
               case Cat =>
                 CatInts(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
@@ -236,6 +236,7 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
         val (isSigned, width) = tpe match {
           case UIntType(IntWidth(n)) => (false, n.toInt)
           case SIntType(IntWidth(n)) => (true, n.toInt)
+          case ClockType             => (false, 1)
         }
 
         arg1 match {
@@ -396,7 +397,11 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
         val assigner = (symbol.dataSize, expressionResult) match {
           case (IntSize, result: IntExpressionResult) => dataStore.AssignInt(symbol.index, result.apply)
 //          case (LongSize, result: LongExpressionResult) => dataStore.AssignLong(symbol.index, result.apply)
+          case (BigSize, result: IntExpressionResult) => dataStore.AssignBig(symbol.index, ToBig(result.apply).apply)
           case (BigSize, result: BigExpressionResult) => dataStore.AssignBig(symbol.index, result.apply)
+          case (size, res) =>
+            println(s"Yikes how am i here. $size, $res")
+            ???
         }
         scheduler.combinationalAssigns += assigner
         assigner
