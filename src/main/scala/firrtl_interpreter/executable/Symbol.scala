@@ -2,21 +2,32 @@
 
 package firrtl_interpreter.executable
 
+import firrtl.Kind
 import firrtl.ir.IntWidth
 import firrtl_interpreter.InterpreterException
 
-case class Symbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int, slots: Int = 1) {
+case class Symbol(
+    name: String,
+    dataSize: DataSize,
+    dataType: DataType,
+    dataKind: Kind,
+    bitWidth: Int,
+    slots: Int = 1
+) {
   var index: Int = -1
   var cardinalNumber: Int = -1
 
   //  override def toString: String = {
   //    f"${s"$dataType<$bitWidth>"}%12s $dataSize index $index%5d $name%-40.40s"
   //  }
+  def render: String = {
+    f"$name%-40.40s $dataSize%3.3s $dataType%4.4s $bitWidth%6d $slots%1d $index%6d $cardinalNumber%6d"
+  }
 }
 
 object Symbol {
-  def apply(name: String, firrtlType: firrtl.ir.Type): Symbol = {
-    Symbol(name, DataSize(firrtlType), DataType(firrtlType), DataSize.getBitWidth(firrtlType))
+  def apply(name: String, firrtlType: firrtl.ir.Type, firrtlKind: Kind): Symbol = {
+    Symbol(name, DataSize(firrtlType), DataType(firrtlType), firrtlKind, DataSize.getBitWidth(firrtlType))
   }
 }
 

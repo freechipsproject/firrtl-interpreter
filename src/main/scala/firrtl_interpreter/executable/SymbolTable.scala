@@ -2,7 +2,7 @@
 
 package firrtl_interpreter.executable
 
-import firrtl.{WDefInstance, WRef, WSubField, WSubIndex}
+import firrtl._
 import firrtl.ir._
 import firrtl_interpreter.utils.TSort
 import firrtl_interpreter.{BlackBoxFactory, BlackBoxImplementation, FindModule, InterpreterException}
@@ -38,7 +38,7 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
 
   def render: String = {
     keys.toArray.sorted.map { name =>
-      nameToSymbol(name)
+      nameToSymbol(name).render
     }.mkString("\n")
   }
 }
@@ -117,22 +117,22 @@ object SymbolTable extends LazyLogging {
         case DefNode(info, name, expression) =>
           logger.debug(s"declaration:DefNode:$name:${expression.serialize} ${expressionToReferences(expression)}")
           val expandedName = expand(name)
-          val symbol = Symbol(expandedName, expression.tpe)
+          val symbol = Symbol(expandedName, expression.tpe, firrtl.NodeKind)
           nameToSymbol(expandedName) = symbol
           dependencies(symbol) = expressionToReferences(expression)
 
         case DefWire(info, name, tpe) =>
           logger.debug(s"declaration:DefWire:$name")
           val expandedName = expand(name)
-          val symbol = Symbol(expandedName, tpe)
+          val symbol = Symbol(expandedName, tpe, WireKind)
           nameToSymbol(expandedName) = symbol
           dependencies(symbol) = Set.empty
 
         case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
           val expandedName = expand(name)
 
-          val registerIn = Symbol(expandedName + "/in", tpe)
-          val registerOut = Symbol(expandedName, tpe)
+          val registerIn = Symbol(expandedName + "/in", tpe, RegKind)
+          val registerOut = Symbol(expandedName, tpe,RegKind)
           registerNames += registerOut.name
           nameToSymbol(registerIn.name) = registerIn
           nameToSymbol(registerOut.name) = registerOut
@@ -178,7 +178,7 @@ object SymbolTable extends LazyLogging {
         if (port.direction == Output) {
           val outputDependencies = instance.outputDependencies(port.name)
           val expandedName = expand(port.name)
-          val symbol = Symbol(expandedName, port.tpe)
+          val symbol = Symbol(expandedName, port.tpe, PortKind)
           nameToSymbol(expandedName) = symbol
           dependencies(symbol) = Set.empty
         }
@@ -191,7 +191,7 @@ object SymbolTable extends LazyLogging {
       def processPorts(module: DefModule): Unit = {
         for (port <- module.ports) {
           val expandedName = expand(port.name)
-          val symbol = Symbol(expandedName, port.tpe)
+          val symbol = Symbol(expandedName, port.tpe, PortKind)
           nameToSymbol(expandedName) = symbol
           dependencies(symbol) = Set.empty
         }
@@ -252,10 +252,12 @@ object SymbolTable extends LazyLogging {
 
     sorted.zipWithIndex.foreach { case (symbol, index) => symbol.cardinalNumber = index }
 
-    logger.info(s"Sorted elements\n${sorted.map(_.name).mkString("\n")}")
+    logger.debug(s"Sorted elements\n${sorted.map(_.name).mkString("\n")}")
     logger.info(s"End of dependency graph")
     // scalastyle:on cyclomatic.complexity
 
-    SymbolTable(nameToSymbol)
+    val symbolTable = SymbolTable(nameToSymbol)
+    symbolTable.registerNames ++= registerNames
+    symbolTable
   }
 }

@@ -37,6 +37,8 @@ class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
     compiler.compile(loweredAst, blackBoxFactories)
   }
 
+  println(s"symbol table size is ${symbolTable.size}, dataStore allocations ${dataStore.getSizes}")
+
   println(s"SymbolTable:\n${program.symbolTable.render}")
 
   def poke(name: String, value: Int): Unit = {
