@@ -22,23 +22,17 @@ class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
 
   val loweredAst: Circuit = lower(ast)
 
-  val compiler = new ExpressionCompiler(numberOfBuffers = 4)
+  val symbolTable = SymbolTable(loweredAst, Seq.empty)
+  val dataStore = DataStore(numberOfBuffers = 1)
+  symbolTable.allocateData(dataStore)
+  val scheduler = new Scheduler(dataStore, symbolTable)
+  val program = new Program(symbolTable, dataStore, scheduler)
 
-  private val program = compiler.compile(loweredAst, blackBoxFactories)
+  val compiler = new ExpressionCompiler(program)
 
-  private val dependencyTracker: DependencyTracker = {
-    val module = FindModule(loweredAst.main, loweredAst) match {
-      case regularModule: firrtl.ir.Module => regularModule
-      case externalModule: firrtl.ir.ExtModule =>
-        throw InterpreterException(s"Top level module must be a regular module $externalModule")
-      case x =>
-        throw InterpreterException(s"Top level module is not the right kind of module $x")
-    }
-    println("X" * 80)
-    val st = new SymbolTableFactory(loweredAst, module, Seq.empty)
-    new DependencyTracker(loweredAst, module)
-  }
-  println(s"Dependency Tracker Info:\n${dependencyTracker.getInfo}")
+  compiler.compile(loweredAst, blackBoxFactories)
+
+
   println(s"SymbolTable:\n${program.symbolTable.render}")
 
   def poke(name: String, value: Int): Unit = {
@@ -91,7 +85,8 @@ object Compiler {
   }
 
   def main(args: Array[String]): Unit = {
-    val text = io.Source.fromFile("gcd.fir").getLines().mkString("\n")
+    val fileName = args.headOption.getOrElse("GCD.fir")
+    val text = io.Source.fromFile(fileName).getLines().mkString("\n")
 
     apply(text)
   }

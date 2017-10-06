@@ -2,13 +2,15 @@
 
 package firrtl_interpreter.executable
 
-import firrtl.ir.IntWidth
-import firrtl_interpreter.InterpreterException
+import firrtl.{WDefInstance, WRef, WSubField, WSubIndex}
+import firrtl.ir._
+import firrtl_interpreter.utils.TSort
+import firrtl_interpreter.{BlackBoxFactory, BlackBoxImplementation, FindModule, InterpreterException}
+import logger.LazyLogging
 
 import scala.collection.mutable
 
-class SymbolTable(dataStore: DataStore) {
-  private val table = new mutable.HashMap[String, Symbol]
+class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
   private val sizeAndIndexToSymbol = new mutable.HashMap[DataSize, mutable.HashMap[Int, Symbol]] {
     override def default(key: DataSize): mutable.HashMap[Int, Symbol] = {
       this(key) = new mutable.HashMap[Int, Symbol]
@@ -16,173 +18,244 @@ class SymbolTable(dataStore: DataStore) {
     }
   }
 
-  def size: Int = table.size
-  def keys:Iterable[String] = table.keys
-
-  def getSizes: (Int, Int, Int) = {
-    dataStore.getSizes
+  def allocateData(dataStore: DataStore): Unit = {
+    nameToSymbol.values.foreach { symbol =>
+      symbol.index = dataStore.getIndex(symbol.dataSize, symbol.slots)
+      sizeAndIndexToSymbol(symbol.dataSize)(symbol.index) = symbol
+    }
+    dataStore.allocateBuffers()
   }
 
-  /**
-    * Based on width allocate slots at the current index, bumping the index for
-    * the next call.
-    * @param dataSize Used to determine which index to use.
-    * @param slots not sure if we need this but allows multiple assigns with 1 call
-    * @return the index assigned
-    */
-  def getIndex(dataSize: DataSize, slots: Int = 1): Int = dataStore.getIndex(dataSize, slots)
-
-  def assignIndex(symbol: Symbol): Unit = {
-    symbol.index = getIndex(symbol.dataSize)
-    sizeAndIndexToSymbol(symbol.dataSize)(symbol.index) = symbol
-  }
-
-  def addSymbol(symbol: Symbol): Symbol = {
-    if(!table.contains(symbol.name)) {
-      table(symbol.name) = symbol
-      assignIndex(symbol)
-    }
-    symbol
-  }
-
-  def addSymbol(name: String, firrtlType: firrtl.ir.Type): Symbol = {
-    if(!table.contains(name)) {
-      addSymbol(Symbol(name, firrtlType))
-    }
-    else {
-      table(name)
-    }
-  }
-
-  def getSymbol(name: String, firrtlType: firrtl.ir.Type): Symbol = {
-    if(table.contains(name)) {
-      table(name)
-    }
-    else {
-      addSymbol(Symbol(name, firrtlType))
-    }
-  }
-
-  def getSymbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int): Symbol = {
-    if(table.contains(name)) {
-      table(name)
-    }
-    else {
-      addSymbol(Symbol(name, dataSize, dataType, bitWidth))
-    }
-  }
+  def size: Int = nameToSymbol.size
+  def keys:Iterable[String] = nameToSymbol.keys
 
   val registerNames: mutable.HashSet[String] = new mutable.HashSet[String]
 
   def isRegister(name: String): Boolean = registerNames.contains(name)
 
-  def apply(name: String): Symbol = table(name)
+  def apply(name: String): Symbol = nameToSymbol(name)
   def apply(dataSize: DataSize, index: Int): Symbol = sizeAndIndexToSymbol(dataSize)(index)
 
   def render: String = {
     keys.toArray.sorted.map { name =>
-      table(name)
+      nameToSymbol(name)
     }.mkString("\n")
   }
 }
 
-object SymbolTable {
-  def apply(dataStore: DataStore): SymbolTable = new SymbolTable(dataStore)
-}
+object SymbolTable extends LazyLogging {
+  def apply(nameToSymbol: mutable.HashMap[String, Symbol]): SymbolTable = new SymbolTable(nameToSymbol)
 
-case class Symbol(name: String, dataSize: DataSize, dataType: DataType, bitWidth: Int) extends Ordering[Symbol] {
-  var index: Int = -1
+  //scalastyle:off cyclomatic.complexity method.length
+  def apply(circuit: Circuit, blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty): SymbolTable = {
 
-  override def hashCode(): Int = {
-    name.hashCode
-  }
-  override def equals(that: Any): Boolean = that match {
-    case that: Symbol => this.hashCode() == that.hashCode()
-    case _ =>
-      throw new InterpreterException((s"Can't compare Symbol $this to $that"))
-  }
+    type SymbolSet = Set[Symbol]
 
-//  override def toString: String = {
-//    f"${s"$dataType<$bitWidth>"}%12s $dataSize index $index%5d $name%-40.40s"
-//  }
+    val nameToSymbol = new mutable.HashMap[String, Symbol]()
 
-  override def compare(x: Symbol, y: Symbol): Int = {
-    if(x == y) { 0 }
-    else if(x < y) { -1 }
-    else { 1 }
-  }
-}
+    val dependencies: mutable.HashMap[Symbol, SymbolSet] = new mutable.HashMap[Symbol, SymbolSet]
+    val registerNames: mutable.HashSet[String] = new mutable.HashSet[String]()
 
-object Symbol {
-  def apply(name: String, firrtlType: firrtl.ir.Type): Symbol = {
-    Symbol(name, DataSize(firrtlType), DataType(firrtlType), DataSize.getBitWidth(firrtlType))
-  }
-}
-
-trait DataSize
-
-object IntSize extends DataSize {
-  override def toString: String = "Int"
-}
-object LongSize extends DataSize {
-  override def toString: String = "Long"
-}
-object BigSize extends DataSize {
-  override def toString: String = "Big"
-}
-
-object DataSize {
-  val IntThreshold = 31
-  val LongThreshold = 31 // Not being used right now
-
-  def getBitWidth(firrtlType: firrtl.ir.Type): Int = {
-    firrtlType match {
-      case firrtl.ir.SIntType(IntWidth(bitWidth)) => bitWidth.toInt
-      case firrtl.ir.UIntType(IntWidth(bitWidth)) => bitWidth.toInt
-      case firrtl.ir.ClockType                    => 1
-      case _ =>
-        throw InterpreterException(s"Error:DataSize doesn't know size of $firrtlType")
+    def getInfo: String = {
+      f"""
+         |Circuit Info:
+     """.stripMargin
     }
-  }
 
-  def apply(bitWidth: Int): DataSize = {
-    if(bitWidth <= DataSize.IntThreshold) {
-      IntSize
+    // scalastyle:off
+    def processDependencyStatements(modulePrefix: String, s: Statement): Unit = {
+      def expand(name: String): String = if (modulePrefix.isEmpty) name else modulePrefix + "." + name
+
+      def expressionToReferences(expression: Expression): SymbolSet = {
+        val result = expression match {
+          case Mux(condition, trueExpression, falseExpression, _) =>
+            expressionToReferences(condition) ++
+              expressionToReferences(trueExpression) ++
+              expressionToReferences(falseExpression)
+
+          case _: WRef | _: WSubField | _: WSubIndex =>
+            Set(nameToSymbol(expand(expression.serialize)))
+
+          case ValidIf(condition, value, _) =>
+            expressionToReferences(condition) ++ expressionToReferences(value)
+          case DoPrim(_, args, _, _) =>
+            args.foldLeft(Set.empty[Symbol]) { case (accum, expr) => accum ++ expressionToReferences(expr) }
+          case _: UIntLiteral | _: SIntLiteral =>
+            Set.empty[Symbol]
+          case _ =>
+            throw new Exception(s"expressionToReferences:error: unhandled expression $expression")
+        }
+        result
+      }
+
+      s match {
+        case block: Block =>
+          block.stmts.foreach { subStatement =>
+            processDependencyStatements(modulePrefix, subStatement)
+          }
+
+        case con: Connect =>
+          con.loc match {
+            case (_: WRef | _: WSubField | _: WSubIndex) =>
+              val name = if (registerNames.contains(expand(con.loc.serialize))) {
+                expand(con.loc.serialize) + "/in"
+              }
+              else {
+                expand(con.loc.serialize)
+              }
+              val symbol = nameToSymbol(name)
+
+              dependencies(symbol) = expressionToReferences(con.expr)
+          }
+
+        case WDefInstance(info, instanceName, moduleName, _) =>
+          val subModule = FindModule(moduleName, circuit)
+          val newPrefix = if (modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
+          logger.debug(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
+          processModule(newPrefix, subModule)
+
+        case DefNode(info, name, expression) =>
+          logger.debug(s"declaration:DefNode:$name:${expression.serialize} ${expressionToReferences(expression)}")
+          val expandedName = expand(name)
+          val symbol = Symbol(expandedName, expression.tpe)
+          nameToSymbol(expandedName) = symbol
+          dependencies(symbol) = expressionToReferences(expression)
+
+        case DefWire(info, name, tpe) =>
+          logger.debug(s"declaration:DefWire:$name")
+          val expandedName = expand(name)
+          val symbol = Symbol(expandedName, tpe)
+          nameToSymbol(expandedName) = symbol
+          dependencies(symbol) = Set.empty
+
+        case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
+          val expandedName = expand(name)
+
+          val registerIn = Symbol(expandedName + "/in", tpe)
+          val registerOut = Symbol(expandedName, tpe)
+          registerNames += registerOut.name
+          nameToSymbol(registerIn.name) = registerIn
+          nameToSymbol(registerOut.name) = registerOut
+          dependencies(registerIn) = Set.empty
+          dependencies(registerOut) = Set.empty
+
+        case defMemory: DefMemory =>
+          val expandedName = expand(defMemory.name)
+          logger.debug(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
+          val newDefMemory = defMemory.copy(name = expandedName)
+
+        //      case IsInvalid(info, expression) =>
+        //        IsInvalid(info, expressionToReferences(expression))
+        //      case Stop(info, ret, clkExpression, enableExpression) =>
+        //        addStop(Stop(info, ret, expressionToReferences(clkExpression), expressionToReferences(enableExpression)))
+        //        s
+        //      case Print(info, stringLiteral, argExpressions, clkExpression, enableExpression) =>
+        //        addPrint(Print(
+        //          info, stringLiteral,
+        //          argExpressions.map { expression => expressionToReferences(expression) },
+        //          expressionToReferences(clkExpression),
+        //          expressionToReferences(enableExpression)
+        //        ))
+
+        case EmptyStmt =>
+
+        case conditionally: Conditionally =>
+          // logger.debug(s"got a conditionally $conditionally")
+          throw new InterpreterException(s"conditionally unsupported in interpreter $conditionally")
+        case _ =>
+          println(s"TODO: Unhandled statement $s")
+      }
     }
-    else if(bitWidth <= DataSize.LongThreshold) {
-      LongSize
+
+    // scalastyle:on
+
+    def processExternalInstance(extModule: ExtModule,
+                                modulePrefix: String,
+                                instance: BlackBoxImplementation): Unit = {
+      def expand(name: String): String = modulePrefix + "." + name
+
+      for (port <- extModule.ports) {
+        if (port.direction == Output) {
+          val outputDependencies = instance.outputDependencies(port.name)
+          val expandedName = expand(port.name)
+          val symbol = Symbol(expandedName, port.tpe)
+          nameToSymbol(expandedName) = symbol
+          dependencies(symbol) = Set.empty
+        }
+      }
     }
-    else {
-      BigSize
+
+    def processModule(modulePrefix: String, myModule: DefModule): Unit = {
+      def expand(name: String): String = if (modulePrefix.nonEmpty) modulePrefix + "." + name else name
+
+      def processPorts(module: DefModule): Unit = {
+        for (port <- module.ports) {
+          val expandedName = expand(port.name)
+          val symbol = Symbol(expandedName, port.tpe)
+          nameToSymbol(expandedName) = symbol
+          dependencies(symbol) = Set.empty
+        }
+      }
+
+      myModule match {
+        case module: Module =>
+          processPorts(module)
+          processDependencyStatements(modulePrefix, module.body)
+        case extModule: ExtModule => // Look to see if we have an implementation for this
+          logger.debug(s"got external module ${extModule.name} instance $modulePrefix")
+          processPorts(extModule)
+          /* use exists while looking for the right factory, short circuits iteration when found */
+          logger.debug(s"Factories: ${blackBoxFactories.mkString("\n")}")
+          val implementationFound = blackBoxFactories.exists { factory =>
+            logger.debug("Found an existing factory")
+            factory.createInstance(modulePrefix, extModule.defname) match {
+              case Some(implementation) =>
+                processExternalInstance(extModule, modulePrefix, implementation)
+                true
+              case _ => false
+            }
+          }
+          if (!implementationFound) {
+            println(
+              s"""WARNING: external module "${extModule.defname}"($modulePrefix:${extModule.name})""" +
+                """was not matched with an implementation""")
+          }
+      }
     }
-  }
 
-  def apply(bitWidth: BigInt): DataSize = apply(bitWidth.toInt)
-
-  def apply(firrtlType: firrtl.ir.Type): DataSize = {
-    apply(getBitWidth(firrtlType))
-  }
-}
-
-trait DataType
-
-object SignedInt extends DataType {
-  override def toString: String = "SInt"
-}
-object UnsignedInt extends DataType {
-  override def toString: String = "UInt"
-}
-
-object DataType {
-  //TODO: (chick) do we need clock and reset types here
-
-  def apply(tpe: firrtl.ir.Type): DataType = {
-    tpe match {
-      case _: firrtl.ir.SIntType => SignedInt
-      case _: firrtl.ir.UIntType => UnsignedInt
-      case firrtl.ir.ClockType   => UnsignedInt
-      case t =>
-        throw new InterpreterException(s"DataType does not know firrtl type $t")
+    val module = FindModule(circuit.main, circuit) match {
+      case regularModule: firrtl.ir.Module => regularModule
+      case externalModule: firrtl.ir.ExtModule =>
+        throw InterpreterException(s"Top level module must be a regular module $externalModule")
+      case x =>
+        throw InterpreterException(s"Top level module is not the right kind of module $x")
     }
+
+    processModule("", module)
+
+    logger.debug(s"For module ${module.name} dependencyGraph =")
+    nameToSymbol.keys.toSeq.sorted foreach { k =>
+      val symbol = nameToSymbol(k)
+      println(f"$symbol%-30.30s ${dependencies(symbol).map(_.name).mkString(",").take(100)}")
+    }
+
+    val sorted: Iterable[Symbol] = try {
+      TSort(dependencies.toMap, Seq.empty[Symbol])
+    }
+    catch {
+      case e: Throwable =>
+        println(s"Exception during topological sort, most likely missing terminals, or loops")
+        TSort.showMissingTerminals(dependencies.toMap)
+        println(s"Loops: ${TSort.findLoops(dependencies.toMap)}")
+        throw e
+    }
+
+    sorted.zipWithIndex.foreach { case (symbol, index) => symbol.cardinalNumber = index }
+
+    logger.info(s"Sorted elements\n${sorted.map(_.name).mkString("\n")}")
+    logger.info(s"End of dependency graph")
+    // scalastyle:on cyclomatic.complexity
+
+    SymbolTable(nameToSymbol)
   }
 }

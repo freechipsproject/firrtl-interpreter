@@ -8,10 +8,10 @@ import firrtl.ir._
 import firrtl_interpreter._
 
 
-class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
-  val dataStore:   DataStore   = DataStore(numberOfBuffers)
-  val symbolTable: SymbolTable = SymbolTable(dataStore)
-  val scheduler:   Scheduler   = Scheduler(dataStore, symbolTable)
+class ExpressionCompiler(program: Program) extends logger.LazyLogging {
+  val dataStore:   DataStore   = program.dataStore
+  val symbolTable: SymbolTable = program.symbolTable
+  val scheduler:   Scheduler   = program.scheduler
 
   def getWidth(tpe: firrtl.ir.Type): Int = {
     tpe match {
@@ -279,8 +279,8 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
         * @return
         */
       def processExpression(expression: Expression): ExpressionResult = {
-        def getSymbolAndAccessor(name: String, firrtlType: firrtl.ir.Type): ExpressionResult = {
-          val symbol = symbolTable.addSymbol(name, firrtlType)
+        def createAccessor(name: String): ExpressionResult = {
+          val symbol = symbolTable(name)
           symbol.dataSize match {
             case IntSize => dataStore.GetInt(symbol.index)
 //            case LongSize => dataStore.GetLong(symbol.index)
@@ -307,11 +307,11 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
             }
 
           case WRef(name, tpe, _, _) =>
-            getSymbolAndAccessor(name, tpe)
+            createAccessor(name)
           case subfield: WSubField =>
-            getSymbolAndAccessor(subfield.serialize, subfield.tpe)
+            createAccessor(subfield.serialize)
           case subIndex: WSubIndex =>
-            getSymbolAndAccessor(subIndex.serialize, subIndex.tpe)
+            createAccessor(subIndex.serialize)
 
           case ValidIf(condition, value, tpe) =>
             processExpression(condition) match {
@@ -391,11 +391,8 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
         result
       }
 
-      def getSymbolAndAssigner(
-                                name: String,
-                                firrtlType: firrtl.ir.Type,
-                                expressionResult: ExpressionResult): Assigner = {
-        val symbol = symbolTable.getSymbol(name, firrtlType)
+      def getAssigner(name: String, expressionResult: ExpressionResult): Assigner = {
+        val symbol = symbolTable(name)
         val assigner = (symbol.dataSize, expressionResult) match {
           case (IntSize, result: IntExpressionResult) => dataStore.AssignInt(symbol.index, result.apply)
 //          case (LongSize, result: LongExpressionResult) => dataStore.AssignLong(symbol.index, result.apply)
@@ -435,7 +432,7 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
             }
           }
           val lhsName = renameIfRegister(con.loc.serialize)
-          getSymbolAndAssigner(lhsName, con.loc.tpe, processExpression(con.expr))
+          getAssigner(lhsName, processExpression(con.expr))
 
         case WDefInstance(info, instanceName, moduleName, _) =>
           val subModule = FindModule(moduleName, circuit)
@@ -445,11 +442,10 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
 
         case DefNode(info, name, expression) =>
           logger.debug(s"declaration:DefNode:$name:${expression.serialize}")
-          getSymbolAndAssigner(name, expression.tpe, processExpression(expression))
+          getAssigner(name, processExpression(expression))
 
         case DefWire(info, name, tpe) =>
           logger.debug(s"declaration:DefWire:$name")
-          symbolTable.addSymbol(name, tpe)
 
         case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
           logger.debug(s"declaration:DefRegister:$name")
@@ -462,12 +458,10 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
           val resetResult = processExpression(resetExpression)
           val resetValue  = processExpression(initValueExpression)
 
-          val registerIn  = symbolTable.addSymbol(s"$expandedName${ExpressionCompiler.RegisterInputSuffix}", tpe)
-          val registerOut = symbolTable.addSymbol(expandedName, tpe)
+          val registerIn  = symbolTable(s"$expandedName${ExpressionCompiler.RegisterInputSuffix}")
+          val registerOut = symbolTable(expandedName)
 
-          symbolTable.registerNames += expandedName
-
-          if(numberOfBuffers > 1) {
+          if(dataStore.numberOfBuffers > 1) {
             scheduler.scheduleCopy(registerIn)
           }
 
@@ -560,8 +554,8 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
 
     def processPorts(module: DefModule): Unit = {
       for(port <- module.ports) {
-        val symbol = symbolTable.addSymbol(expand(port.name), port.tpe)
-        if(numberOfBuffers > 1) {
+        val symbol = symbolTable(expand(port.name))
+        if(dataStore.numberOfBuffers > 1) {
           scheduler.scheduleCopy(symbol)
         }
       }
@@ -593,7 +587,7 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
   }
 
   // scalastyle:off cyclomatic.complexity
-  def compile(circuit: Circuit, blackBoxFactories: Seq[BlackBoxFactory]): Program = {
+  def compile(circuit: Circuit, blackBoxFactories: Seq[BlackBoxFactory]): Unit = {
     val module = FindModule(circuit.main, circuit) match {
       case regularModule: firrtl.ir.Module => regularModule
       case externalModule: firrtl.ir.ExtModule =>
@@ -607,7 +601,6 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
     dataStore.allocateBuffers()
 
     val dependencyTracker = new DependencyTracker(circuit,module, blackBoxFactories)
-    Program(symbolTable, dataStore, scheduler, dependencyTracker)
   }
 }
 
