@@ -596,11 +596,7 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
         throw InterpreterException(s"Top level module is not the right kind of module $x")
     }
 
-
     processModule("", module, circuit)
-    dataStore.allocateBuffers()
-
-    val dependencyTracker = new DependencyTracker(circuit,module, blackBoxFactories)
   }
 }
 

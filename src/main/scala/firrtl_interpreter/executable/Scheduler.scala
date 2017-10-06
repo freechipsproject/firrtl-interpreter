@@ -51,17 +51,6 @@ class Scheduler(dataStore: DataStore, symbolTable: SymbolTable) {
   def getTriggerExpressions: Iterable[ExpressionResult] = {
     triggeredAssigns.keys
   }
-
-  def sortCombinational(dependencyTracker: DependencyTracker): Unit = {
-    def compare(a: Assigner, b: Assigner): Boolean = {
-      (a, b) match {
-        case (aa: dataStore.AssignInt, bb: dataStore.AssignInt) =>
-          dependencyTracker.symbolSortKey(symbolTable(IntSize, aa.index).name) <
-            dependencyTracker.symbolSortKey(symbolTable(IntSize, bb.index).name)
-        case _ => false
-      }
-    }
-  }
 }
 
 object Scheduler {

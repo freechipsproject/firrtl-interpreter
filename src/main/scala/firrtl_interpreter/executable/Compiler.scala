@@ -7,7 +7,7 @@ package firrtl_interpreter.executable
 
 import firrtl._
 import firrtl.ir.Circuit
-import firrtl_interpreter.{BlackBoxFactory, FindModule, InterpreterException}
+import firrtl_interpreter.{BlackBoxFactory, FindModule, InterpreterException, Timer}
 
 //scalastyle:off magic.number
 class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
@@ -21,8 +21,11 @@ class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
   }
 
   val loweredAst: Circuit = lower(ast)
+  val timer = new Timer
 
-  val symbolTable = SymbolTable(loweredAst, Seq.empty)
+  val symbolTable = timer("build symbol table") {
+    SymbolTable(loweredAst, Seq.empty)
+  }
   val dataStore = DataStore(numberOfBuffers = 1)
   symbolTable.allocateData(dataStore)
   val scheduler = new Scheduler(dataStore, symbolTable)
@@ -30,8 +33,9 @@ class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
 
   val compiler = new ExpressionCompiler(program)
 
-  compiler.compile(loweredAst, blackBoxFactories)
-
+  timer("compile") {
+    compiler.compile(loweredAst, blackBoxFactories)
+  }
 
   println(s"SymbolTable:\n${program.symbolTable.render}")
 
@@ -75,6 +79,8 @@ class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
     count += 1
     step()
   }
+
+  println(timer.report())
 }
 
 object Compiler {
