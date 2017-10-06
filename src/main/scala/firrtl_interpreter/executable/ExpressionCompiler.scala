@@ -77,7 +77,6 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
               case Xor  => XorBigs(e1.apply, e2.apply)
 
               case Cat =>
-                val width2 = getWidth(args.tail.head)
                 CatInts(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
 
               case _ =>
@@ -106,7 +105,6 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
               case Xor  => XorBigs(ToBig(e1.apply).apply, e2.apply)
 
               case Cat =>
-                val width2 = getWidth(args.tail.head)
                 CatBigs(ToBig(e1.apply).apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
 
               case _ =>
@@ -135,7 +133,6 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
               case Xor  => XorBigs(e1.apply, ToBig(e2.apply).apply)
 
               case Cat =>
-                val width2 = getWidth(args.tail.head)
                 CatBigs(e1.apply, arg1IsSigned, arg1Width, ToBig(e2.apply).apply, arg2IsSigned, arg2Width)
 
               case _ =>
@@ -164,7 +161,6 @@ class ExpressionCompiler(val numberOfBuffers: Int) extends logger.LazyLogging {
               case Xor  => XorBigs(e1.apply, e2.apply)
 
               case Cat =>
-                val width2 = getWidth(args.tail.head)
                 CatBigs(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
 
               case _ =>
