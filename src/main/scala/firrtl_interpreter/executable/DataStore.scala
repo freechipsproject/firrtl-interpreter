@@ -106,14 +106,14 @@ class DataStore(val numberOfBuffers: Int) {
     }
   }
 
-//  case class GetLong(index: Int) extends LongExpressionResult {
-//    def apply(): Long = currentLongSource(index)
-//  }
-//  case class AssignLong(index: Int, expression: FuncLong) extends Assigner {
-//    def apply(): Unit = {
-//      currentLongTarget(index) = expression()
-//    }
-//  }
+  case class GetLong(index: Int) extends LongExpressionResult {
+    def apply(): Long = currentLongSource(index)
+  }
+  case class AssignLong(index: Int, expression: FuncLong) extends Assigner {
+    def apply(): Unit = {
+      currentLongTarget(index) = expression()
+    }
+  }
 
   case class GetBig(index: Int) extends BigExpressionResult {
     def apply(): Big = currentBigSource(index)

@@ -11,8 +11,9 @@ package object executable {
 
   trait ExpressionResult
 
-  type FuncInt = () => Int
-  type FuncBig = () => Big
+  type FuncInt  = () => Int
+  type FuncLong = () => Long
+  type FuncBig  = () => Big
 
   trait Assigner {
     def apply(): Unit

@@ -82,6 +82,34 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
               case _ =>
                 throw InterpreterException(s"Error:BinaryOp:$opCode)(${args.head}, ${args.tail.head})")
             }
+          case (e1: IntExpressionResult, e2: LongExpressionResult) =>
+            opCode match {
+              case Add => AddLongs(ToLong(e1.apply).apply, e2.apply)
+              case Sub => SubLongs(ToLong(e1.apply).apply, e2.apply)
+              case Mul => MulLongs(ToLong(e1.apply).apply, e2.apply)
+              case Div => DivLongs(ToLong(e1.apply).apply, e2.apply)
+              case Rem => RemLongs(ToLong(e1.apply).apply, e2.apply)
+
+              case Eq  => EqLongs(ToLong(e1.apply).apply, e2.apply)
+              case Neq => NeqLongs(ToLong(e1.apply).apply, e2.apply)
+              case Lt  => LtLongs(ToLong(e1.apply).apply, e2.apply)
+              case Leq => LeqLongs(ToLong(e1.apply).apply, e2.apply)
+              case Gt  => GtLongs(ToLong(e1.apply).apply, e2.apply)
+              case Geq => GeqLongs(ToLong(e1.apply).apply, e2.apply)
+
+              case Dshl => DshlLongs(ToLong(e1.apply).apply, e2.apply)
+              case Dshr => DshrLongs(ToLong(e1.apply).apply, e2.apply)
+
+              case And  => AndLongs(ToLong(e1.apply).apply, e2.apply)
+              case Or   => OrLongs(ToLong(e1.apply).apply, e2.apply)
+              case Xor  => XorLongs(ToLong(e1.apply).apply, e2.apply)
+
+              case Cat =>
+                CatLongs(ToLong(e1.apply).apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
+
+              case _ =>
+                throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
+            }
           case (e1: IntExpressionResult, e2: BigExpressionResult) =>
             opCode match {
               case Add => AddBigs(ToBig(e1.apply).apply, e2.apply)
@@ -399,9 +427,15 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
 //          case (LongSize, result: LongExpressionResult) => dataStore.AssignLong(symbol.index, result.apply)
           case (BigSize, result: IntExpressionResult) => dataStore.AssignBig(symbol.index, ToBig(result.apply).apply)
           case (BigSize, result: BigExpressionResult) => dataStore.AssignBig(symbol.index, result.apply)
-          case (size, res) =>
-            println(s"Yikes how am i here. $size, $res")
-            ???
+          case (size, result) =>
+            val expressionSize = result match {
+              case _: IntExpressionResult => "Int"
+//              case _: LongExpressionResult => "Long"
+              case _: BigExpressionResult => "Big"
+            }
+
+            throw InterpreterException(
+              s"Error:assignment size mismatch ($size)$name <= ($expressionSize)$expressionResult")
         }
         scheduler.combinationalAssigns += assigner
         assigner
