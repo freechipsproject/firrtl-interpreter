@@ -6,6 +6,7 @@ import firrtl.PrimOps._
 import firrtl._
 import firrtl.ir._
 import firrtl_interpreter._
+import jdk.nashorn.internal.runtime.regexp.joni.constants.OPCode
 
 
 class ExpressionCompiler(program: Program) extends logger.LazyLogging {
@@ -53,147 +54,126 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
         val (arg1, arg1IsSigned, arg1Width) = getParameters(args.head)
         val (arg2, arg2IsSigned, arg2Width) = getParameters(args.tail.head)
 
+        def handleIntResult(e1: IntExpressionResult, e2: IntExpressionResult): ExpressionResult = {
+          opCode match {
+            case Add => AddInts(e1.apply, e2.apply)
+            case Sub => SubInts(e1.apply, e2.apply)
+            case Mul => MulInts(e1.apply, e2.apply)
+            case Div => DivInts(e1.apply, e2.apply)
+            case Rem => RemInts(e1.apply, e2.apply)
+
+            case Eq => EqInts(e1.apply, e2.apply)
+            case Neq => NeqInts(e1.apply, e2.apply)
+            case Lt => LtInts(e1.apply, e2.apply)
+            case Leq => LeqInts(e1.apply, e2.apply)
+            case Gt => GtInts(e1.apply, e2.apply)
+            case Geq => GeqInts(e1.apply, e2.apply)
+
+            case Dshl => DshlInts(e1.apply, e2.apply)
+            case Dshr => DshrInts(e1.apply, e2.apply)
+
+            case And => AndInts(e1.apply, e2.apply)
+            case Or => OrInts(e1.apply, e2.apply)
+            case Xor => XorInts(e1.apply, e2.apply)
+
+            case Cat =>
+              CatInts(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
+
+            case _ =>
+              throw InterpreterException(s"Error:BinaryOp:$opCode)(${args.head}, ${args.tail.head})")
+          }
+        }
+
+        def handleLongResult(e1: LongExpressionResult, e2: LongExpressionResult): ExpressionResult = {
+          opCode match {
+            case Add => AddLongs(e1.apply, e2.apply)
+            case Sub => SubLongs(e1.apply, e2.apply)
+            case Mul => MulLongs(e1.apply, e2.apply)
+            case Div => DivLongs(e1.apply, e2.apply)
+            case Rem => RemLongs(e1.apply, e2.apply)
+
+            case Eq  => EqLongs(e1.apply, e2.apply)
+            case Neq => NeqLongs(e1.apply, e2.apply)
+            case Lt  => LtLongs(e1.apply, e2.apply)
+            case Leq => LeqLongs(e1.apply, e2.apply)
+            case Gt  => GtLongs(e1.apply, e2.apply)
+            case Geq => GeqLongs(e1.apply, e2.apply)
+
+            case Dshl => DshlLongs(e1.apply, e2.apply)
+            case Dshr => DshrLongs(e1.apply, e2.apply)
+
+            case And  => AndLongs(e1.apply, e2.apply)
+            case Or   => OrLongs(e1.apply, e2.apply)
+            case Xor  => XorLongs(e1.apply, e2.apply)
+
+            case Cat =>
+              CatLongs(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
+
+            case _ =>
+              throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
+          }
+        }
+
+        def handleBigResult(e1: BigExpressionResult, e2: BigExpressionResult): ExpressionResult = {
+          opCode match {
+            case Add => AddBigs(e1.apply, e2.apply)
+            case Sub => SubBigs(e1.apply, e2.apply)
+            case Mul => MulBigs(e1.apply, e2.apply)
+            case Div => DivBigs(e1.apply, e2.apply)
+            case Rem => RemBigs(e1.apply, e2.apply)
+
+            case Eq  => EqBigs(e1.apply, e2.apply)
+            case Neq => NeqBigs(e1.apply, e2.apply)
+            case Lt  => LtBigs(e1.apply, e2.apply)
+            case Leq => LeqBigs(e1.apply, e2.apply)
+            case Gt  => GtBigs(e1.apply, e2.apply)
+            case Geq => GeqBigs(e1.apply, e2.apply)
+
+            case Dshl => DshlBigs(e1.apply, e2.apply)
+            case Dshr => DshrBigs(e1.apply, e2.apply)
+
+            case And  => AndBigs(e1.apply, e2.apply)
+            case Or   => OrBigs(e1.apply, e2.apply)
+            case Xor  => XorBigs(e1.apply, e2.apply)
+
+            case Cat =>
+              CatBigs(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
+
+            case _ =>
+              throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
+          }
+        }
+
         (arg1, arg2) match {
           case (e1: IntExpressionResult, e2: IntExpressionResult) =>
-            opCode match {
-              case Add => AddInts(e1.apply, e2.apply)
-              case Sub => SubInts(e1.apply, e2.apply)
-              case Mul => MulInts(e1.apply, e2.apply)
-              case Div => DivInts(e1.apply, e2.apply)
-              case Rem => RemInts(e1.apply, e2.apply)
+            handleIntResult(e1, e2)
 
-              case Eq  => EqInts(e1.apply, e2.apply)
-              case Neq => NeqInts(e1.apply, e2.apply)
-              case Lt  => LtInts(e1.apply, e2.apply)
-              case Leq => LeqInts(e1.apply, e2.apply)
-              case Gt  => GtInts(e1.apply, e2.apply)
-              case Geq => GeqInts(e1.apply, e2.apply)
-
-              case Dshl => DshlInts(e1.apply, e2.apply)
-              case Dshr => DshrInts(e1.apply, e2.apply)
-
-              case And  => AndInts(e1.apply, e2.apply)
-              case Or   => OrInts(e1.apply, e2.apply)
-              case Xor  => XorInts(e1.apply, e2.apply)
-
-              case Cat =>
-                CatInts(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
-
-              case _ =>
-                throw InterpreterException(s"Error:BinaryOp:$opCode)(${args.head}, ${args.tail.head})")
-            }
           case (e1: IntExpressionResult, e2: LongExpressionResult) =>
-            opCode match {
-              case Add => AddLongs(ToLong(e1.apply).apply, e2.apply)
-              case Sub => SubLongs(ToLong(e1.apply).apply, e2.apply)
-              case Mul => MulLongs(ToLong(e1.apply).apply, e2.apply)
-              case Div => DivLongs(ToLong(e1.apply).apply, e2.apply)
-              case Rem => RemLongs(ToLong(e1.apply).apply, e2.apply)
+            handleLongResult(ToLong(e1.apply), e2)
 
-              case Eq  => EqLongs(ToLong(e1.apply).apply, e2.apply)
-              case Neq => NeqLongs(ToLong(e1.apply).apply, e2.apply)
-              case Lt  => LtLongs(ToLong(e1.apply).apply, e2.apply)
-              case Leq => LeqLongs(ToLong(e1.apply).apply, e2.apply)
-              case Gt  => GtLongs(ToLong(e1.apply).apply, e2.apply)
-              case Geq => GeqLongs(ToLong(e1.apply).apply, e2.apply)
-
-              case Dshl => DshlLongs(ToLong(e1.apply).apply, e2.apply)
-              case Dshr => DshrLongs(ToLong(e1.apply).apply, e2.apply)
-
-              case And  => AndLongs(ToLong(e1.apply).apply, e2.apply)
-              case Or   => OrLongs(ToLong(e1.apply).apply, e2.apply)
-              case Xor  => XorLongs(ToLong(e1.apply).apply, e2.apply)
-
-              case Cat =>
-                CatLongs(ToLong(e1.apply).apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
-
-              case _ =>
-                throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
-            }
           case (e1: IntExpressionResult, e2: BigExpressionResult) =>
-            opCode match {
-              case Add => AddBigs(ToBig(e1.apply).apply, e2.apply)
-              case Sub => SubBigs(ToBig(e1.apply).apply, e2.apply)
-              case Mul => MulBigs(ToBig(e1.apply).apply, e2.apply)
-              case Div => DivBigs(ToBig(e1.apply).apply, e2.apply)
-              case Rem => RemBigs(ToBig(e1.apply).apply, e2.apply)
+            handleBigResult(ToBig(e1.apply), e2)
 
-              case Eq  => EqBigs(ToBig(e1.apply).apply, e2.apply)
-              case Neq => NeqBigs(ToBig(e1.apply).apply, e2.apply)
-              case Lt  => LtBigs(ToBig(e1.apply).apply, e2.apply)
-              case Leq => LeqBigs(ToBig(e1.apply).apply, e2.apply)
-              case Gt  => GtBigs(ToBig(e1.apply).apply, e2.apply)
-              case Geq => GeqBigs(ToBig(e1.apply).apply, e2.apply)
 
-              case Dshl => DshlBigs(ToBig(e1.apply).apply, e2.apply)
-              case Dshr => DshrBigs(ToBig(e1.apply).apply, e2.apply)
+          case (e1: LongExpressionResult, e2: IntExpressionResult) =>
+            handleLongResult(e1, ToLong(e2.apply))
 
-              case And  => AndBigs(ToBig(e1.apply).apply, e2.apply)
-              case Or   => OrBigs(ToBig(e1.apply).apply, e2.apply)
-              case Xor  => XorBigs(ToBig(e1.apply).apply, e2.apply)
+          case (e1: LongExpressionResult, e2: LongExpressionResult) =>
+            handleLongResult(e1, e2)
 
-              case Cat =>
-                CatBigs(ToBig(e1.apply).apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
+          case (e1: LongExpressionResult, e2: BigExpressionResult) =>
+            handleBigResult(LongToBig(e1.apply), e2)
 
-              case _ =>
-                throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
-            }
+
           case (e1: BigExpressionResult, e2: IntExpressionResult) =>
-            opCode match {
-              case Add => AddBigs(e1.apply, ToBig(e2.apply).apply)
-              case Sub => SubBigs(e1.apply, ToBig(e2.apply).apply)
-              case Mul => MulBigs(e1.apply, ToBig(e2.apply).apply)
-              case Div => DivBigs(e1.apply, ToBig(e2.apply).apply)
-              case Rem => RemBigs(e1.apply, ToBig(e2.apply).apply)
+            handleBigResult(e1, ToBig(e2.apply))
 
-              case Eq  => EqBigs(e1.apply, ToBig(e2.apply).apply)
-              case Neq => NeqBigs(e1.apply, ToBig(e2.apply).apply)
-              case Lt  => LtBigs(e1.apply, ToBig(e2.apply).apply)
-              case Leq => LeqBigs(e1.apply, ToBig(e2.apply).apply)
-              case Gt  => GtBigs(e1.apply, ToBig(e2.apply).apply)
-              case Geq => GeqBigs(e1.apply, ToBig(e2.apply).apply)
+          case (e1: BigExpressionResult, e2: LongExpressionResult) =>
+            handleBigResult(e1, LongToBig(e2.apply))
 
-              case Dshl => DshlBigs(e1.apply, ToBig(e2.apply).apply)
-              case Dshr => DshrBigs(e1.apply, ToBig(e2.apply).apply)
-
-              case And  => AndBigs(e1.apply, ToBig(e2.apply).apply)
-              case Or   => OrBigs(e1.apply, ToBig(e2.apply).apply)
-              case Xor  => XorBigs(e1.apply, ToBig(e2.apply).apply)
-
-              case Cat =>
-                CatBigs(e1.apply, arg1IsSigned, arg1Width, ToBig(e2.apply).apply, arg2IsSigned, arg2Width)
-
-              case _ =>
-                throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
-            }
           case (e1: BigExpressionResult, e2: BigExpressionResult) =>
-            opCode match {
-              case Add => AddBigs(e1.apply, e2.apply)
-              case Sub => SubBigs(e1.apply, e2.apply)
-              case Mul => MulBigs(e1.apply, e2.apply)
-              case Div => DivBigs(e1.apply, e2.apply)
-              case Rem => RemBigs(e1.apply, e2.apply)
+            handleBigResult(e1, e2)
 
-              case Eq  => EqBigs(e1.apply, e2.apply)
-              case Neq => NeqBigs(e1.apply, e2.apply)
-              case Lt  => LtBigs(e1.apply, e2.apply)
-              case Leq => LeqBigs(e1.apply, e2.apply)
-              case Gt  => GtBigs(e1.apply, e2.apply)
-              case Geq => GeqBigs(e1.apply, e2.apply)
-
-              case Dshl => DshlBigs(e1.apply, e2.apply)
-              case Dshr => DshrBigs(e1.apply, e2.apply)
-
-              case And  => AndBigs(e1.apply, e2.apply)
-              case Or   => OrBigs(e1.apply, e2.apply)
-              case Xor  => XorBigs(e1.apply, e2.apply)
-
-              case Cat =>
-                CatBigs(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
-
-              case _ =>
-                throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
-            }
           case _ =>
             throw InterpreterException(
               s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head}) ($arg1, $arg2)")
