@@ -199,6 +199,13 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
               case Shl  => ShlInts(e1.apply, GetIntConstant(param1).apply)
               case Shr  => ShrInts(e1.apply, GetIntConstant(param1).apply)
             }
+          case e1: LongExpressionResult =>
+            op match {
+              case Head => HeadLongs(e1.apply, isSigned, takeBits = param1, arg1Width)
+              case Tail => TailLongs(e1.apply, isSigned, toDrop = param1, arg1Width)
+              case Shl  => ShlLongs(e1.apply, GetLongConstant(param1).apply)
+              case Shr  => ShrLongs(e1.apply, GetLongConstant(param1).apply)
+            }
           case e1: BigExpressionResult =>
             op match {
               case Head => HeadBigs(e1.apply, isSigned, takeBits = param1, arg1Width)
@@ -227,6 +234,10 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
           case e1: IntExpressionResult =>
             op match {
               case Bits => BitsInts(e1.apply, isSigned, arg2.toInt, arg3.toInt, width)
+            }
+          case e1: LongExpressionResult =>
+            op match {
+              case Bits => BitsLongs(e1.apply, isSigned, arg2.toInt, arg3.toInt, width)
             }
           case e1: BigExpressionResult =>
             op match {
@@ -263,6 +274,21 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
               case Orr     => NotInts(e1.apply)
               case Xorr    => NegInts(e1.apply)
             }
+          case e1: LongExpressionResult =>
+            op match {
+              case Pad     => e1
+              case AsUInt  => e1
+              case AsSInt  => e1
+              case AsClock => e1
+
+              case Cvt     => e1
+              case Neg     => NegLongs(e1.apply)
+              case Not     => NotLongs(e1.apply)
+
+              case Andr    => AndrLongs(e1.apply, width)
+              case Orr     => NotLongs(e1.apply)
+              case Xorr    => NegLongs(e1.apply)
+            }
           case e1: BigExpressionResult =>
             op match {
               case Pad     => e1
@@ -292,7 +318,7 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
           val symbol = symbolTable(name)
           symbol.dataSize match {
             case IntSize => dataStore.GetInt(symbol.index)
-//            case LongSize => dataStore.GetLong(symbol.index)
+            case LongSize => dataStore.GetLong(symbol.index)
             case BigSize => dataStore.GetBig(symbol.index)
           }
         }
@@ -302,12 +328,25 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
             processExpression(condition) match {
               case c: IntExpressionResult =>
                 (processExpression(trueExpression), processExpression(falseExpression)) match {
+
                   case (t: IntExpressionResult, f: IntExpressionResult) =>
                     MuxInts(c.apply, t.apply, f.apply)
-                  case (t: BigExpressionResult, f: IntExpressionResult) =>
-                    MuxBigs(c.apply, t.apply, ToBig(f.apply).apply)
+                  case (t: IntExpressionResult, f: LongExpressionResult) =>
+                    MuxLongs(c.apply, ToLong(t.apply).apply, f.apply)
                   case (t: IntExpressionResult, f: BigExpressionResult) =>
                     MuxBigs(c.apply, ToBig(t.apply).apply, f.apply)
+
+                  case (t: LongExpressionResult, f: IntExpressionResult) =>
+                    MuxLongs(c.apply, t.apply, ToLong(f.apply).apply)
+                  case (t: LongExpressionResult, f: LongExpressionResult) =>
+                    MuxLongs(c.apply, t.apply, f.apply)
+                  case (t: LongExpressionResult, f: BigExpressionResult) =>
+                    MuxBigs(c.apply, LongToBig(t.apply).apply, f.apply)
+
+                  case (t: BigExpressionResult, f: IntExpressionResult) =>
+                    MuxBigs(c.apply, t.apply, ToBig(f.apply).apply)
+                  case (t: BigExpressionResult, f: LongExpressionResult) =>
+                    MuxBigs(c.apply, t.apply, LongToBig(f.apply).apply)
                   case (t: BigExpressionResult, f: BigExpressionResult) =>
                     MuxBigs(c.apply, t.apply, f.apply)
                 }
@@ -328,6 +367,8 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
                 processExpression(value) match {
                   case t: IntExpressionResult =>
                     MuxInts(c.apply, t.apply, UndefinedInts(getWidth(tpe)).apply)
+                  case t: LongExpressionResult =>
+                    MuxLongs(c.apply, t.apply, UndefinedLongs(getWidth(tpe)).apply)
                   case t: BigExpressionResult =>
                     MuxBigs(c.apply, t.apply, UndefinedBigs(getWidth(tpe)).apply)
                   case _ =>
@@ -404,13 +445,13 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
         val symbol = symbolTable(name)
         val assigner = (symbol.dataSize, expressionResult) match {
           case (IntSize, result: IntExpressionResult) => dataStore.AssignInt(symbol.index, result.apply)
-//          case (LongSize, result: LongExpressionResult) => dataStore.AssignLong(symbol.index, result.apply)
+          case (LongSize, result: LongExpressionResult) => dataStore.AssignLong(symbol.index, result.apply)
           case (BigSize, result: IntExpressionResult) => dataStore.AssignBig(symbol.index, ToBig(result.apply).apply)
           case (BigSize, result: BigExpressionResult) => dataStore.AssignBig(symbol.index, result.apply)
           case (size, result) =>
             val expressionSize = result match {
               case _: IntExpressionResult => "Int"
-//              case _: LongExpressionResult => "Long"
+              case _: LongExpressionResult => "Long"
               case _: BigExpressionResult => "Big"
             }
 
@@ -428,7 +469,7 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
                          ): Unit = {
         val assignment = (value.dataSize, expressionResult) match {
           case (IntSize, e: IntExpressionResult) => dataStore.AssignInt(value.index, e.apply)
-//          case (LongSize, e: LongExpressionResult) => dataStore.AssignLong(value.index, e.apply)
+          case (LongSize, e: LongExpressionResult) => dataStore.AssignLong(value.index, e.apply)
           case (BigSize, e: BigExpressionResult) => dataStore.AssignBig(value.index, e.apply)
         }
         scheduler.triggeredAssigns(triggerExpression) += assignment
@@ -494,13 +535,12 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
                   triggeredAssign(resetResult, registerOut, ToInt(rv.apply))
               }
             case LongSize =>
-//              scheduler.combinationalAssigns += dataStore.AssignLong(registerOut.index, dataStore.GetLong(registerIn.index).apply)
-//              triggeredAssign(clockResult, registerOut, dataStore.GetLong(registerIn.index))
-//              resetValue match {
-//                case rv: IntExpressionResult => triggeredAssign(resetResult, registerOut, ToLong(rv.apply))
-//                case rv: LongExpressionResult => triggeredAssign(resetResult, registerOut, rv)
-//              }
-              ???
+              scheduler.combinationalAssigns += dataStore.AssignLong(registerOut.index, dataStore.GetLong(registerIn.index).apply)
+              triggeredAssign(clockResult, registerOut, dataStore.GetLong(registerIn.index))
+              resetValue match {
+                case rv: IntExpressionResult => triggeredAssign(resetResult, registerOut, ToLong(rv.apply))
+                case rv: LongExpressionResult => triggeredAssign(resetResult, registerOut, rv)
+              }
             case BigSize =>
               scheduler.combinationalAssigns += dataStore.AssignBig(registerOut.index, dataStore.GetBig(registerIn.index).apply)
               triggeredAssign(clockResult, registerOut, dataStore.GetBig(registerIn.index))
