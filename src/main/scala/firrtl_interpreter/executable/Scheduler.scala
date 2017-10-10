@@ -2,10 +2,12 @@
 
 package firrtl_interpreter.executable
 
+import firrtl_interpreter.InterpreterException
+
 import scala.collection.mutable
 
 class Scheduler(dataStore: DataStore, symbolTable: SymbolTable) {
-  val combinationalAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
+  var combinationalAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
   val bufferAdvanceAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
 
   /**
@@ -50,6 +52,26 @@ class Scheduler(dataStore: DataStore, symbolTable: SymbolTable) {
 
   def getTriggerExpressions: Iterable[ExpressionResult] = {
     triggeredAssigns.keys
+  }
+
+  def sortCombinationalAssigns: Unit = {
+    combinationalAssigns = combinationalAssigns.sortBy {
+      case assign: dataStore.AssignInt =>
+        symbolTable.sortKey(IntSize, assign.index)
+      case assign: dataStore.AssignLong =>
+        symbolTable.sortKey(LongSize, assign.index)
+      case assign: dataStore.AssignBig =>
+        symbolTable.sortKey(BigSize, assign.index)
+      case assigner =>
+        throw InterpreterException(s"unknown assigner found in sort combinational assigns $assigner")
+    }
+  }
+
+  def render: String = {
+    s"combinational assigns (${combinationalAssigns.size}\n" +
+    combinationalAssigns.map { assigner =>
+      symbolTable(dataStore, assigner).render
+    }.mkString("\n")
   }
 }
 

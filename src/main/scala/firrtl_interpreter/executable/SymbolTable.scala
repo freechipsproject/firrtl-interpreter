@@ -29,12 +29,18 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
   def size: Int = nameToSymbol.size
   def keys:Iterable[String] = nameToSymbol.keys
 
+  def sortKey(dataSize: DataSize, index: Int): Int = sizeAndIndexToSymbol(dataSize)(index).cardinalNumber
+
   val registerNames: mutable.HashSet[String] = new mutable.HashSet[String]
 
   def isRegister(name: String): Boolean = registerNames.contains(name)
 
   def apply(name: String): Symbol = nameToSymbol(name)
   def apply(dataSize: DataSize, index: Int): Symbol = sizeAndIndexToSymbol(dataSize)(index)
+  def apply(dataStore: DataStore, assigner: Assigner): Symbol = {
+    val (size, index) = dataStore.getSizeAndIndex(assigner)
+    apply(size, index)
+  }
 
   def render: String = {
     keys.toArray.sorted.map { name =>

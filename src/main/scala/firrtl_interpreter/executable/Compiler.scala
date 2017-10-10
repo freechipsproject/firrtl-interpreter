@@ -37,6 +37,11 @@ class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
     compiler.compile(loweredAst, blackBoxFactories)
   }
 
+  println(s"Scheduler before sort ${scheduler.render}")
+  scheduler.sortCombinationalAssigns
+  println(s"Scheduler after sort ${scheduler.render}")
+
+
   println(s"symbol table size is ${symbolTable.size}, dataStore allocations ${dataStore.getSizes}")
 
   println(s"SymbolTable:\n${program.symbolTable.render}")

@@ -22,6 +22,14 @@ case class LongToBig(f: FuncLong) extends BigExpressionResult {
   def apply(): Big = BigInt(f())
 }
 
+case class LongToInt(f: FuncLong) extends IntExpressionResult {
+  def apply(): Int = f().toInt
+}
+
+case class BigToLong(f: FuncBig) extends LongExpressionResult {
+  def apply(): Long = f().toLong
+}
+
 case class ToInt(f: FuncBig) extends IntExpressionResult {
   def apply(): Int = f().toInt
 }

@@ -6,8 +6,6 @@ import firrtl.PrimOps._
 import firrtl._
 import firrtl.ir._
 import firrtl_interpreter._
-import jdk.nashorn.internal.runtime.regexp.joni.constants.OPCode
-
 
 class ExpressionCompiler(program: Program) extends logger.LazyLogging {
   val dataStore:   DataStore   = program.dataStore
@@ -252,10 +250,10 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
         tpe: firrtl.ir.Type
       ): ExpressionResult = {
         val arg1 = processExpression(expressions.head)
-        val (isSigned, width) = tpe match {
-          case UIntType(IntWidth(n)) => (false, n.toInt)
-          case SIntType(IntWidth(n)) => (true, n.toInt)
-          case ClockType             => (false, 1)
+        val width = tpe match {
+          case UIntType(IntWidth(n)) => n.toInt
+          case SIntType(IntWidth(n)) => n.toInt
+          case ClockType             => 1
         }
 
         arg1 match {
@@ -354,7 +352,7 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
                 throw InterpreterException(s"Mux condition is not 1 bit $condition parsed as $c")
             }
 
-          case WRef(name, tpe, _, _) =>
+          case WRef(name, _, _, _) =>
             createAccessor(name)
           case subfield: WSubField =>
             createAccessor(subfield.serialize)
@@ -531,6 +529,8 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
               resetValue match {
                 case rv: IntExpressionResult =>
                   triggeredAssign(resetResult, registerOut, rv)
+                case rv: LongExpressionResult =>
+                  triggeredAssign(resetResult, registerOut, LongToInt(rv.apply))
                 case rv: BigExpressionResult =>
                   triggeredAssign(resetResult, registerOut, ToInt(rv.apply))
               }
@@ -540,12 +540,14 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
               resetValue match {
                 case rv: IntExpressionResult => triggeredAssign(resetResult, registerOut, ToLong(rv.apply))
                 case rv: LongExpressionResult => triggeredAssign(resetResult, registerOut, rv)
+                case rv: BigExpressionResult => triggeredAssign(resetResult, registerOut, BigToLong(rv.apply))
               }
             case BigSize =>
               scheduler.combinationalAssigns += dataStore.AssignBig(registerOut.index, dataStore.GetBig(registerIn.index).apply)
               triggeredAssign(clockResult, registerOut, dataStore.GetBig(registerIn.index))
               resetValue match {
                 case rv: IntExpressionResult => triggeredAssign(resetResult, registerOut, ToBig(rv.apply))
+                case rv: LongExpressionResult => triggeredAssign(resetResult, registerOut, LongToBig(rv.apply))
                 case rv: BigExpressionResult => triggeredAssign(resetResult, registerOut, rv)
               }
             case _ =>
@@ -589,25 +591,6 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
           val outputDependencies = instance.outputDependencies(port.name)
           dependencyGraph(expand(port.name)) = BlackBoxOutput(port.name, instance, outputDependencies, port.tpe)
         }
-      }
-    }
-
-    def getBitWidth(tpe: Type): Int = {
-      tpe match {
-        case UIntType(IntWidth(n)) => n.toInt
-        case SIntType(IntWidth(n)) => n.toInt
-        case _ =>
-          throw InterpreterException(s"bad tpe: $tpe")
-      }
-    }
-
-    def getIsSigned(tpe: Type): Boolean = {
-      tpe match {
-        case _: UIntType => false
-        case _: SIntType => true
-//        case _: firrtl.ir.ClockType => false
-        case _ =>
-          throw InterpreterException(s"bad tpe: $tpe")
       }
     }
 

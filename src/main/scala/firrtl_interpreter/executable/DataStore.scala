@@ -2,6 +2,8 @@
 
 package firrtl_interpreter.executable
 
+import firrtl_interpreter.InterpreterException
+
 import scala.collection.mutable
 
 /**
@@ -121,6 +123,16 @@ class DataStore(val numberOfBuffers: Int) {
   case class AssignBig(index: Int, expression: FuncBig) extends Assigner {
     def apply(): Unit = {
       currentBigTarget(index) = expression()
+    }
+  }
+
+  def getSizeAndIndex(assigner: Assigner): (DataSize, Int) = {
+    assigner match {
+      case assign: AssignInt => (IntSize, assign.index)
+      case assign: AssignLong => (LongSize, assign.index)
+      case assign: AssignBig => (BigSize, assign.index)
+      case assign =>
+        throw InterpreterException(s"unknown assigner found $assign")
     }
   }
 
