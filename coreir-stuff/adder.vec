@@ -1,0 +1,40 @@
+poke, io_in0, 114
+poke, io_in1, 180
+step, 1
+expect, io_out, 38
+poke, io_in0, 239
+poke, io_in1, 73
+step, 2
+expect, io_out, 56
+poke, io_in0, 109
+poke, io_in1, 113
+step, 3
+expect, io_out, 222
+poke, io_in0, 67
+poke, io_in1, 171
+step, 4
+expect, io_out, 238
+poke, io_in0, 184
+poke, io_in1, 229
+step, 5
+expect, io_out, 157
+poke, io_in0, 137
+poke, io_in1, 100
+step, 6
+expect, io_out, 237
+poke, io_in0, 153
+poke, io_in1, 238
+step, 7
+expect, io_out, 135
+poke, io_in0, 140
+poke, io_in1, 170
+step, 8
+expect, io_out, 54
+poke, io_in0, 181
+poke, io_in1, 99
+step, 9
+expect, io_out, 24
+poke, io_in0, 89
+poke, io_in1, 23
+step, 10
+expect, io_out, 112
