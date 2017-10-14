@@ -519,10 +519,6 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
           val registerIn  = symbolTable(s"$expandedName${ExpressionCompiler.RegisterInputSuffix}")
           val registerOut = symbolTable(expandedName)
 
-          if(dataStore.numberOfBuffers > 1) {
-            scheduler.scheduleCopy(registerIn)
-          }
-
           registerIn.dataSize match {
             case IntSize =>
               triggeredAssign(clockResult, registerOut, dataStore.GetInt(registerIn.index))
@@ -597,9 +593,6 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
     def processPorts(module: DefModule): Unit = {
       for(port <- module.ports) {
         val symbol = symbolTable(expand(port.name))
-        if(dataStore.numberOfBuffers > 1) {
-          scheduler.scheduleCopy(symbol)
-        }
       }
     }
 

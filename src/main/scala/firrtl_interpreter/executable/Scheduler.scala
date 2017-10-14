@@ -23,23 +23,8 @@ class Scheduler(dataStore: DataStore, symbolTable: SymbolTable) {
     }
   }
 
-  def scheduleCopy(symbol: Symbol): Unit = {
-    val assigner = symbol.dataSize match {
-      case IntSize => dataStore.AssignInt(symbol.index, dataStore.GetInt(symbol.index).apply)
-      //      case LongSize => dataStore.AssignLong(symbol.index, dataStore.GetLong(symbol.index).apply)
-      case BigSize => dataStore.AssignBig(symbol.index, dataStore.GetBig(symbol.index).apply)
-    }
-    bufferAdvanceAssigns += assigner
-  }
-
   def executeCombinational(): Unit = {
     combinationalAssigns.foreach {
-      assign => assign()
-    }
-  }
-
-  def executeBufferAdvances(): Unit = {
-    bufferAdvanceAssigns.foreach {
       assign => assign()
     }
   }
@@ -54,7 +39,7 @@ class Scheduler(dataStore: DataStore, symbolTable: SymbolTable) {
     triggeredAssigns.keys
   }
 
-  def sortCombinationalAssigns: Unit = {
+  def sortCombinationalAssigns(): Unit = {
     combinationalAssigns = combinationalAssigns.sortBy {
       case assign: dataStore.AssignInt =>
         symbolTable.sortKey(IntSize, assign.index)

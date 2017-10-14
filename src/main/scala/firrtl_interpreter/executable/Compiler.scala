@@ -26,10 +26,10 @@ class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
   val symbolTable: SymbolTable = timer("build symbol table") {
     SymbolTable(loweredAst, Seq.empty)
   }
-  val dataStore = DataStore(numberOfBuffers = 1)
+  val dataStore = DataStore(numberOfBuffers = 2)
   symbolTable.allocateData(dataStore)
   val scheduler = new Scheduler(dataStore, symbolTable)
-  val program = new Program(symbolTable, dataStore, scheduler)
+  val program = Program(symbolTable, dataStore, scheduler)
 
   val compiler = new ExpressionCompiler(program)
 
@@ -38,13 +38,13 @@ class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
   }
 
   println(s"Scheduler before sort ${scheduler.render}")
-  scheduler.sortCombinationalAssigns
+  scheduler.sortCombinationalAssigns()
   println(s"Scheduler after sort ${scheduler.render}")
 
 
-  println(s"symbol table size is ${symbolTable.size}, dataStore allocations ${dataStore.getSizes}")
+//  println(s"symbol table size is ${symbolTable.size}, dataStore allocations ${dataStore.getSizes}")
 
-  println(s"SymbolTable:\n${program.symbolTable.render}")
+//  println(s"SymbolTable:\n${program.symbolTable.render}")
 
   def poke(name: String, value: Int): Unit = {
     val symbol = program.symbolTable(name)
@@ -56,12 +56,13 @@ class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
   }
 
   def step(steps: Int = 1): Unit = {
+    program.dataStore.advanceBuffers()
+    println(s"a --  ${program.dataInColumns}")
     program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
+    println(s"h --  ${program.header}")
     println(s"r --  ${program.dataInColumns}")
     program.scheduler.executeCombinational()
     println(s"c --  ${program.dataInColumns}")
-    program.dataStore.advanceBuffers()
-    program.scheduler.executeBufferAdvances()
   }
 
   println(s"h --  ${program.header}")
@@ -74,15 +75,14 @@ class Compiler(ast: Circuit, blackBoxFactories: Seq[BlackBoxFactory]) {
   println(s"p --  ${program.dataInColumns}")
 
   step()
-  step()
-  step()
-  step()
 
   poke("io_e", 0)
   println(s"p --  ${program.dataInColumns}")
+  step()
 
   var count = 0
-  while(peek("io_v") == 0 && count < 50) {
+//  while(peek("io_v") == 0 && count < 50 && peek("x") > 0) {
+  while(/*peek("io_v") == 0 &&*/ count < 12) {
     count += 1
     step()
   }

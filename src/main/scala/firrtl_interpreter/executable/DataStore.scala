@@ -40,27 +40,27 @@ class DataStore(val numberOfBuffers: Int) {
   var longData: Array[Array[Long]] = Array.fill(numberOfBuffers, numberOfLongs)(0L)
   var bigData:  Array[Array[Big]]  = Array.fill(numberOfBuffers, numberOfBigs)(Big(0))
 
-  private var targetBufferIndex = if(numberOfBuffers > 1) 1 else 0
-  private var sourceBufferIndex = 0
+  var currentBufferIndex:  Int = if(numberOfBuffers > 1) 1 else 0
+  var previousBufferIndex: Int = 0
 
-  private var currentIntTarget  = intData(targetBufferIndex)
-  private var currentLongTarget = longData(targetBufferIndex)
-  private var currentBigTarget  = bigData(targetBufferIndex)
-  private var currentIntSource  = intData(sourceBufferIndex)
-  private var currentLongSource = longData(sourceBufferIndex)
-  private var currentBigSource  = bigData(sourceBufferIndex)
+  var currentIntArray:   Array[Int]  = intData(currentBufferIndex)
+  var currentLongArray:  Array[Long] = longData(currentBufferIndex)
+  var currentBigArray:   Array[Big]  = bigData(currentBufferIndex)
+  var previousIntArray:  Array[Int]  = intData(previousBufferIndex)
+  var previousLongArray: Array[Long] = longData(previousBufferIndex)
+  var currentBigSource:  Array[Big]  = bigData(previousBufferIndex)
 
   def allocateBuffers(): Unit = {
     intData  = Array.fill(numberOfBuffers, numberOfInts)(0)
     longData = Array.fill(numberOfBuffers, numberOfLongs)(0L)
     bigData  = Array.fill(numberOfBuffers, numberOfBigs)(Big(0))
 
-    currentIntTarget  = intData(targetBufferIndex)
-    currentLongTarget = longData(targetBufferIndex)
-    currentBigTarget  = bigData(targetBufferIndex)
-    currentIntSource  = intData(sourceBufferIndex)
-    currentLongSource = longData(sourceBufferIndex)
-    currentBigSource  = bigData(sourceBufferIndex)
+    currentIntArray  = intData(currentBufferIndex)
+    currentLongArray = longData(currentBufferIndex)
+    currentBigArray  = bigData(currentBufferIndex)
+    previousIntArray  = intData(previousBufferIndex)
+    previousLongArray = longData(previousBufferIndex)
+    currentBigSource  = bigData(previousBufferIndex)
   }
 
   /**
@@ -68,7 +68,7 @@ class DataStore(val numberOfBuffers: Int) {
     * @return
     */
   def sourceBuffers(): (Array[Int], Array[Long], Array[Big]) = {
-    (intData(sourceBufferIndex), longData(sourceBufferIndex), bigData(sourceBufferIndex))
+    (intData(previousBufferIndex), longData(previousBufferIndex), bigData(previousBufferIndex))
   }
 
   /**
@@ -76,7 +76,7 @@ class DataStore(val numberOfBuffers: Int) {
     * @return
     */
   def targetBuffers(): (Array[Int], Array[Long], Array[Big]) = {
-    (intData(targetBufferIndex), longData(targetBufferIndex), bigData(targetBufferIndex))
+    (intData(currentBufferIndex), longData(currentBufferIndex), bigData(currentBufferIndex))
   }
 
   /**
@@ -85,44 +85,48 @@ class DataStore(val numberOfBuffers: Int) {
     */
   def advanceBuffers(): Unit = {
     if(numberOfBuffers > 1) {
-      sourceBufferIndex = (sourceBufferIndex + 1) % numberOfBuffers
-      targetBufferIndex = (targetBufferIndex + 1) % numberOfBuffers
+      previousBufferIndex = (previousBufferIndex + 1) % numberOfBuffers
+      currentBufferIndex = (currentBufferIndex + 1) % numberOfBuffers
 
-      currentIntTarget  = intData(targetBufferIndex)
-      currentLongTarget = longData(targetBufferIndex)
-      currentBigTarget  = bigData(targetBufferIndex)
-      currentIntSource  = intData(sourceBufferIndex)
-      currentLongSource = longData(sourceBufferIndex)
-      currentBigSource  = bigData(sourceBufferIndex)
+      currentIntArray  = intData(currentBufferIndex)
+      currentLongArray = longData(currentBufferIndex)
+      currentBigArray  = bigData(currentBufferIndex)
+      previousIntArray  = intData(previousBufferIndex)
+      previousLongArray = longData(previousBufferIndex)
+      currentBigSource  = bigData(previousBufferIndex)
 
-      for(i <- currentIntTarget.indices) { currentIntTarget(i) = currentIntSource(i) }
+      for(i <- currentIntArray.indices) { currentIntArray(i) = previousIntArray(i) }
     }
   }
 
   case class GetInt(index: Int) extends IntExpressionResult {
-    def apply(): Int = currentIntSource(index)
+    def apply(): Int = currentIntArray(index)
   }
   case class AssignInt(index: Int, expression: FuncInt) extends Assigner {
+    val m = Map(22 -> "x/in", 14 -> "x", 11 -> "y", 8 -> "y/in" )
     def apply(): Unit = {
-      currentIntTarget(index) = expression()
+//      if(m.contains(index)) {
+        println(s"${m.getOrElse(index, index)} <= ${expression()}")
+//      }
+      currentIntArray(index) = expression()
     }
   }
 
   case class GetLong(index: Int) extends LongExpressionResult {
-    def apply(): Long = currentLongSource(index)
+    def apply(): Long = currentLongArray(index)
   }
   case class AssignLong(index: Int, expression: FuncLong) extends Assigner {
     def apply(): Unit = {
-      currentLongTarget(index) = expression()
+      currentLongArray(index) = expression()
     }
   }
 
   case class GetBig(index: Int) extends BigExpressionResult {
-    def apply(): Big = currentBigSource(index)
+    def apply(): Big = currentBigArray(index)
   }
   case class AssignBig(index: Int, expression: FuncBig) extends Assigner {
     def apply(): Unit = {
-      currentBigTarget(index) = expression()
+      currentBigArray(index) = expression()
     }
   }
 
@@ -138,24 +142,24 @@ class DataStore(val numberOfBuffers: Int) {
 
   def getIntRow(index: Int): Seq[Int] = {
     intData.indices.map { historyIndex =>
-      val adjustedHistoryIndex = (historyIndex + targetBufferIndex) % numberOfBuffers
+      val adjustedHistoryIndex = (historyIndex + currentBufferIndex) % numberOfBuffers
       intData(adjustedHistoryIndex)(index)
     }
   }
 
   def apply(symbol: Symbol): Big = {
     symbol.dataSize match {
-      case IntSize  => currentIntTarget(symbol.index)
-      case LongSize => currentLongTarget(symbol.index)
-      case BigSize  => currentBigTarget(symbol.index)
+      case IntSize  => currentIntArray(symbol.index)
+      case LongSize => currentLongArray(symbol.index)
+      case BigSize  => currentBigArray(symbol.index)
     }
   }
 
   def update(symbol: Symbol, value: Big): Unit = {
     symbol.dataSize match {
-      case IntSize  => currentIntTarget(symbol.index) = value.toInt
-      case LongSize => currentLongTarget(symbol.index) = value.toLong
-      case BigSize  => currentBigTarget(symbol.index) = value
+      case IntSize  => currentIntArray(symbol.index) = value.toInt
+      case LongSize => currentLongArray(symbol.index) = value.toLong
+      case BigSize  => currentBigArray(symbol.index) = value
     }
   }
 }

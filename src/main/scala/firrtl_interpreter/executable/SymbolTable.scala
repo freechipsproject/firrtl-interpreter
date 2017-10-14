@@ -244,11 +244,11 @@ object SymbolTable extends LazyLogging {
 
     processModule("", module)
 
-    logger.debug(s"For module ${module.name} dependencyGraph =")
-    nameToSymbol.keys.toSeq.sorted foreach { k =>
-      val symbol = nameToSymbol(k)
-      println(f"$symbol%-50.50s ${dependencies(symbol).map(_.name).mkString(",").take(100)}")
-    }
+//    logger.debug(s"For module ${module.name} dependencyGraph =")
+//    nameToSymbol.keys.toSeq.sorted foreach { k =>
+//      val symbol = nameToSymbol(k)
+//      println(f"$symbol%-50.50s ${dependencies(symbol).map(_.name).mkString(",").take(100)}")
+//    }
 
     val sorted: Iterable[Symbol] = try {
       TSort(dependencies.toMap, Seq.empty[Symbol])
