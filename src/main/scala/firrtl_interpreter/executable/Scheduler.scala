@@ -25,13 +25,13 @@ class Scheduler(dataStore: DataStore, symbolTable: SymbolTable) {
 
   def executeCombinational(): Unit = {
     combinationalAssigns.foreach {
-      assign => assign()
+      assign => assign.run()
     }
   }
 
   def executeTriggeredAssigns(triggerExpression: ExpressionResult): Unit = {
     triggeredAssigns(triggerExpression).foreach {
-      assign => assign()
+      assign => assign.run()
     }
   }
 

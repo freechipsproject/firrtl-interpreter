@@ -442,7 +442,7 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
       def getAssigner(name: String, expressionResult: ExpressionResult): Assigner = {
         val symbol = symbolTable(name)
         val assigner = (symbol.dataSize, expressionResult) match {
-          case (IntSize, result: IntExpressionResult) => dataStore.AssignInt(symbol.index, result.apply)
+          case (IntSize, result: IntExpressionResult) => dataStore.AssignInt(symbol, result.apply)
           case (LongSize, result: LongExpressionResult) => dataStore.AssignLong(symbol.index, result.apply)
           case (BigSize, result: IntExpressionResult) => dataStore.AssignBig(symbol.index, ToBig(result.apply).apply)
           case (BigSize, result: BigExpressionResult) => dataStore.AssignBig(symbol.index, result.apply)
@@ -466,7 +466,7 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
                            expressionResult: ExpressionResult
                          ): Unit = {
         val assignment = (value.dataSize, expressionResult) match {
-          case (IntSize, e: IntExpressionResult) => dataStore.AssignInt(value.index, e.apply)
+          case (IntSize, e: IntExpressionResult) => dataStore.AssignInt(value, e.apply)
           case (LongSize, e: LongExpressionResult) => dataStore.AssignLong(value.index, e.apply)
           case (BigSize, e: BigExpressionResult) => dataStore.AssignBig(value.index, e.apply)
         }

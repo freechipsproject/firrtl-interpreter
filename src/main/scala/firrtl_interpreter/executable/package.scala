@@ -14,8 +14,9 @@ package object executable {
   type FuncInt  = () => Int
   type FuncLong = () => Long
   type FuncBig  = () => Big
+  type FuncUnit = () => Unit
 
   trait Assigner {
-    def apply(): Unit
+    def run: FuncUnit
   }
 }

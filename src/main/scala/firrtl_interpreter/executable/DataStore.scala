@@ -102,21 +102,23 @@ class DataStore(val numberOfBuffers: Int) {
   case class GetInt(index: Int) extends IntExpressionResult {
     def apply(): Int = currentIntArray(index)
   }
-  case class AssignInt(index: Int, expression: FuncInt) extends Assigner {
-    val m = Map(22 -> "x/in", 14 -> "x", 11 -> "y", 8 -> "y/in" )
-    def apply(): Unit = {
-//      if(m.contains(index)) {
-        println(s"${m.getOrElse(index, index)} <= ${expression()}")
-//      }
+  case class AssignInt(symbol: Symbol, expression: FuncInt) extends Assigner {
+    val index: Int = symbol.index
+
+    def runQuiet(): Unit = {currentIntArray(index) = expression() }
+
+    def runVerbose(): Unit = {
+      println(s"${symbol.name}:${symbol.index} <= ${expression()}")
       currentIntArray(index) = expression()
     }
+    val run: FuncUnit = runVerbose _
   }
 
   case class GetLong(index: Int) extends LongExpressionResult {
     def apply(): Long = currentLongArray(index)
   }
   case class AssignLong(index: Int, expression: FuncLong) extends Assigner {
-    def apply(): Unit = {
+    def run: FuncUnit = () => {
       currentLongArray(index) = expression()
     }
   }
@@ -125,10 +127,9 @@ class DataStore(val numberOfBuffers: Int) {
     def apply(): Big = currentBigArray(index)
   }
   case class AssignBig(index: Int, expression: FuncBig) extends Assigner {
-    def apply(): Unit = {
+    def run: FuncUnit = () => {
       currentBigArray(index) = expression()
-    }
-  }
+    }  }
 
   def getSizeAndIndex(assigner: Assigner): (DataSize, Int) = {
     assigner match {
