@@ -442,15 +442,17 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
       def getAssigner(name: String, expressionResult: ExpressionResult): Assigner = {
         val symbol = symbolTable(name)
         val assigner = (symbol.dataSize, expressionResult) match {
-          case (IntSize, result: IntExpressionResult) => dataStore.AssignInt(symbol, result.apply)
-          case (LongSize, result: LongExpressionResult) => dataStore.AssignLong(symbol.index, result.apply)
-          case (BigSize, result: IntExpressionResult) => dataStore.AssignBig(symbol.index, ToBig(result.apply).apply)
-          case (BigSize, result: BigExpressionResult) => dataStore.AssignBig(symbol.index, result.apply)
+          case (IntSize,  result: IntExpressionResult)  => dataStore.AssignInt(symbol, result.apply)
+          case (LongSize, result: IntExpressionResult)  => dataStore.AssignLong(symbol, ToLong(result.apply).apply)
+          case (LongSize, result: LongExpressionResult) => dataStore.AssignLong(symbol, result.apply)
+          case (BigSize,  result: IntExpressionResult)  => dataStore.AssignBig(symbol, ToBig(result.apply).apply)
+          case (BigSize,  result: LongExpressionResult) => dataStore.AssignBig(symbol, LongToBig(result.apply).apply)
+          case (BigSize,  result: BigExpressionResult)  => dataStore.AssignBig(symbol, result.apply)
           case (size, result) =>
             val expressionSize = result match {
-              case _: IntExpressionResult => "Int"
+              case _: IntExpressionResult  => "Int"
               case _: LongExpressionResult => "Long"
-              case _: BigExpressionResult => "Big"
+              case _: BigExpressionResult  => "Big"
             }
 
             throw InterpreterException(
@@ -467,8 +469,8 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
                          ): Unit = {
         val assignment = (value.dataSize, expressionResult) match {
           case (IntSize, e: IntExpressionResult) => dataStore.AssignInt(value, e.apply)
-          case (LongSize, e: LongExpressionResult) => dataStore.AssignLong(value.index, e.apply)
-          case (BigSize, e: BigExpressionResult) => dataStore.AssignBig(value.index, e.apply)
+          case (LongSize, e: LongExpressionResult) => dataStore.AssignLong(value, e.apply)
+          case (BigSize, e: BigExpressionResult) => dataStore.AssignBig(value, e.apply)
         }
         scheduler.triggeredAssigns(triggerExpression) += assignment
       }
@@ -531,7 +533,7 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
                   triggeredAssign(resetResult, registerOut, ToInt(rv.apply))
               }
             case LongSize =>
-              scheduler.combinationalAssigns += dataStore.AssignLong(registerOut.index, dataStore.GetLong(registerIn.index).apply)
+              scheduler.combinationalAssigns += dataStore.AssignLong(registerOut, dataStore.GetLong(registerIn.index).apply)
               triggeredAssign(clockResult, registerOut, dataStore.GetLong(registerIn.index))
               resetValue match {
                 case rv: IntExpressionResult => triggeredAssign(resetResult, registerOut, ToLong(rv.apply))
@@ -539,7 +541,7 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
                 case rv: BigExpressionResult => triggeredAssign(resetResult, registerOut, BigToLong(rv.apply))
               }
             case BigSize =>
-              scheduler.combinationalAssigns += dataStore.AssignBig(registerOut.index, dataStore.GetBig(registerIn.index).apply)
+              scheduler.combinationalAssigns += dataStore.AssignBig(registerOut, dataStore.GetBig(registerIn.index).apply)
               triggeredAssign(clockResult, registerOut, dataStore.GetBig(registerIn.index))
               resetValue match {
                 case rv: IntExpressionResult => triggeredAssign(resetResult, registerOut, ToBig(rv.apply))

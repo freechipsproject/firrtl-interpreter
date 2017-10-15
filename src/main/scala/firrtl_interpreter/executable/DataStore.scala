@@ -15,7 +15,7 @@ import scala.collection.mutable
   *
   * @param numberOfBuffers Number of buffers
   */
-class DataStore(val numberOfBuffers: Int) {
+class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
   assert(numberOfBuffers > 0, s"DataStore: numberOfBuffers $numberOfBuffers must be > 0")
 
   private val nextIndexFor = new mutable.HashMap[DataSize, Int]
@@ -112,25 +112,40 @@ class DataStore(val numberOfBuffers: Int) {
       println(s"${symbol.name}:${symbol.index} <= ${expression()}")
       currentIntArray(index) = expression()
     }
-    val run: FuncUnit = runVerbose _
+    val run: FuncUnit = if(optimizationLevel == 0) runVerbose _ else runQuiet _
   }
 
   case class GetLong(index: Int) extends LongExpressionResult {
     def apply(): Long = currentLongArray(index)
   }
-  case class AssignLong(index: Int, expression: FuncLong) extends Assigner {
-    def run: FuncUnit = () => {
+  case class AssignLong(symbol: Symbol, expression: FuncLong) extends Assigner {
+    var index: Int = symbol.index
+
+    def runQuiet(): Unit = () => {
       currentLongArray(index) = expression()
     }
+
+    def runVerbose(): Unit = () => {
+      println(s"${symbol.name}:${symbol.index} <= ${expression()}")
+      currentLongArray(index) = expression()
+    }
+    val run: FuncUnit = if(optimizationLevel == 0) runVerbose _ else runQuiet _
   }
 
   case class GetBig(index: Int) extends BigExpressionResult {
     def apply(): Big = currentBigArray(index)
   }
-  case class AssignBig(index: Int, expression: FuncBig) extends Assigner {
-    def run: FuncUnit = () => {
+  case class AssignBig(symbol: Symbol, expression: FuncBig) extends Assigner {
+    val index = symbol.index
+
+    def runQuiet(): Unit = () => {
       currentBigArray(index) = expression()
     }
+    def runVerbose(): Unit = () => {
+      println(s"${symbol.name}:${symbol.index} <= ${expression()}")
+      currentBigArray(index) = expression()
+    }
+    val run: FuncUnit = if(optimizationLevel == 0) runVerbose _ else runQuiet
   }
 
   case class PrintfOp(

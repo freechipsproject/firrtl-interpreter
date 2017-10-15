@@ -212,5 +212,4 @@ object BigIntTestValuesGenerator {
 
     BigIntTestValuesGenerator(TestUtils.powerOfTwoFrom(widthOfStart), TestUtils.powerOfTwoFrom(widthOfFinish))
   }
-
 }
