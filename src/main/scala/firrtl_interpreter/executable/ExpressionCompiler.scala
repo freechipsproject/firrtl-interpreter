@@ -559,6 +559,17 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
 //          dependencyGraph.addStop(Stop(info, ret, processExpression(clkExpression), processExpression(enableExpression)))
 //          s
         case Print(info, stringLiteral, argExpressions, clkExpression, enableExpression) =>
+          class PrintAssigner(print: Print) {
+
+          }
+          val printfOp = dataStore.PrintfOp(
+            info, stringLiteral,
+            argExpressions.map { expression => processExpression(expression) },
+            processExpression(enableExpression)
+          )
+          scheduler.triggeredAssigns(processExpression(clkExpression)) += printfOp
+
+
 //          dependencyGraph.addPrint(Print(
 //            info, stringLiteral,
 //            argExpressions.map { expression => processExpression(expression) },
