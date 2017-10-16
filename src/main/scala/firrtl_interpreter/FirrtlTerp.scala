@@ -161,9 +161,6 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     circuitState.setValue(name, concreteValue, registerPoke = registerPoke)
   }
 
-  def hasInput(name: String): Boolean  = dependencyGraph.hasInput(name)
-  def hasOutput(name: String): Boolean = dependencyGraph.hasOutput(name)
-
   def evaluateCircuit(specificDependencies: Seq[String] = Seq()): Unit = {
     logger.debug(s"clear ephemera")
     circuitState.prepareForDependencyResolution()

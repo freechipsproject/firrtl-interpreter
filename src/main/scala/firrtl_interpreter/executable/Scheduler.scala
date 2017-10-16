@@ -52,6 +52,11 @@ class Scheduler(dataStore: DataStore, symbolTable: SymbolTable) {
     }
   }
 
+  def makeFresh(): Unit = {
+    //TODO (chick) make sure dataStore is up to date
+
+  }
+
   def render: String = {
     s"combinational assigns (${combinationalAssigns.size}\n" +
     combinationalAssigns.map { assigner =>

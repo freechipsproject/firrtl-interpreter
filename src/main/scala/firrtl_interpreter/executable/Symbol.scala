@@ -8,11 +8,12 @@ import firrtl_interpreter.InterpreterException
 
 case class Symbol(
     name: String,
-    dataSize: DataSize,
-    dataType: DataType,
-    dataKind: Kind,
-    bitWidth: Int,
-    slots:    Int
+    dataSize:   DataSize,
+    dataType:   DataType,
+    dataKind:   Kind,
+    bitWidth:   Int,
+    slots:      Int,
+    firrtlType: firrtl.ir.Type
 ) {
   var index: Int = -1
   var cardinalNumber: Int = -1
@@ -27,7 +28,8 @@ case class Symbol(
 
 object Symbol {
   def apply(name: String, firrtlType: firrtl.ir.Type, firrtlKind: Kind, slots: Int = 1): Symbol = {
-    Symbol(name, DataSize(firrtlType), DataType(firrtlType), firrtlKind, DataSize.getBitWidth(firrtlType), slots)
+    Symbol(name, DataSize(firrtlType), DataType(firrtlType),
+      firrtlKind, DataSize.getBitWidth(firrtlType), slots, firrtlType)
   }
 }
 

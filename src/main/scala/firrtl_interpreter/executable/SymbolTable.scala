@@ -42,6 +42,8 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
     apply(size, index)
   }
 
+  def contains(name: String): Boolean = nameToSymbol.contains(name)
+
   def render: String = {
     keys.toArray.sorted.map { name =>
       nameToSymbol(name).render
