@@ -13,7 +13,7 @@ class PoisonSpec extends FreeSpec with Matchers {
       s"""
         |circuit Poison :
         |  module Poison :
-        |    input u_in : UInt<$TestWidth>
+        |    input u_in : SInt<$TestWidth>
         |    input s_in : SInt<$TestWidth>
         |    output s_out: SInt<${TestWidth + 2}>
         |
