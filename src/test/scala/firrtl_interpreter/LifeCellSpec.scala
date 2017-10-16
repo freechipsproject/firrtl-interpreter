@@ -192,7 +192,7 @@ class LifeCellSpec extends FlatSpec with Matchers {
       step(1)
       expect("io_is_alive", 0)
 
-      interpreter.circuitState.vcdLoggerOption.get.write(optionsManager.targetDirName + "/" + "life.vcd")
+//      interpreter.circuitState.vcdLoggerOption.get.write(optionsManager.targetDirName + "/" + "life.vcd")
       report()
     }
   }

@@ -17,10 +17,10 @@ case class Program(
   def dataInColumns: String = {
     ("-" * 100) + s"\n${dataStore.previousBufferIndex}  " +
     symbolTable.keys.toArray.sorted.map { name =>
-      val value = dataStore.previousIntArray(symbolTable(name).index)
+      val value = dataStore(symbolTable(name))
       f"$value%10.10s" }.mkString("") + s"\n${dataStore.currentBufferIndex}  " +
     symbolTable.keys.toArray.sorted.map { name =>
-      val value = dataStore.currentIntArray(symbolTable(name).index)
+      val value = dataStore(symbolTable(name))
       f"$value%10.10s" }.mkString("") + "\n" +
     ("-" * 100)
   }

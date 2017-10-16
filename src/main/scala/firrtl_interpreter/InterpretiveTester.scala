@@ -23,9 +23,9 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
   val commonOptions: firrtl.CommonOptions    = optionsManager.commonOptions
 
-  interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
-  interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
-  interpreter.evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
+//  interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
+//  interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
+//  interpreter.evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
   interpreter.setVerbose(interpreterOptions.setVerbose)
 
   setVerbose(interpreterOptions.setVerbose)
@@ -86,8 +86,8 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     if(interpreter.checkStopped(s"poke($name, $value)")) return
 
     try {
-      val isRegister = interpreter.circuitState.registers.contains(name)
-      interpreter.circuitState.vcdLowerClock()
+      val isRegister = interpreter.symbolTable.isRegister(name)
+//      interpreter.circuitState.vcdLowerClock()
       interpreter.setValueWithBigInt(name, value, registerPoke = isRegister)
     }
     catch {
@@ -108,9 +108,9 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     if(interpreter.checkStopped(s"poke($name, $value)")) return
 
     try {
-      val isRegister = interpreter.circuitState.registers.contains(name)
-      interpreter.circuitState.vcdLowerClock()
-      interpreter.circuitState.setValue(name, value, registerPoke = isRegister)
+      val isRegister = interpreter.symbolTable.isRegister(name)
+//      interpreter.circuitState.vcdLowerClock()
+      interpreter.setValue(name, value, registerPoke = isRegister)
     }
     catch {
       case ie: InterpreterException =>
@@ -211,7 +211,7 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     }
     s"test ${interpreter.loweredAst.main} " +
       s"$status $expectationsMet tests passed " +
-      s"in ${interpreter.circuitState.stateCounter} cycles " +
+//      s"in ${interpreter.circuitState.stateCounter} cycles " +
       f"taking $elapsedSeconds%.6f seconds"
   }
   /**

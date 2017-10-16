@@ -2,36 +2,19 @@
 
 package firrtl_interpreter
 
+import firrtl.PortKind
+import firrtl.ir.Circuit
+import firrtl_interpreter.executable._
 import firrtl_interpreter.real.DspRealFactory
-import firrtl.ir._
+import logger.{LazyLogging, LogLevel, Logger}
 
-import logger._
-
-// TODO: consider adding x-state
-// TODO: Support forced values on nodes (don't recompute them if forced)
-// TODO: How do zero width wires affect interpreter
-
-/**
-  * This is the Firrtl interpreter.  It is the top level control engine
-  * that controls the simulation of a circuit running.
-  *
-  * It coordinates updating of the circuit's inputs (other elements, nodes,
-  * registers, etc can be forced to values) and querying the circuits outputs
-  * (or optionally other circuit components)
-  *
-  * This mainly involves updating of a circuit state instance by using a
-  * expression evaluator on a dependency graph.
-  *
-  * @param ast the circuit to be simulated
-  */
+//scalastyle:off magic.number
 class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) extends LazyLogging {
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
 
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
   var verbose: Boolean = false
-
-  def stopResult: Int  = lastStopResult.get
 
   val loweredAst: Circuit = if(interpreterOptions.lowCompileAtLoad) {
     ToLoFirrtl.lower(ast, optionsManager)
@@ -54,72 +37,101 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     */
   def setVerbose(value: Boolean = true): Unit = {
     Logger.setLevel(classOf[FirrtlTerp], LogLevel.Debug)
-    evaluator.setVerbose(value)
+    //TODO: This is supposed to set verbose execution
   }
 
-  val dependencyGraph = DependencyGraph(loweredAst, this)
+  val timer = new Timer
+
+  val symbolTable: SymbolTable = timer("build symbol table") {
+    SymbolTable(loweredAst, Seq.empty)
+  }
+  val dataStore = DataStore(numberOfBuffers = 1)
+  symbolTable.allocateData(dataStore)
+  val scheduler = new Scheduler(dataStore, symbolTable)
+  val program = Program(symbolTable, dataStore, scheduler)
+
+  val compiler = new ExpressionCompiler(program)
+
+  timer("compile") {
+    compiler.compile(loweredAst, blackBoxFactories)
+  }
+
+  println(s"Scheduler before sort ${scheduler.render}")
+  scheduler.sortCombinationalAssigns()
+  println(s"Scheduler after sort ${scheduler.render}")
+
   /**
     * Once a stop has occured, the intepreter will not allow pokes until
     * the stop has been cleared
     */
   def clearStop(): Unit = {lastStopResult = None}
 
-  var circuitState = CircuitState(dependencyGraph)
-  println("Circuit state created")
-
   def makeVCDLogger(fileName: String, showUnderscored: Boolean): Unit = {
-    circuitState.makeVCDLogger(dependencyGraph, circuitState, fileName, showUnderscored)
+    //TODO: (chick) circuitState.makeVCDLogger(dependencyGraph, circuitState, fileName, showUnderscored)
   }
   def disableVCD(): Unit = {
-    circuitState.disableVCD()
+    //TODO: (chick) circuitState.disableVCD()
   }
   def writeVCD(): Unit = {
-    circuitState.writeVCD()
+    //TODO: (chick) circuitState.writeVCD()
   }
 
-  val evaluator = new LoFirrtlExpressionEvaluator(
-    dependencyGraph = dependencyGraph,
-    circuitState = circuitState
-  )
-  evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
-  val timer: Timer = evaluator.timer
+  logger.debug(s"symbol table size is ${symbolTable.size}, dataStore allocations ${dataStore.getSizes}")
+
+  logger.debug(s"SymbolTable:\n${program.symbolTable.render}")
 
   setVerbose(interpreterOptions.setVerbose)
 
+  var isStale: Boolean = false
+
   def getValue(name: String): Concrete = {
-    assert(dependencyGraph.validNames.contains(name),
+    assert(symbolTable.contains(name),
       s"Error: getValue($name) is not an element of this circuit")
 
-    if(circuitState.isStale) {
-        evaluateCircuit()
-      }
-    circuitState.getValue(name) match {
-      case Some(value) => value
-      case _ => throw InterpreterException(s"Error: getValue($name) returns value not found")
-    }
+    if(isStale) scheduler.makeFresh()
+
+    val symbol = symbolTable(name)
+    TypeInstanceFactory(symbol.firrtlType, dataStore(symbolTable(name))
+    )
   }
 
+  /**
+    * This function used to show the calculation of all dependencies resolved to get value
+    * @param name
+    * @return
+    */
   def getSpecifiedValue(name: String): Concrete = {
-    assert(dependencyGraph.validNames.contains(name),
+    //TODO: (chick) Show this in some other way
+    assert(symbolTable.contains(name),
       s"Error: getValue($name) is not an element of this circuit")
 
-    if(circuitState.isStale) {
-      evaluateCircuit(Seq(name))
-    }
-    circuitState.getValue(name) match {
-      case Some(value) => value
-      case _ => throw InterpreterException(s"Error: getValue($name) returns value not found")
-    }
+    if(isStale) scheduler.makeFresh()
+
+    val symbol = symbolTable(name)
+    TypeInstanceFactory(symbol.firrtlType, dataStore(symbolTable(name))
+    )
   }
 
+  /**
+    * Update the circuit state with the supplied information
+    * @param name  name of value to set
+    * @param value new concrete value
+    * @param force allows setting components other than top level inputs
+    * @param registerPoke changes which side of a register is poked
+    * @return the concrete value that was derived from type and value
+    */
   def setValue(name: String, value: Concrete, force: Boolean = true, registerPoke: Boolean = false): Concrete = {
+    assert(symbolTable.contains(name))
+    val symbol = symbolTable(name)
+
     if(!force) {
-      assert(circuitState.isInput(name),
+      assert(symbol.dataKind == PortKind,
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
       if(checkStopped("setValue")) return Concrete.poisonedUInt(1)
     }
 
-    circuitState.setValue(name, value, registerPoke = registerPoke)
+    dataStore(symbol) = value.value
+    value
   }
 
   /**
@@ -132,12 +144,9 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     * @return the concrete value that was derived from type and value
     */
   def makeConcreteValue(name: String, value: BigInt, poisoned: Boolean = false): Concrete = {
-    circuitState.getValue(name) match {
-      case Some(currentValue) =>
-        TypeInstanceFactory.makeSimilar(currentValue, value, poisoned = poisoned)
-      case None =>
-        TypeInstanceFactory(dependencyGraph.nameToType(name), value, poisoned = poisoned)
-    }
+    //TODO: (chick) former poison functionality is not here right now
+    val symbol = symbolTable(name)
+    TypeInstanceFactory(symbol.firrtlType, dataStore(symbolTable(name)))
   }
 
   /**
@@ -150,27 +159,27 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     */
   def setValueWithBigInt(
       name: String, value: BigInt, force: Boolean = true, registerPoke: Boolean = false): Concrete = {
+    assert(symbolTable.contains(name))
+    val symbol = symbolTable(name)
 
     if(!force) {
-      assert(circuitState.isInput(name),
+      assert(symbol.dataKind == PortKind,
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
+      if(checkStopped("setValue")) return Concrete.poisonedUInt(1)
     }
 
-    val concreteValue = makeConcreteValue(name, value)
-
-    circuitState.setValue(name, concreteValue, registerPoke = registerPoke)
+    dataStore(symbol) = value
+    makeConcreteValue(name, value)
   }
 
   def evaluateCircuit(specificDependencies: Seq[String] = Seq()): Unit = {
-    logger.debug(s"clear ephemera")
-    circuitState.prepareForDependencyResolution()
-    logger.debug(circuitState.prettyString())
-    logger.debug(s"resolve dependencies")
-    evaluator.resolveDependencies(specificDependencies)
-
-    if(specificDependencies.isEmpty) {
-      circuitState.isStale = false
-    }
+    program.dataStore.advanceBuffers()
+    println(s"a --  ${program.dataInColumns}")
+    program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
+    println(s"h --  ${program.header}")
+    println(s"r --  ${program.dataInColumns}")
+    program.scheduler.executeCombinational()
+    println(s"c --  ${program.dataInColumns}")
   }
 
   def reEvaluate(name: String): Unit = {
@@ -186,53 +195,35 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
   }
 
   def cycle(showState: Boolean = false): Unit = {
+    //TODO: (chick) VCD stuff is missing from here
     logger.debug("interpreter cycle called " + "="*80)
     if(checkStopped("cycle")) return
 
-    circuitState.vcdLowerClock()
-    circuitState.vcdRaiseClock()
-
-    if(circuitState.isStale) {
+    if(isStale) {
       logger.debug("interpreter cycle() called, state is stale, re-evaluate Circuit")
-      logger.debug(circuitState.prettyString())
+      logger.debug(program.dataInColumns)
 
       logger.debug(s"process reset")
-      evaluateCircuit()
+//      evaluateCircuit()
     }
     else {
       logger.debug(s"interpreter cycle() called, state is fresh")
     }
 
-    circuitState.cycle()
+    evaluateCircuit()
 
     for (elem <- blackBoxFactories) {
       elem.cycle()
     }
 
-    logger.debug(s"check prints")
-    evaluator.checkPrints()
-    logger.debug(s"check stops")
-    lastStopResult = evaluator.checkStops()
 
-    if(stopped) {
-      if(stopResult == 0) {
-        throw StopException(s"Success: Stop result $stopResult")
-      }
-      else {
-        throw StopException(s"Failure: Stop result $stopResult")
-      }
-    }
-
-    evaluateCircuit()
-    logger.debug(s"cycle complete:\n${circuitState.prettyString()}")
-
-    if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${circuitState.prettyString()}")
+    if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${program.dataInColumns}")
   }
 
   def doCycles(n: Int): Unit = {
     if(checkStopped(s"doCycles($n)")) return
 
-    println(s"Initial state ${"-"*80}\n${circuitState.prettyString()}")
+    println(s"Initial state ${"-"*80}\n${program.dataInColumns}")
 
     for(cycle_number <- 1 to n) {
       println(s"Cycle $cycle_number ${"-"*80}")
@@ -240,6 +231,49 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
       if(stopped) return
     }
   }
+
+  def poke(name: String, value: Int): Unit = {
+    val symbol = program.symbolTable(name)
+    program.dataStore(symbol) = value
+  }
+  def peek(name: String): Big = {
+    val symbol = program.symbolTable(name)
+    program.dataStore(symbol)
+  }
+
+  def step(steps: Int = 1): Unit = {
+    program.dataStore.advanceBuffers()
+    println(s"a --  ${program.dataInColumns}")
+    program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
+    println(s"h --  ${program.header}")
+    println(s"r --  ${program.dataInColumns}")
+    program.scheduler.executeCombinational()
+    println(s"c --  ${program.dataInColumns}")
+  }
+
+//  println(s"h --  ${program.header}")
+//  println(s"i --  ${program.dataInColumns}")
+//
+//  poke("io_a", 33)
+//  poke("io_b", 11)
+//  poke("io_e", 1)
+//
+//  println(s"p --  ${program.dataInColumns}")
+//
+//  step()
+//
+//  poke("io_e", 0)
+//  println(s"p --  ${program.dataInColumns}")
+//  step()
+//
+//  var count = 0
+////  while(peek("io_v") == 0 && count < 50 && peek("x") > 0) {
+//  while(/*peek("io_v") == 0 &&*/ count < 12) {
+//    count += 1
+//    step()
+//  }
+//
+//  println(timer.report())
 }
 
 object FirrtlTerp {
@@ -253,15 +287,15 @@ object FirrtlTerp {
     branches of muxes get computed, while we are at we can compute the sort key order
      */
     try {
-      val saveUseTopologicalSortedKeys = interpreter.evaluator.useTopologicalSortedKeys
-      val saveEvaluateAll = interpreter.evaluator.evaluateAll
-
-      interpreter.evaluator.evaluateAll = true
-      interpreter.evaluator.useTopologicalSortedKeys = true
-      interpreter.evaluateCircuit()
-
-      interpreter.evaluator.useTopologicalSortedKeys = saveUseTopologicalSortedKeys
-      interpreter.evaluator.evaluateAll = saveEvaluateAll
+//      val saveUseTopologicalSortedKeys = interpreter.evaluator.useTopologicalSortedKeys
+//      val saveEvaluateAll = interpreter.evaluator.evaluateAll
+//
+//      interpreter.evaluator.evaluateAll = true
+//      interpreter.evaluator.useTopologicalSortedKeys = true
+//      interpreter.evaluateCircuit()
+//
+//      interpreter.evaluator.useTopologicalSortedKeys = saveUseTopologicalSortedKeys
+//      interpreter.evaluator.evaluateAll = saveEvaluateAll
     }
     catch {
       case ie: InterpreterException =>

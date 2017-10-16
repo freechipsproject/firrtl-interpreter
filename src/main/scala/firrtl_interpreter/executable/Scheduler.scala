@@ -30,8 +30,15 @@ class Scheduler(dataStore: DataStore, symbolTable: SymbolTable) {
   }
 
   def executeTriggeredAssigns(triggerExpression: ExpressionResult): Unit = {
-    triggeredAssigns(triggerExpression).foreach {
-      assign => assign.run()
+    val triggerValue = triggerExpression match {
+      case e: IntExpressionResult  => e.apply() > 0
+      case e: LongExpressionResult => e.apply() > 0L
+      case e: BigExpressionResult  => e.apply() > Big(0)
+    }
+    if(triggerValue) {
+      triggeredAssigns(triggerExpression).foreach {
+        assign => assign.run()
+      }
     }
   }
 
