@@ -92,7 +92,7 @@ case class AsUIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExp
 case class AsSIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = if (isSigned) applySigned() else applyUnsigned()
 
-  private val mask: Int = 1 << (width - 1)
+  private val nextPowerOfTwo: Int = 1 << (width - 1)
 
   def applySigned(): Int = f1()
 
@@ -101,8 +101,8 @@ case class AsSIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExp
     if (width == 1 && uInt == 1) {
       -1
     }
-    else if ((uInt & mask) > 0) {
-      mask - uInt
+    else if ((uInt & nextPowerOfTwo) > 0) {
+      nextPowerOfTwo - uInt
     } else {
       uInt
     }
@@ -218,6 +218,7 @@ case class TailInts(f1: FuncInt, isSigned: Boolean, toDrop: Int, originalWidth: 
   private val mask: Int = (1 << (originalWidth - toDrop)) - 1
 
   def apply(): Int = {
+    val f1Value = f1()
     val uInt = AsUIntInts(f1, isSigned, originalWidth).apply()
     uInt & mask
   }

@@ -58,7 +58,7 @@ case class GeqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
 }
 
 case class AsUIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
-  private val mask = (BigInt(1) << width) - 1
+  private val mask = Big.makeMask(width)
 
   //  def apply(): Int = if (isSigned) applySigned() else applyUnsigned()
   def apply(): Big = f1() & mask
@@ -67,7 +67,7 @@ case class AsUIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExp
 case class AsSIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
   def apply(): Big = if (isSigned) applySigned() else applyUnsigned()
 
-  val mask: Big = BigInt(1) << (width - 1)
+  val nextPowerOfTwo: Big = BigInt(1) << (width - 1)
 
   def applySigned(): Big = f1()
 
@@ -76,8 +76,8 @@ case class AsSIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExp
     if (width == 1 && uInt == BigInt(1)) {
       BigInt(-1)
     }
-    else if ((uInt & mask) > 0) {
-      mask - uInt
+    else if ((uInt & nextPowerOfTwo) > 0) {
+      nextPowerOfTwo - uInt
     } else {
       uInt
     }
@@ -173,7 +173,7 @@ case class CatBigs(
 
 case class BitsBigs(f1: FuncBig, isSigned: Boolean, high: Int, low: Int, originalWidth: Int)
   extends BigExpressionResult {
-  private val mask = (1 << ((high - low) + 1)) - 1
+  private val mask = Big.makeMask((high - low) + 1)
 
   def apply(): Big = {
     val uInt = AsUIntBigs(f1, isSigned, originalWidth).apply()
@@ -182,7 +182,7 @@ case class BitsBigs(f1: FuncBig, isSigned: Boolean, high: Int, low: Int, origina
 }
 
 case class HeadBigs(f1: FuncBig, isSigned: Boolean, takeBits: Int, originalWidth: Int) extends BigExpressionResult {
-  private val mask = (1 << takeBits) - 1
+  private val mask = Big.makeMask(takeBits)
   private val shift = originalWidth - takeBits
 
   def apply(): Big = {
@@ -192,9 +192,10 @@ case class HeadBigs(f1: FuncBig, isSigned: Boolean, takeBits: Int, originalWidth
 }
 
 case class TailBigs(f1: FuncBig, isSigned: Boolean, toDrop: Int, originalWidth: Int) extends BigExpressionResult {
-  private val mask: Big = BigInt((1 << (originalWidth - toDrop)) - 1)
+  private val mask: Big = Big.makeMask(originalWidth - toDrop)
 
   def apply(): Big = {
+    val f1Value = f1()
     val uInt = AsUIntBigs(f1, isSigned, originalWidth).apply()
     uInt & mask
   }

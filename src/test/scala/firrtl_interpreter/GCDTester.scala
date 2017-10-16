@@ -24,20 +24,22 @@ class GCDTester extends FlatSpec with Matchers {
 
   behavior of "GCD"
 
-  val gcdFirrtl: String =
-    """
+  //scalastyle:off
+  def sizableTest(width: Int) {
+    val gcdFirrtl: String =
+      s"""
       |circuit GCD :
       |  module GCD :
       |    input clock : Clock
       |    input reset : UInt<1>
-      |    input io_a : UInt<32>
-      |    input io_b : UInt<32>
+      |    input io_a : UInt<$width>
+      |    input io_b : UInt<$width>
       |    input io_e : UInt<1>
-      |    output io_z : UInt<32>
+      |    output io_z : UInt<$width>
       |    output io_v : UInt<1>
-      |    reg x : UInt<32>, clock with :
+      |    reg x : UInt<$width>, clock with :
       |      reset => (UInt<1>("h0"), x)
-      |    reg y : UInt<32>, clock with :
+      |    reg y : UInt<$width>, clock with :
       |      reset => (UInt<1>("h0"), y)
       |    node T_13 = gt(x, y)
       |    node T_14 = sub(x, y)
@@ -52,10 +54,9 @@ class GCDTester extends FlatSpec with Matchers {
       |    y <= mux(io_e, io_b, GEN_1)
       |    io_z <= x
       |    io_v <= T_21
-    """.stripMargin
+    """
+        .stripMargin
 
-
-  it should "run with InterpretedTester" in {
     val manager = new InterpreterOptionsManager {
       interpreterOptions = interpreterOptions.copy(showFirrtlAtLoad = true)
     }
@@ -71,8 +72,9 @@ class GCDTester extends FlatSpec with Matchers {
     // interpreter.setVerbose()
     tester.poke("clock", 1)
 
-        List((1, 1, 1), (34, 17, 17), (8, 12, 4)).foreach { case (x, y, z) =>
-//    for((x, y, z) <- values) {
+    List((34, 17, 17)).foreach { case (x, y, z) =>
+      //    List((1, 1, 1), (34, 17, 17), (8, 12, 4)).foreach { case (x, y, z) =>
+      //    for((x, y, z) <- values) {
       tester.step()
       tester.poke("io_a", x)
       tester.poke("io_b", y)
@@ -85,8 +87,17 @@ class GCDTester extends FlatSpec with Matchers {
       while (tester.peek("io_v") != Big1) {
         tester.step()
       }
-      println(s"GOT io_z ${tester.peek("io_z")}  io_v ${tester.peek("io_v")}")
-//      tester.expect("io_z", z)
+
+      val right = tester.peek("io_z") == BigInt(z)
+      if(right) {
+        println(s"GOT io_z ${tester.peek("io_z")} io_v ${tester.peek("io_v")}")
+      }
+      else {
+        println(s"${Console.RED}GOT io_z ${tester.peek("io_z")} NOT $z  io_v ${tester.peek("io_v")}${Console.RESET}")
+      }
+
+
+      //      tester.expect("io_z", z)
     }
     val endTime = System.nanoTime()
     val elapsedSeconds = (endTime - startTime).toDouble / 1000000000.0
@@ -97,6 +108,20 @@ class GCDTester extends FlatSpec with Matchers {
       f"processed $cycle cycles $elapsedSeconds%.6f seconds ${cycle.toDouble / (1000000.0 * elapsedSeconds)}%5.3f MHz"
     )
     tester.report()
+
+  }
+
+
+  it should "run with InterpretedTester at Int size 16" in {
+    sizableTest(16)
+  }
+
+  it should "run with InterpretedTester at Int size 44" in {
+    sizableTest(44)
+  }
+
+  it should "run with InterpretedTester at size 68" in {
+    sizableTest(68)
   }
 }
 

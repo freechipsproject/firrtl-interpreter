@@ -47,7 +47,7 @@ case object BigSize extends DataSize {
 
 object DataSize {
   val IntThreshold = 31
-  val LongThreshold = 31 // Not being used right now
+  val LongThreshold = 63
 
   def getBitWidth(firrtlType: firrtl.ir.Type): Int = {
     firrtlType match {

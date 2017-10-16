@@ -15,7 +15,7 @@ import scala.collection.mutable
   *
   * @param numberOfBuffers Number of buffers
   */
-class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
+class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
   assert(numberOfBuffers > 0, s"DataStore: numberOfBuffers $numberOfBuffers must be > 0")
 
   private val nextIndexFor = new mutable.HashMap[DataSize, Int]
@@ -121,11 +121,11 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
   case class AssignLong(symbol: Symbol, expression: FuncLong) extends Assigner {
     var index: Int = symbol.index
 
-    def runQuiet(): Unit = () => {
+    def runQuiet(): Unit = {
       currentLongArray(index) = expression()
     }
 
-    def runVerbose(): Unit = () => {
+    def runVerbose(): Unit = {
       println(s"${symbol.name}:${symbol.index} <= ${expression()}")
       currentLongArray(index) = expression()
     }
@@ -138,14 +138,14 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
   case class AssignBig(symbol: Symbol, expression: FuncBig) extends Assigner {
     val index = symbol.index
 
-    def runQuiet(): Unit = () => {
+    def runQuiet(): Unit = {
       currentBigArray(index) = expression()
     }
-    def runVerbose(): Unit = () => {
+    def runVerbose(): Unit = {
       println(s"${symbol.name}:${symbol.index} <= ${expression()}")
       currentBigArray(index) = expression()
     }
-    val run: FuncUnit = if(optimizationLevel == 0) runVerbose _ else runQuiet
+    val run: FuncUnit = if(optimizationLevel == 0) runVerbose _ else runQuiet _
   }
 
   case class PrintfOp(

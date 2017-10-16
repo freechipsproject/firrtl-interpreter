@@ -174,9 +174,10 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 
   def evaluateCircuit(specificDependencies: Seq[String] = Seq()): Unit = {
     program.dataStore.advanceBuffers()
-    println(s"a --  ${program.dataInColumns}")
-    program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
     println(s"h --  ${program.header}")
+    program.scheduler.executeCombinational()
+    println(s"c --  ${program.dataInColumns}")
+    program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
     println(s"r --  ${program.dataInColumns}")
     program.scheduler.executeCombinational()
     println(s"c --  ${program.dataInColumns}")
