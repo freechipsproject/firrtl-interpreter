@@ -7,7 +7,7 @@ import firrtl._
 import firrtl.ir._
 import firrtl_interpreter._
 
-class ExpressionCompiler(program: Program) extends logger.LazyLogging {
+class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.LazyLogging {
   val dataStore:   DataStore   = program.dataStore
   val symbolTable: SymbolTable = program.symbolTable
   val scheduler:   Scheduler   = program.scheduler
@@ -557,28 +557,18 @@ class ExpressionCompiler(program: Program) extends logger.LazyLogging {
           val newDefMemory = defMemory.copy(name = expandedName)
         case IsInvalid(info, expression) =>
 //          IsInvalid(info, processExpression(expression))
-        case Stop(info, ret, clkExpression, enableExpression) =>
-//          dependencyGraph.addStop(Stop(info, ret, processExpression(clkExpression), processExpression(enableExpression)))
-//          s
-        case Print(info, stringLiteral, argExpressions, clkExpression, enableExpression) =>
-          class PrintAssigner(print: Print) {
+        case Stop(info, ret, clockExpression, enableExpression) =>
+          val stopOp = StopOp(info, returnValue = ret, condition = processExpression(enableExpression), parent)
+          scheduler.triggeredAssigns(processExpression(clockExpression)) += stopOp
 
-          }
-          val printfOp = dataStore.PrintfOp(
+        case Print(info, stringLiteral, argExpressions, clockExpression, enableExpression) =>
+          val printfOp = PrintfOp(
             info, stringLiteral,
             argExpressions.map { expression => processExpression(expression) },
             processExpression(enableExpression)
           )
-          scheduler.triggeredAssigns(processExpression(clkExpression)) += printfOp
+          scheduler.triggeredAssigns(processExpression(clockExpression)) += printfOp
 
-
-//          dependencyGraph.addPrint(Print(
-//            info, stringLiteral,
-//            argExpressions.map { expression => processExpression(expression) },
-//            processExpression(clkExpression),
-//            processExpression(enableExpression)
-//          ))
-//          s
         case EmptyStmt =>
         case conditionally: Conditionally =>
           // logger.debug(s"got a conditionally $conditionally")

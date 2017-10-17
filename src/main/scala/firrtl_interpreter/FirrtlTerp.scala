@@ -50,7 +50,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
   val scheduler = new Scheduler(dataStore, symbolTable)
   val program = Program(symbolTable, dataStore, scheduler)
 
-  val compiler = new ExpressionCompiler(program)
+  val compiler = new ExpressionCompiler(program, this)
 
   timer("compile") {
     compiler.compile(loweredAst, blackBoxFactories)
@@ -97,7 +97,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 
   /**
     * This function used to show the calculation of all dependencies resolved to get value
-    * @param name
+    * @param name signal to get and show computation
     * @return
     */
   def getSpecifiedValue(name: String): Concrete = {

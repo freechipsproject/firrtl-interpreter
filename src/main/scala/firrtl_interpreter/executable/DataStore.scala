@@ -136,7 +136,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     def apply(): Big = currentBigArray(index)
   }
   case class AssignBig(symbol: Symbol, expression: FuncBig) extends Assigner {
-    val index = symbol.index
+    val index: Int = symbol.index
 
     def runQuiet(): Unit = {
       currentBigArray(index) = expression()
@@ -146,32 +146,6 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
       currentBigArray(index) = expression()
     }
     val run: FuncUnit = if(optimizationLevel == 0) runVerbose _ else runQuiet _
-  }
-
-  case class PrintfOp(
-                       info: Info,
-                       string: StringLit,
-                       args: Seq[ExpressionResult],
-                       condition: ExpressionResult
-                     ) extends Assigner {
-
-    def run: FuncUnit = {
-      val conditionValue = condition match {
-        case e: IntExpressionResult  => e.apply() > 0
-        case e: LongExpressionResult => e.apply() > 0L
-        case e: BigExpressionResult  => e.apply() > Big(0)
-      }
-      if(conditionValue) {
-        val currentArgValues = args.map {
-          case e: IntExpressionResult  => e.apply()
-          case e: LongExpressionResult => e.apply()
-          case e: BigExpressionResult  => e.apply()
-        }
-        val formatString = string.escape
-        printf(formatString, currentArgValues:_*)
-      }
-      () => Unit
-    }
   }
 
   def getSizeAndIndex(assigner: Assigner): (DataSize, Int) = {
