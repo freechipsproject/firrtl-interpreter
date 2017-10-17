@@ -102,7 +102,7 @@ object StandaloneRunner {
 
   def main(args: Array[String]): Unit = {
     val optionsManager = new InterpreterOptionsManager with HasStandaloneConfig
-    optionsManager.doNotExitOnHelp()
+//    optionsManager.doNotExitOnHelp()
 
     if (optionsManager.parse(args)) {
       val sourceFile = optionsManager.standaloneConfig.firrtlFileName

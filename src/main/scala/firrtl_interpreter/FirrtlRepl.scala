@@ -1094,9 +1094,9 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
     else if(replConfig.firrtlSourceName.nonEmpty) {
       loadFile(replConfig.firrtlSourceName)
     }
-    else if(optionsManager.commonOptions.programArgs.nonEmpty) {
-      loadFile(optionsManager.commonOptions.programArgs.head)
-    }
+//    else if(optionsManager.commonOptions.programArgs.nonEmpty) {
+//      loadFile(optionsManager.commonOptions.programArgs.head)
+//    }
     if(replConfig.scriptName.nonEmpty) {
       loadScript(replConfig.scriptName)
     }
