@@ -218,7 +218,6 @@ case class TailInts(f1: FuncInt, isSigned: Boolean, toDrop: Int, originalWidth: 
   private val mask: Int = (1 << (originalWidth - toDrop)) - 1
 
   def apply(): Int = {
-    val f1Value = f1()
     val uInt = AsUIntInts(f1, isSigned, originalWidth).apply()
     uInt & mask
   }

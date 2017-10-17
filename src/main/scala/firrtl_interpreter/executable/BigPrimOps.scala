@@ -195,7 +195,6 @@ case class TailBigs(f1: FuncBig, isSigned: Boolean, toDrop: Int, originalWidth: 
   private val mask: Big = Big.makeMask(originalWidth - toDrop)
 
   def apply(): Big = {
-    val f1Value = f1()
     val uInt = AsUIntBigs(f1, isSigned, originalWidth).apply()
     uInt & mask
   }

@@ -2,7 +2,6 @@
 
 package firrtl_interpreter.executable
 
-import firrtl.ir.{Info, StringLit}
 import firrtl_interpreter.InterpreterException
 
 import scala.collection.mutable
@@ -119,7 +118,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     def apply(): Long = currentLongArray(index)
   }
   case class AssignLong(symbol: Symbol, expression: FuncLong) extends Assigner {
-    var index: Int = symbol.index
+    val index: Int = symbol.index
 
     def runQuiet(): Unit = {
       currentLongArray(index) = expression()
