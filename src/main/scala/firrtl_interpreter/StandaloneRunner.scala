@@ -31,7 +31,7 @@ class StandaloneRunner(
         if(verbose) println(message)
       }
 
-      line.split(",").map(_.trim.toLowerCase()).toList match {
+      line.split(",").map(_.trim).toList match {
         case "peek" :: portName :: _ =>
           tester.peek(portName)
           show(s"$line, ${tester.peek(portName)}")
