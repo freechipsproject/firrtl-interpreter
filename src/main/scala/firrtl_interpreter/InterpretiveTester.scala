@@ -3,6 +3,8 @@ package firrtl_interpreter
 
 import java.io.{File, PrintWriter}
 
+import firrtl.{ExecutionOptionsManager, HasCommonOptions, HasFirrtlOptions}
+
 /**
   * Works a lot like the chisel classic tester compiles a firrtl input string
   * and allows poke, peek, expect and step
@@ -16,7 +18,7 @@ import java.io.{File, PrintWriter}
   * @param input              a firrtl program contained in a string
   * @param optionsManager     collection of options for the interpreter
   */
-class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = new InterpreterOptionsManager) {
+class InterpretiveTester(input: String, optionsManager: ExecutionOptionsManager with HasFirrtlOptions with HasInterpreterOptions = new InterpreterOptionsManager) {
   var expectationsMet = 0
 
   firrtl_interpreter.random.setSeed(optionsManager.interpreterOptions.randomSeed)

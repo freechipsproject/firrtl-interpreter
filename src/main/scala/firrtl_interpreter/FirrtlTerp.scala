@@ -2,6 +2,7 @@
 
 package firrtl_interpreter
 
+import firrtl.{ExecutionOptionsManager, HasCommonOptions, HasFirrtlOptions}
 import firrtl_interpreter.real.DspRealFactory
 import firrtl.ir._
 
@@ -22,7 +23,7 @@ import firrtl.ir._
   *
   * @param ast the circuit to be simulated
   */
-class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) extends SimpleLogger {
+class FirrtlTerp(val ast: Circuit, val optionsManager: ExecutionOptionsManager with HasFirrtlOptions with HasInterpreterOptions) extends SimpleLogger {
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
 
   var lastStopResult: Option[Int] = None
@@ -249,7 +250,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 object FirrtlTerp {
   val blackBoxFactory = new DspRealFactory
 
-  def apply(input: String, optionsManager: HasInterpreterSuite = new InterpreterOptionsManager): FirrtlTerp = {
+  def apply(input: String, optionsManager: ExecutionOptionsManager with HasFirrtlOptions with HasInterpreterOptions= new InterpreterOptionsManager): FirrtlTerp = {
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
     val interpreter = new FirrtlTerp(ast, optionsManager)
 
