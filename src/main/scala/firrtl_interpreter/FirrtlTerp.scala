@@ -45,6 +45,8 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
   val symbolTable: SymbolTable = timer("build symbol table") {
     SymbolTable(loweredAst, Seq.empty)
   }
+
+  println(s"Symbol table:\n${symbolTable.render}")
   val dataStore = DataStore(numberOfBuffers = 1)
   symbolTable.allocateData(dataStore)
   val scheduler = new Scheduler(dataStore, symbolTable)

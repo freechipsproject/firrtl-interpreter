@@ -353,7 +353,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             }
 
           case WRef(name, _, _, _) =>
-            createAccessor(name)
+            createAccessor(expand(name))
           case subfield: WSubField =>
             createAccessor(subfield.serialize)
           case subIndex: WSubIndex =>
@@ -491,7 +491,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
               name
             }
           }
-          val lhsName = renameIfRegister(con.loc.serialize)
+          val lhsName = expand(renameIfRegister(con.loc.serialize))
           getAssigner(lhsName, processExpression(con.expr))
 
         case WDefInstance(info, instanceName, moduleName, _) =>
