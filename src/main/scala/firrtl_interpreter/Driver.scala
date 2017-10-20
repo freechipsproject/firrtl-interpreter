@@ -150,7 +150,7 @@ trait HasInterpreterOptions {
   parser.opt[Unit]("fint-pretty-print-monitor-stats")
     .abbr("fippms")
     .foreach { _ =>
-      interpreterOptions = interpreterOptions.copy(monitorBitUsage = true)
+      interpreterOptions = interpreterOptions.copy(prettyPrintReport = true)
     }
     .text("columnizes bit usage monitor reports")
 

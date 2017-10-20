@@ -23,7 +23,12 @@ class NumberMonitor(val canBeNegative: Boolean, val bitSize: Int, numberOfBins: 
   var minValue: BigInt    = BigInt(Long.MaxValue)
 
   private val bins = Array.fill(numberOfBins)(0L)
-  private val binShift = (bitSize - (math.log(numberOfBins) / math.log(2))).toInt
+  private val binShift = if((1 << bitSize) - 1 < numberOfBins) {
+    0
+  }
+  else {
+    (bitSize - (math.log(numberOfBins) / math.log(2))).toInt
+  }
   private val doBinning = if(numberOfBins > 2) updateBins _ else noBinning _
 
   def noBinning(value: BigInt): Unit = Unit
@@ -56,12 +61,14 @@ class NumberMonitor(val canBeNegative: Boolean, val bitSize: Int, numberOfBins: 
   def showBins: String = bins.map { x => f"$x%8d" }.mkString(" ")
 
   def render(prettyPrint: Boolean = true): String = {
+    def showType: String = s"""${if(canBeNegative) "sin<" else "uint<"}$bitSize>"""
+
     if(prettyPrint) {
-      f"$bitSize%6d,$samples%8d,$minValue%8d,$maxValue%16d,$mean%10.5f," +
-        f"$stddev%10.5f,${bins.map(x => f"$x%8d").mkString(",")}"
+      f"$showType%10s,$samples%8d,$minValue%8d,$maxValue%16d,$mean%16.5f," +
+        f"$stddev%16.5f,${bins.map(x => f"$x%8d").mkString(",")}"
     }
     else {
-      s"$bitSize,$samples,$minValue,$maxValue,$mean," +
+      s"$showType,$samples,$minValue,$maxValue,$mean," +
         s"$stddev,${bins.map(x => f"$x").mkString(",")}"
     }
   }
@@ -101,11 +108,11 @@ class MonitorManager(options: InterpreterOptions) {
 
   def renderHeader: String = {
     if(prettyPrintReport) {
-      f"${"bits"}%6s,${"n"}%8s,${"min"}%8s,${"max"}%16s,${"mean"}%10s," +
-        f"${"stddev"}%10s${(0 until numberOfBins).map(x => f"${"bin" + x}%8s").mkString(",", ",", "")}"
+      f"${"type"}%10s,${"n"}%8s,${"min"}%8s,${"max"}%16s,${"mean"}%16s," +
+        f"${"stddev"}%16s${(0 until numberOfBins).map(x => f"${"bin" + x}%8s").mkString(",", ",", "")}"
     }
     else {
-      s"${"bits"},${"n"},${"min"},${"max"},${"mean"}," +
+      s"${"type"},${"n"},${"min"},${"max"},${"mean"}," +
         s"${"stddev"}${(0 until numberOfBins).map(x => s"${"bin" + x}").mkString(",", ",", "")}"
     }
   }
