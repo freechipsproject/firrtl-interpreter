@@ -28,10 +28,13 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
 
   def size: Int = nameToSymbol.size
   def keys:Iterable[String] = nameToSymbol.keys
+  def symbols:Iterable[Symbol] = nameToSymbol.values
 
   def sortKey(dataSize: DataSize, index: Int): Int = sizeAndIndexToSymbol(dataSize)(index).cardinalNumber
 
-  val registerNames: mutable.HashSet[String] = new mutable.HashSet[String]
+  val registerNames:    mutable.HashSet[String] = new mutable.HashSet[String]
+  val inputPortsNames:  mutable.HashSet[String] = new mutable.HashSet[String]
+  val outputPortsNames: mutable.HashSet[String] = new mutable.HashSet[String]
 
   def isRegister(name: String): Boolean = registerNames.contains(name)
 
@@ -63,6 +66,8 @@ object SymbolTable extends LazyLogging {
 
     val dependencies: mutable.HashMap[Symbol, SymbolSet] = new mutable.HashMap[Symbol, SymbolSet]
     val registerNames: mutable.HashSet[String] = new mutable.HashSet[String]()
+    val inputPorts = new mutable.HashSet[String]
+    val outputPorts = new mutable.HashSet[String]
 
     def getInfo: String = {
       f"""
@@ -207,6 +212,14 @@ object SymbolTable extends LazyLogging {
           val symbol = Symbol(expandedName, port.tpe, PortKind)
           nameToSymbol(expandedName) = symbol
           dependencies(symbol) = Set.empty
+          if(modulePrefix.isEmpty) {  // this is true only at top level
+            if(port.direction == Input) {
+              inputPorts += symbol.name
+            }
+            else if(port.direction == Output) {
+              outputPorts += symbol.name
+            }
+          }
         }
       }
 
@@ -271,6 +284,8 @@ object SymbolTable extends LazyLogging {
 
     val symbolTable = SymbolTable(nameToSymbol)
     symbolTable.registerNames ++= registerNames
+    symbolTable.inputPortsNames    ++= inputPorts
+    symbolTable.outputPortsNames   ++= outputPorts
     symbolTable
   }
 }

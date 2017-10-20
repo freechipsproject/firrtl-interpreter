@@ -63,7 +63,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
   println(s"Scheduler after sort ${scheduler.render}")
 
   /**
-    * Once a stop has occured, the intepreter will not allow pokes until
+    * Once a stop has occured, the interpreter will not allow pokes until
     * the stop has been cleared
     */
   def clearStop(): Unit = {lastStopResult = None}
@@ -174,6 +174,33 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     makeConcreteValue(name, value)
   }
 
+  def isRegister(name: String): Boolean = {
+    symbolTable.registerNames.contains(name)
+  }
+
+  def getRegisterNames: Seq[String] = {
+    symbolTable.registerNames.toSeq
+  }
+
+  def getInputPorts: Seq[String] = {
+    symbolTable.inputPortsNames.toSeq
+  }
+
+  def getOutputPorts: Seq[String] = {
+    symbolTable.outputPortsNames.toSeq
+  }
+
+  def isInputPort(name: String): Boolean = {
+    symbolTable.inputPortsNames.contains(name)
+  }
+
+  def isOutputPort(name: String): Boolean = {
+    symbolTable.outputPortsNames.contains(name)
+  }
+
+  def validNames: Iterable[String] = symbolTable.keys
+  def symbols: Iterable[Symbol] = symbolTable.symbols
+
   def evaluateCircuit(specificDependencies: Seq[String] = Seq()): Unit = {
     program.dataStore.advanceBuffers()
     println(s"h --  ${program.header}")
@@ -243,6 +270,9 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     val symbol = program.symbolTable(name)
     program.dataStore(symbol)
   }
+
+  def getInfoString: String = "Info"  //TODO (chick) flesh this out
+  def getPrettyString: String = program.dataInColumns
 
   def step(steps: Int = 1): Unit = {
     program.dataStore.advanceBuffers()

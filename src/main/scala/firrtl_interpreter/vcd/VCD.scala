@@ -482,7 +482,8 @@ case class VCD(
   val initialValues = new mutable.HashSet[Change]
   var scopeRoot = Scope(scope)
   val wires = new mutable.HashMap[String, Wire]
-  var aliasedWires = new mutable.HashMap[String, mutable.HashSet[Wire]] {
+  var aliasedWires: mutable.HashMap[String, mutable.HashSet[Wire]] =
+    new mutable.HashMap[String, mutable.HashSet[Wire]] {
     override def default(key: String): mutable.HashSet[Wire] = {
       this(key) = new mutable.HashSet[Wire]
       this(key)

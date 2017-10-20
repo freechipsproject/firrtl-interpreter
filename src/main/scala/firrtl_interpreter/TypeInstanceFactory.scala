@@ -74,6 +74,22 @@ object TypeInstanceFactory {
     }
   }
   /**
+    * Make a random valued concrete based on the properties of template, but using parameter poisoned
+    * It's more convenient to use the Concrete#random functions because they figure out the proper
+    * range for the random values generated
+    * @param firrtlType The a firrtl type
+    * @param poisoned Sets poisoned
+    * @return
+    */
+  def makeRandom(firrtlType: firrtl.ir.Type, poisoned: Boolean): Concrete = {
+    firrtlType match {
+      case UIntType(IntWidth(w)) => Concrete.randomUInt(w.toInt, poisoned)
+      case SIntType(IntWidth(w)) => Concrete.randomUInt(w.toInt, poisoned)
+      case s: ConcreteClock      => Concrete.randomClock()
+      case _ => throw new InterpreterException(s"Unsupported LoFIRRTL type for interpreter $firrtlType")
+    }
+  }
+  /**
     * Make a concrete based on the properties of template, but using parameter poisoned
     * @param template The concrete value to use as the template
     * @param poisoned Sets poisoned
