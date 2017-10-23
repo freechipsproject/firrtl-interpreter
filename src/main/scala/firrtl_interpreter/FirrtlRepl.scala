@@ -2,6 +2,7 @@
 package firrtl_interpreter
 
 import java.io.File
+import java.util.regex.Matcher
 
 import firrtl_interpreter.vcd.VCD
 
@@ -31,7 +32,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
 
   val terminal: Terminal = TerminalFactory.create()
   val console = new ConsoleReader
-  private val historyPath = "~/.firrtl_repl_history".replaceFirst("^~",System.getProperty("user.home"))
+  private val historyPath = "~/.firrtl_repl_history".replaceFirst("^~",Matcher.quoteReplacement(System.getProperty("user.home")))
   val historyFile = new File(historyPath)
   if(! historyFile.exists()) {
     println(s"creating ${historyFile.getName}")
