@@ -102,6 +102,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
   case class GetInt(index: Int) extends IntExpressionResult {
     def apply(): Int = currentIntArray(index)
   }
+
   case class AssignInt(symbol: Symbol, expression: FuncInt) extends Assigner {
     val index: Int = symbol.index
 
@@ -117,6 +118,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
   case class GetLong(index: Int) extends LongExpressionResult {
     def apply(): Long = currentLongArray(index)
   }
+
   case class AssignLong(symbol: Symbol, expression: FuncLong) extends Assigner {
     val index: Int = symbol.index
 
@@ -134,6 +136,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
   case class GetBig(index: Int) extends BigExpressionResult {
     def apply(): Big = currentBigArray(index)
   }
+
   case class AssignBig(symbol: Symbol, expression: FuncBig) extends Assigner {
     val index: Int = symbol.index
 
@@ -147,11 +150,108 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     val run: FuncUnit = if(optimizationLevel == 0) runVerbose _ else runQuiet _
   }
 
+  /** for memory implementations */
+  case class GetIntIndirect(
+                             memorySymbol: Symbol,
+                             getMemoryIndex: FuncInt,
+                             enable: FuncInt
+                           ) extends IntExpressionResult {
+    val memoryLocation = memorySymbol.index
+    def apply(): Int = {
+      currentIntArray(memoryLocation + getMemoryIndex())
+    }
+  }
+
+  case class GetLongIndirect(
+                             memorySymbol: Symbol,
+                             getMemoryIndex: FuncInt,
+                             enable: FuncInt
+                           ) extends LongExpressionResult {
+    val memoryLocation = memorySymbol.index
+    def apply(): Long = {
+      currentLongArray(memoryLocation + getMemoryIndex())
+    }
+  }
+
+  case class GetBigIndirect(
+                             memorySymbol: Symbol,
+                             getMemoryIndex: FuncInt,
+                             enable: FuncInt
+                           ) extends BigExpressionResult {
+    val memoryLocation = memorySymbol.index
+    def apply(): Big = {
+      currentBigArray(memoryLocation + getMemoryIndex())
+    }
+  }
+
+  case class AssignIntIndirect(
+                               memorySymbol: Symbol,
+                               getMemoryIndex: FuncInt,
+                               enable: FuncInt,
+                               expression: FuncInt
+                              ) extends Assigner {
+    val index: Int = memorySymbol.index
+
+    def runQuiet(): Unit = {
+      currentIntArray(index + getMemoryIndex.apply()) = expression()
+    }
+
+    def runVerbose(): Unit = {
+      println(s"${memorySymbol.name}:${memorySymbol.index} <= ${expression()}")
+      currentIntArray(index + getMemoryIndex.apply()) = expression()
+    }
+
+    val run: FuncUnit = if (optimizationLevel == 0) runVerbose _ else runQuiet _
+  }
+
+  case class AssignLongIndirect(
+                               memorySymbol: Symbol,
+                               getMemoryIndex: FuncInt,
+                               enable: FuncInt,
+                               expression: FuncLong
+                              ) extends Assigner {
+    val index: Int = memorySymbol.index
+
+    def runQuiet(): Unit = {
+      currentLongArray(index + getMemoryIndex.apply()) = expression()
+    }
+
+    def runVerbose(): Unit = {
+      println(s"${memorySymbol.name}:${memorySymbol.index} <= ${expression()}")
+      currentLongArray(index + getMemoryIndex.apply()) = expression()
+    }
+
+    val run: FuncUnit = if (optimizationLevel == 0) runVerbose _ else runQuiet _
+  }
+
+  case class AssignBigIndirect(
+                                 memorySymbol: Symbol,
+                                 getMemoryIndex: FuncInt,
+                                 enable: FuncInt,
+                                 expression: FuncBig
+                               ) extends Assigner {
+    val index: Int = memorySymbol.index
+
+    def runQuiet(): Unit = {
+      currentBigArray(index + getMemoryIndex.apply()) = expression()
+    }
+
+    def runVerbose(): Unit = {
+      println(s"${memorySymbol.name}:${memorySymbol.index} <= ${expression()}")
+      currentBigArray(index + getMemoryIndex.apply()) = expression()
+    }
+
+    val run: FuncUnit = if (optimizationLevel == 0) runVerbose _ else runQuiet _
+  }
+
   def getSizeAndIndex(assigner: Assigner): (DataSize, Int) = {
     assigner match {
       case assign: AssignInt => (IntSize, assign.index)
       case assign: AssignLong => (LongSize, assign.index)
       case assign: AssignBig => (BigSize, assign.index)
+      case assign: AssignIntIndirect  => (IntSize, assign.index)
+      case assign: AssignLongIndirect => (LongSize, assign.index)
+      case assign: AssignBigIndirect  => (BigSize, assign.index)
       case assign =>
         throw InterpreterException(s"unknown assigner found $assign")
     }

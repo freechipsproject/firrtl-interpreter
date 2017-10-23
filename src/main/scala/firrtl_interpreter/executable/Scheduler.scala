@@ -6,7 +6,7 @@ import firrtl_interpreter.InterpreterException
 
 import scala.collection.mutable
 
-class Scheduler(dataStore: DataStore, symbolTable: SymbolTable) {
+class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) {
   var combinationalAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
   val bufferAdvanceAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
 
@@ -53,6 +53,12 @@ class Scheduler(dataStore: DataStore, symbolTable: SymbolTable) {
       case assign: dataStore.AssignLong =>
         symbolTable.sortKey(LongSize, assign.index)
       case assign: dataStore.AssignBig =>
+        symbolTable.sortKey(BigSize, assign.index)
+      case assign: dataStore.AssignIntIndirect =>
+        symbolTable.sortKey(IntSize, assign.index)
+      case assign: dataStore.AssignLongIndirect =>
+        symbolTable.sortKey(LongSize, assign.index)
+      case assign: dataStore.AssignBigIndirect =>
         symbolTable.sortKey(BigSize, assign.index)
       case assigner =>
         throw InterpreterException(s"unknown assigner found in sort combinational assigns $assigner")

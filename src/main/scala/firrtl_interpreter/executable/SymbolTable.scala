@@ -156,7 +156,7 @@ object SymbolTable extends LazyLogging {
           val expandedName = expand(defMemory.name)
           logger.debug(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
 
-          Memory.buildSymbols(defMemory, expandedName).foreach { symbol =>
+          Memory.buildSymbols(defMemory, expandedName, dependencies).foreach { symbol =>
             nameToSymbol(symbol.name) = symbol
             dependencies(symbol) = Set.empty
           }
@@ -164,17 +164,8 @@ object SymbolTable extends LazyLogging {
 
         //      case IsInvalid(info, expression) =>
         //        IsInvalid(info, expressionToReferences(expression))
-        //      case Stop(info, ret, clkExpression, enableExpression) =>
-        //        addStop(Stop(info, ret, expressionToReferences(clkExpression), expressionToReferences(enableExpression)))
-        //        s
-        //      case Print(info, stringLiteral, argExpressions, clkExpression, enableExpression) =>
-        //        addPrint(Print(
-        //          info, stringLiteral,
-        //          argExpressions.map { expression => expressionToReferences(expression) },
-        //          expressionToReferences(clkExpression),
-        //          expressionToReferences(enableExpression)
-        //        ))
-
+        case _: Stop   =>
+        case _: Print  =>
         case EmptyStmt =>
 
         case conditionally: Conditionally =>

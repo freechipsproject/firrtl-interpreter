@@ -439,8 +439,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         result
       }
 
-      def getAssigner(name: String, expressionResult: ExpressionResult): Assigner = {
-        val symbol = symbolTable(name)
+      def getAssigner(symbol: Symbol, expressionResult: ExpressionResult): Assigner = {
         val assigner = (symbol.dataSize, expressionResult) match {
           case (IntSize,  result: IntExpressionResult)  => dataStore.AssignInt(symbol, result.apply)
           case (LongSize, result: IntExpressionResult)  => dataStore.AssignLong(symbol, ToLong(result.apply).apply)
@@ -456,10 +455,187 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             }
 
             throw InterpreterException(
-              s"Error:assignment size mismatch ($size)$name <= ($expressionSize)$expressionResult")
+              s"Error:assignment size mismatch ($size)${symbol.name} <= ($expressionSize)$expressionResult")
         }
         scheduler.combinationalAssigns += assigner
         assigner
+      }
+
+      def getAssignerByName(name: String, expressionResult: ExpressionResult): Assigner = {
+        getAssigner(symbolTable(name), expressionResult)
+      }
+
+      def getIndexAssigner(
+                            symbol: Symbol,
+                            indexSymbol: Symbol,
+                            enableSymbol: Symbol,
+                            expressionResult: ExpressionResult
+                          ): Assigner = {
+        val getIndex = dataStore.GetInt(indexSymbol.index).apply _
+        val getEnable = dataStore.GetInt(enableSymbol.index).apply _
+
+        val assigner = (symbol.dataSize, expressionResult) match {
+          case (IntSize,  result: IntExpressionResult)  =>
+            dataStore.AssignIntIndirect(symbol, getIndex, getEnable, result.apply)
+          case (LongSize, result: IntExpressionResult)  =>
+            dataStore.AssignLongIndirect(symbol, getIndex, getEnable, ToLong(result.apply).apply)
+          case (LongSize, result: LongExpressionResult) =>
+            dataStore.AssignLongIndirect(symbol, getIndex, getEnable, result.apply)
+          case (BigSize,  result: IntExpressionResult)  =>
+            dataStore.AssignBigIndirect(symbol, getIndex, getEnable, ToBig(result.apply).apply)
+          case (BigSize,  result: LongExpressionResult) =>
+            dataStore.AssignBigIndirect(symbol, getIndex, getEnable, LongToBig(result.apply).apply)
+          case (BigSize,  result: BigExpressionResult)  =>
+            dataStore.AssignBigIndirect(symbol, getIndex, getEnable, result.apply)
+          case (size, result) =>
+            val expressionSize = result match {
+              case _: IntExpressionResult  => "Int"
+              case _: LongExpressionResult => "Long"
+              case _: BigExpressionResult  => "Big"
+            }
+
+            throw InterpreterException(
+              s"Error:assignment size mismatch ($size)${symbol.name} <= ($expressionSize)$expressionResult")
+        }
+        scheduler.combinationalAssigns += assigner
+        assigner
+      }
+
+      def makeGet(source: Symbol): ExpressionResult = {
+        source.dataSize match {
+          case IntSize =>
+            dataStore.GetInt(source.index)
+          case LongSize =>
+            dataStore.GetLong(source.index)
+          case BigSize =>
+            dataStore.GetBig(source.index)
+        }
+      }
+
+      def makeGetIndirect(memory: Symbol, data: Symbol, enable: Symbol, addr: Symbol): ExpressionResult = {
+        data.dataSize match {
+          case IntSize =>
+            dataStore.GetIntIndirect(
+              memory, dataStore.GetInt(addr.index).apply, dataStore.GetInt(enable.index).apply
+            )
+          case LongSize =>
+            dataStore.GetLongIndirect(
+              memory, dataStore.GetInt(addr.index).apply, dataStore.GetInt(enable.index).apply
+            )
+          case BigSize =>
+            dataStore.GetBigIndirect(
+              memory, dataStore.GetInt(addr.index).apply, dataStore.GetInt(enable.index).apply
+            )
+        }
+      }
+
+      //TODO (chick) This must be modified to be on the right clock
+      //TODO (chick) Does mask need to be pipelined
+
+      /**
+        * Construct the machinery to move data into and out of the memory stack
+        * @param memory
+        * @param expandedName
+        * @param scheduler
+        */
+      def buildMemoryInternals(memory: DefMemory, expandedName: String, scheduler: Scheduler): Unit = {
+        val symbolTable = scheduler.symbolTable
+        val memorySymbol = symbolTable(expandedName)
+        val addrWidth = IntWidth(requiredBitsForUInt(memory.depth - 1))
+
+        memory.readers.foreach { readerString =>
+          val readerName = s"$expandedName.$readerString"
+          val enable = symbolTable(s"$readerName.en")
+          val clk    = symbolTable(s"$readerName.clk")
+          val addr   = symbolTable(s"$readerName.addr")
+          val data   = symbolTable(s"$readerName.data")
+
+          if(memory.readLatency == 0) {
+            getAssigner(data, makeGetIndirect(memorySymbol, data, enable, addr))
+          }
+          else if(memory.readLatency == 1) {
+            val pipelineSymbols = (0 until memory.readLatency).map { n =>
+              symbolTable(s"$expandedName.$readerString.pipeline_$n")
+            }
+
+            getAssigner(data, makeGet(pipelineSymbols.last))
+            getAssigner(pipelineSymbols.head, makeGetIndirect(memorySymbol, data, enable, addr))
+          }
+          else {
+            val pipelineSymbols = (0 until memory.readLatency).map { n =>
+              symbolTable(s"$expandedName.$readerString.pipeline_$n")
+            }
+            getAssigner(data, makeGet(pipelineSymbols.last))
+            pipelineSymbols.zip(pipelineSymbols.reverse.tail).foreach { case (target, source) =>
+              getAssigner(target, makeGet(source))
+            }
+            getAssigner(pipelineSymbols.head, makeGetIndirect(memorySymbol, data, enable, addr))
+          }
+        }
+
+        val writerSymbols = memory.writers.foreach { writerString =>
+          val writerName = s"$expandedName.$writerString"
+
+          val enable = symbolTable(s"$writerName.en")
+          val clk    = symbolTable(s"$writerName.clk")
+          val addr   = symbolTable(s"$writerName.addr")
+          val mask   = symbolTable(s"$writerName.mask")
+          val data   = symbolTable(s"$writerName.data")
+
+          if(memory.writeLatency == 0) {
+            getIndexAssigner(memorySymbol, addr, enable, makeGet(data))
+          }
+          else if(memory.writeLatency == 1) {
+            val pipelineDataSymbols = (0 until memory.writeLatency).map { n =>
+              symbolTable(s"$expandedName.$writerString.pipeline_data_$n")
+            }
+            val pipelineAddrSymbols = (0 until memory.writeLatency).map { n =>
+              symbolTable(s"$expandedName.$writerString.pipeline_addr_$n")
+            }
+            val pipelineEnableSymbols = (0 until memory.writeLatency).map { n =>
+              symbolTable(s"$expandedName.$writerString.pipeline_en_$n")
+            }
+
+            getIndexAssigner(
+              memorySymbol,
+              pipelineAddrSymbols.head,
+              pipelineEnableSymbols.head,
+              makeGet(pipelineDataSymbols.head)
+            )
+            getAssigner(pipelineDataSymbols.head, makeGet(data))
+            getAssigner(pipelineAddrSymbols.head, makeGet(addr))
+            getAssigner(pipelineEnableSymbols.head, makeGet(enable))
+          }
+          else {
+            val pipelineDataSymbols = (0 until memory.writeLatency).map { n =>
+              symbolTable(s"$expandedName.$writerString.pipeline_data_$n")
+            }
+            val pipelineAddrSymbols = (0 until memory.writeLatency).map { n =>
+              symbolTable(s"$expandedName.$writerString.pipeline_addr_$n")
+            }
+            val pipelineEnableSymbols = (0 until memory.writeLatency).map { n =>
+              symbolTable(s"$expandedName.$writerString.pipeline_en_$n")
+            }
+
+            getIndexAssigner(
+              memorySymbol,
+              pipelineAddrSymbols.head,
+              pipelineEnableSymbols.head,
+              makeGet(pipelineDataSymbols.head)
+            )
+
+
+            pipelineDataSymbols.indices.reverse.zip(pipelineDataSymbols.indices.reverse.tail).foreach { case (i, j) =>
+              getAssigner(pipelineDataSymbols(i), makeGet(pipelineDataSymbols(j)))
+              getAssigner(pipelineAddrSymbols(i), makeGet(pipelineAddrSymbols(j)))
+              getAssigner(pipelineEnableSymbols(i), makeGet(pipelineEnableSymbols(j)))
+            }
+
+            getAssigner(pipelineDataSymbols.head, makeGet(data))
+            getAssigner(pipelineAddrSymbols.head, makeGet(addr))
+            getAssigner(pipelineEnableSymbols.head, makeGet(enable))
+          }
+        }
       }
 
       def triggeredAssign(
@@ -492,7 +668,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             }
           }
           val lhsName = expand(renameIfRegister(con.loc.serialize))
-          getAssigner(lhsName, processExpression(con.expr))
+          getAssignerByName(lhsName, processExpression(con.expr))
 
         case WDefInstance(info, instanceName, moduleName, _) =>
           val subModule = FindModule(moduleName, circuit)
@@ -502,7 +678,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
         case DefNode(info, name, expression) =>
           logger.debug(s"declaration:DefNode:$name:${expression.serialize}")
-          getAssigner(name, processExpression(expression))
+          getAssignerByName(name, processExpression(expression))
 
         case DefWire(info, name, tpe) =>
           logger.debug(s"declaration:DefWire:$name")
@@ -554,7 +730,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         case defMemory: DefMemory =>
           val expandedName = expand(defMemory.name)
           logger.debug(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
-          val newDefMemory = defMemory.copy(name = expandedName)
+          buildMemoryInternals(defMemory, expandedName, scheduler)
         case IsInvalid(info, expression) =>
 //          IsInvalid(info, processExpression(expression))
         case Stop(info, ret, clockExpression, enableExpression) =>

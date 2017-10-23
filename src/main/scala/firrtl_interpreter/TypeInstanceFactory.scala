@@ -69,7 +69,7 @@ object TypeInstanceFactory {
     template match {
       case u: ConcreteUInt => Concrete.randomUInt(u.width, poisoned)
       case s: ConcreteSInt => Concrete.randomSInt(s.width, poisoned)
-      case s: ConcreteClock => Concrete.randomClock()
+      case _: ConcreteClock => Concrete.randomClock()
       case _ => throw new InterpreterException(s"Unsupported LoFIRRTL type for interpreter $template")
     }
   }
@@ -85,7 +85,7 @@ object TypeInstanceFactory {
     firrtlType match {
       case UIntType(IntWidth(w)) => Concrete.randomUInt(w.toInt, poisoned)
       case SIntType(IntWidth(w)) => Concrete.randomUInt(w.toInt, poisoned)
-      case s: ConcreteClock      => Concrete.randomClock()
+      case ClockType             => Concrete.randomClock()
       case _ => throw new InterpreterException(s"Unsupported LoFIRRTL type for interpreter $firrtlType")
     }
   }
@@ -97,8 +97,8 @@ object TypeInstanceFactory {
     */
   def makeSimilar(template: Concrete, value: BigInt, poisoned: Boolean): Concrete = {
     template match {
-      case ConcreteUInt(_, width, p) => ConcreteUInt(value, width, poisoned)
-      case ConcreteSInt(_, width, p) => makeSInt(value, width, poisoned = poisoned)
+      case ConcreteUInt(_, width, _) => ConcreteUInt(value, width, poisoned)
+      case ConcreteSInt(_, width, _) => makeSInt(value, width, poisoned = poisoned)
     }
   }
 }
