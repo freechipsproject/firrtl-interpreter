@@ -193,12 +193,16 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     val index: Int = memorySymbol.index
 
     def runQuiet(): Unit = {
-      currentIntArray(index + getMemoryIndex.apply()) = expression()
+      if(enable() > 0) {
+        currentIntArray(index + getMemoryIndex.apply()) = expression()
+      }
     }
 
     def runVerbose(): Unit = {
       println(s"${memorySymbol.name}:${memorySymbol.index} <= ${expression()}")
-      currentIntArray(index + getMemoryIndex.apply()) = expression()
+      if(enable() > 0) {
+        currentIntArray(index + getMemoryIndex.apply()) = expression()
+      }
     }
 
     val run: FuncUnit = if (optimizationLevel == 0) runVerbose _ else runQuiet _
@@ -213,12 +217,16 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     val index: Int = memorySymbol.index
 
     def runQuiet(): Unit = {
-      currentLongArray(index + getMemoryIndex.apply()) = expression()
+      if(enable() > 0) {
+        currentLongArray(index + getMemoryIndex.apply()) = expression()
+      }
     }
 
     def runVerbose(): Unit = {
       println(s"${memorySymbol.name}:${memorySymbol.index} <= ${expression()}")
-      currentLongArray(index + getMemoryIndex.apply()) = expression()
+      if(enable() > 0) {
+        currentLongArray(index + getMemoryIndex.apply()) = expression()
+      }
     }
 
     val run: FuncUnit = if (optimizationLevel == 0) runVerbose _ else runQuiet _
@@ -233,12 +241,16 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     val index: Int = memorySymbol.index
 
     def runQuiet(): Unit = {
-      currentBigArray(index + getMemoryIndex.apply()) = expression()
+      if(enable() > 0) {
+        currentBigArray(index + getMemoryIndex.apply()) = expression()
+      }
     }
 
     def runVerbose(): Unit = {
       println(s"${memorySymbol.name}:${memorySymbol.index} <= ${expression()}")
-      currentBigArray(index + getMemoryIndex.apply()) = expression()
+      if(enable() > 0) {
+        currentBigArray(index + getMemoryIndex.apply()) = expression()
+      }
     }
 
     val run: FuncUnit = if (optimizationLevel == 0) runVerbose _ else runQuiet _

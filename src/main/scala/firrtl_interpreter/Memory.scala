@@ -335,7 +335,7 @@ class Memory(
     }
     override def getValue(fieldName: String): Concrete = {
       fieldName match {
-        case "wmod"    => ConcreteUInt(boolToBigInt(writeMode), 1)
+        case "wmode"   => ConcreteUInt(boolToBigInt(writeMode), 1)
         case "rdata"   => readData
         case "mask"    => mask
         case _         => super.getValue(fieldName)

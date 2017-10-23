@@ -355,9 +355,9 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           case WRef(name, _, _, _) =>
             createAccessor(expand(name))
           case subfield: WSubField =>
-            createAccessor(subfield.serialize)
+            createAccessor(expand(subfield.serialize))
           case subIndex: WSubIndex =>
-            createAccessor(subIndex.serialize)
+            createAccessor(expand(subIndex.serialize))
 
           case ValidIf(condition, value, tpe) =>
             processExpression(condition) match {
@@ -465,12 +465,13 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         getAssigner(symbolTable(name), expressionResult)
       }
 
-      def getIndexAssigner(
-                            symbol: Symbol,
-                            indexSymbol: Symbol,
-                            enableSymbol: Symbol,
-                            expressionResult: ExpressionResult
-                          ): Assigner = {
+      def getIndirectAssigner(
+                               symbol: Symbol,
+                               indexSymbol: Symbol,
+                               enableSymbol: Symbol,
+                               expressionResult: ExpressionResult
+                             ): Assigner = {
+
         val getIndex = dataStore.GetInt(indexSymbol.index).apply _
         val getEnable = dataStore.GetInt(enableSymbol.index).apply _
 
@@ -550,30 +551,18 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           val addr   = symbolTable(s"$readerName.addr")
           val data   = symbolTable(s"$readerName.data")
 
-          if(memory.readLatency == 0) {
-            getAssigner(data, makeGetIndirect(memorySymbol, data, enable, addr))
-          }
-          else if(memory.readLatency == 1) {
-            val pipelineSymbols = (0 until memory.readLatency).map { n =>
-              symbolTable(s"$expandedName.$readerString.pipeline_$n")
-            }
+          val pipelineReadSymbols = (0 until memory.readLatency).map { n =>
+            symbolTable(s"$expandedName.$readerString.pipeline_$n")
+          } ++ Seq(data)
 
-            getAssigner(data, makeGet(pipelineSymbols.last))
-            getAssigner(pipelineSymbols.head, makeGetIndirect(memorySymbol, data, enable, addr))
-          }
-          else {
-            val pipelineSymbols = (0 until memory.readLatency).map { n =>
-              symbolTable(s"$expandedName.$readerString.pipeline_$n")
-            }
-            getAssigner(data, makeGet(pipelineSymbols.last))
-            pipelineSymbols.zip(pipelineSymbols.reverse.tail).foreach { case (target, source) =>
-              getAssigner(target, makeGet(source))
-            }
-            getAssigner(pipelineSymbols.head, makeGetIndirect(memorySymbol, data, enable, addr))
+          getAssigner(pipelineReadSymbols.head, makeGetIndirect(memorySymbol, data, enable, addr))
+
+          pipelineReadSymbols.zip(pipelineReadSymbols.tail).foreach { case (target, source) =>
+            getAssigner(target, makeGet(source))
           }
         }
 
-        val writerSymbols = memory.writers.foreach { writerString =>
+        memory.writers.foreach { writerString =>
           val writerName = s"$expandedName.$writerString"
 
           val enable = symbolTable(s"$writerName.en")
@@ -582,59 +571,81 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           val mask   = symbolTable(s"$writerName.mask")
           val data   = symbolTable(s"$writerName.data")
 
-          if(memory.writeLatency == 0) {
-            getIndexAssigner(memorySymbol, addr, enable, makeGet(data))
+          val pipelineEnableSymbols = Seq(enable) ++ (0 until memory.writeLatency).map { n =>
+            symbolTable(s"$expandedName.$writerString.pipeline_en_$n")
           }
-          else if(memory.writeLatency == 1) {
-            val pipelineDataSymbols = (0 until memory.writeLatency).map { n =>
-              symbolTable(s"$expandedName.$writerString.pipeline_data_$n")
-            }
-            val pipelineAddrSymbols = (0 until memory.writeLatency).map { n =>
-              symbolTable(s"$expandedName.$writerString.pipeline_addr_$n")
-            }
-            val pipelineEnableSymbols = (0 until memory.writeLatency).map { n =>
-              symbolTable(s"$expandedName.$writerString.pipeline_en_$n")
-            }
-
-            getIndexAssigner(
-              memorySymbol,
-              pipelineAddrSymbols.head,
-              pipelineEnableSymbols.head,
-              makeGet(pipelineDataSymbols.head)
-            )
-            getAssigner(pipelineDataSymbols.head, makeGet(data))
-            getAssigner(pipelineAddrSymbols.head, makeGet(addr))
-            getAssigner(pipelineEnableSymbols.head, makeGet(enable))
+          val pipelineDataSymbols = Seq(data) ++ (0 until memory.writeLatency).map { n =>
+            symbolTable(s"$expandedName.$writerString.pipeline_data_$n")
           }
-          else {
-            val pipelineDataSymbols = (0 until memory.writeLatency).map { n =>
-              symbolTable(s"$expandedName.$writerString.pipeline_data_$n")
-            }
-            val pipelineAddrSymbols = (0 until memory.writeLatency).map { n =>
-              symbolTable(s"$expandedName.$writerString.pipeline_addr_$n")
-            }
-            val pipelineEnableSymbols = (0 until memory.writeLatency).map { n =>
-              symbolTable(s"$expandedName.$writerString.pipeline_en_$n")
-            }
-
-            getIndexAssigner(
-              memorySymbol,
-              pipelineAddrSymbols.head,
-              pipelineEnableSymbols.head,
-              makeGet(pipelineDataSymbols.head)
-            )
-
-
-            pipelineDataSymbols.indices.reverse.zip(pipelineDataSymbols.indices.reverse.tail).foreach { case (i, j) =>
-              getAssigner(pipelineDataSymbols(i), makeGet(pipelineDataSymbols(j)))
-              getAssigner(pipelineAddrSymbols(i), makeGet(pipelineAddrSymbols(j)))
-              getAssigner(pipelineEnableSymbols(i), makeGet(pipelineEnableSymbols(j)))
-            }
-
-            getAssigner(pipelineDataSymbols.head, makeGet(data))
-            getAssigner(pipelineAddrSymbols.head, makeGet(addr))
-            getAssigner(pipelineEnableSymbols.head, makeGet(enable))
+          val pipelineAddrSymbols = Seq(addr) ++ (0 until memory.writeLatency).map { n =>
+            symbolTable(s"$expandedName.$writerString.pipeline_addr_$n")
           }
+
+          def connectPipeline(pipeline: Seq[Symbol]): Unit = {
+            pipeline.zip(pipeline.tail).foreach { case (source, target) =>
+              getAssigner(target, makeGet(source))
+            }
+          }
+
+          connectPipeline(pipelineEnableSymbols)
+          connectPipeline(pipelineDataSymbols)
+          connectPipeline(pipelineAddrSymbols)
+
+          getIndirectAssigner(
+            memorySymbol,
+            pipelineAddrSymbols.last,
+            pipelineEnableSymbols.last,
+            makeGet(pipelineDataSymbols.last)
+          )
+        }
+
+        memory.readwriters.foreach { readWriterString =>
+          val writerName = s"$expandedName.$readWriterString"
+
+          val enable =  symbolTable(s"$writerName.en")
+          val clk    =  symbolTable(s"$writerName.clk")
+          val addr   =  symbolTable(s"$writerName.addr")
+          val rdata  =  symbolTable(s"$writerName.rdata")
+          val mode   =  symbolTable(s"$writerName.wmode")
+          val mask   =  symbolTable(s"$writerName.wmask")
+          val wdata  =  symbolTable(s"$writerName.wdata")
+
+          val pipelineReadSymbols = (0 until memory.readLatency).map { n =>
+            symbolTable(s"$expandedName.$readWriterString.pipeline_read_$n")
+          } ++ Seq(rdata)
+
+          getAssigner(pipelineReadSymbols.head, makeGetIndirect(memorySymbol, rdata, enable, addr))
+
+          pipelineReadSymbols.zip(pipelineReadSymbols.tail).foreach { case (target, source) =>
+            getAssigner(target, makeGet(source))
+          }
+
+          val pipelineEnableSymbols = Seq(enable) ++ (0 until memory.writeLatency).map { n =>
+            symbolTable(s"$expandedName.$readWriterString.pipeline_en_$n")
+          }
+          val pipelineDataSymbols = Seq(wdata) ++ (0 until memory.writeLatency).map { n =>
+            symbolTable(s"$expandedName.$readWriterString.pipeline_write_data_$n")
+          }
+          val pipelineAddrSymbols = Seq(addr) ++ (0 until memory.writeLatency).map { n =>
+            symbolTable(s"$expandedName.$readWriterString.pipeline_write_addr_$n")
+          }
+
+          def connectPipeline(pipeline: Seq[Symbol]): Unit = {
+            pipeline.zip(pipeline.tail).foreach { case (source, target) =>
+              getAssigner(target, makeGet(source))
+            }
+          }
+
+          connectPipeline(pipelineEnableSymbols)
+          connectPipeline(pipelineDataSymbols)
+          connectPipeline(pipelineAddrSymbols)
+
+          getIndirectAssigner(
+            memorySymbol,
+            pipelineAddrSymbols.last,
+            pipelineEnableSymbols.last,
+            makeGet(pipelineDataSymbols.last)
+          )
         }
       }
 
