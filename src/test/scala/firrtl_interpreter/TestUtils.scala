@@ -212,5 +212,8 @@ object BigIntTestValuesGenerator {
 
     BigIntTestValuesGenerator(TestUtils.powerOfTwoFrom(widthOfStart), TestUtils.powerOfTwoFrom(widthOfFinish))
   }
+  def fromWidth(bitWidth: Int): BigIntTestValuesGenerator = {
+    apply( -(BigInt(1) << (bitWidth - 1)), BigInt("1" * (bitWidth - 1), 2))
+  }
 
 }

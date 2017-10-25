@@ -12,32 +12,50 @@ import scala.util.matching.Regex
   * @param bitSize       How many bits to track
   * @param numberOfBins  Number of bits in the saved histogram, less than one disables binning
   */
-class NumberMonitor(val canBeNegative: Boolean, val bitSize: Int, numberOfBins: Int = 0) {
+class NumberMonitor(val name: String, val canBeNegative: Boolean, val bitSize: Int, numberOfBins: Int = 0) {
   var samples: Long = 0L
   var mu: Double = 0.0
   var sq: Double = 0.0
 
   val minPossible: BigInt = if(canBeNegative) - (1L << (bitSize - 1)) else 0
   val maxPossible: BigInt = if(canBeNegative) (1L << (bitSize- 1)) - 1 else 1 << (bitSize - 1)
-  var maxValue: BigInt    = BigInt(Long.MinValue)
-  var minValue: BigInt    = BigInt(Long.MaxValue)
+  var minValue: BigInt    = BigInt(1) << (bitSize - 1)
+  var maxValue: BigInt    = -(BigInt(1) << (bitSize - 1)) - BigInt(1)
+  val adjustedMaxPossible: BigInt = maxPossible - minPossible
 
-  private val bins = Array.fill(numberOfBins)(0L)
-  private val binShift = if((1 << bitSize) - 1 < numberOfBins) {
-    0
-  }
-  else {
-    (bitSize - (math.log(numberOfBins) / math.log(2))).toInt
-  }
+  val bins: Array[Long] = Array.fill(numberOfBins)(0L)
+
+  val divisor: BigInt = if(numberOfBins > 0 ) (adjustedMaxPossible + 1) / BigInt(numberOfBins) else BigInt(1)
   private val doBinning = if(numberOfBins > 2) updateBins _ else noBinning _
 
   def noBinning(value: BigInt): Unit = Unit
   def updateBins(value: BigInt): Unit = {
-    bins((value >> binShift).toInt) += 1
+    val adjustedValue = value - minPossible
+    val fixedValue = if(adjustedValue < 0) {
+      println(s"instrumenting $name: got bad low value = $value adjusted $adjustedValue")
+      Big0
+    }
+    else if(adjustedValue > adjustedMaxPossible) {
+      println(s"instrumenting $name: got bad high value = $value adjusted $adjustedValue")
+      adjustedMaxPossible
+    }
+    else {
+      adjustedValue
+    }
+
+    val intIndex = (fixedValue / divisor).toInt
+    bins(intIndex) += 1
+  }
+
+  def clear(): Unit = {
+    samples = 0
+    mu = 0.0
+    sq = 0.0
+    minValue = BigInt(1) << (bitSize - 1)
+    maxValue = -(BigInt(1) << (bitSize - 1) - 1)
   }
 
   def update(value: BigInt): Unit = {
-    val adjustedValue = value - minPossible
     val double = value.toDouble
 
     // Next four lines use Welford's algorithm to compute running mean and variance
@@ -49,10 +67,7 @@ class NumberMonitor(val canBeNegative: Boolean, val bitSize: Int, numberOfBins: 
     if(value > maxValue) maxValue = value
     if(value < minValue) minValue = value
 
-    if(adjustedValue < 0 ) {
-      println(s"got bad value = $value adjusted $adjustedValue")
-    }
-    doBinning(adjustedValue)
+    doBinning(value)
   }
 
   def mean: Double = mu
@@ -98,7 +113,8 @@ class MonitorManager(options: InterpreterOptions) {
         monitorRecord.get(key) match {
           case Some(m) => m
           case _ =>
-            monitorRecord(key) = new NumberMonitor(concrete.isInstanceOf[ConcreteSInt], concrete.width, numberOfBins)
+            monitorRecord(key) =
+              new NumberMonitor(key, concrete.isInstanceOf[ConcreteSInt], concrete.width, numberOfBins)
             monitorRecord(key)
         }
       }
@@ -119,7 +135,7 @@ class MonitorManager(options: InterpreterOptions) {
 
   def monitorReport: String = {
     val headerString = monitorRecord.values.headOption match {
-      case Some(monitor) =>
+      case Some(_) =>
         if(prettyPrintReport) {
           f"${"key,"}%-40.40s$renderHeader\n"
         }
