@@ -85,7 +85,7 @@ class NumberMonitor(val name: String, val canBeNegative: Boolean, val bitSize: I
   def showBins: String = bins.map { x => f"$x%8d" }.mkString(" ")
 
   def render(prettyPrint: Boolean = true): String = {
-    def showType: String = s"""${if(canBeNegative) "sin<" else "uint<"}$bitSize>"""
+    def showType: String = s"""${if(canBeNegative) "sint<" else "uint<"}$bitSize>"""
 
     if(prettyPrint) {
       f"$showType%10s,$samples%8d,$minValue%8d,$maxValue%16d,$mean%16.5f," +
