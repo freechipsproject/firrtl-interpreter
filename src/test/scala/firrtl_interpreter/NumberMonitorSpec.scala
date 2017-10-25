@@ -69,6 +69,44 @@ class NumberMonitorSpec extends FreeSpec with Matchers {
     println(s"bins = ${monitor.showBins}")
   }
 
+  "when possible values less than bins, just use bin per value" in {
+    val monitor = new NumberMonitor(carla, canBeNegative = false, 2, 32)
+    monitor.divisor should be (Big1)
+    monitor.minPossible should be (Big0)
+    monitor.maxPossible should be (BigInt(3))
+    monitor.adjustedMaxPossible should be (BigInt(3))
+
+    monitor.update(0)
+    monitor.update(1)
+    monitor.update(2)
+    monitor.update(3)
+
+    monitor.bins(0) should be (1L)
+    monitor.bins(1) should be (1L)
+    monitor.bins(2) should be (1L)
+    monitor.bins(3) should be (1L)
+
+  }
+
+  "when possible values less than bins, just use bin per value, using negatives" in {
+    val monitor = new NumberMonitor(carla, canBeNegative = true, 2, 32)
+    monitor.divisor should be (Big1)
+    monitor.minPossible should be (BigInt(-2))
+    monitor.maxPossible should be (BigInt(1))
+    monitor.adjustedMaxPossible should be (BigInt(3))
+
+    monitor.update(-2)
+    monitor.update(-1)
+    monitor.update(0)
+    monitor.update(1)
+
+    monitor.bins(0) should be (1L)
+    monitor.bins(1) should be (1L)
+    monitor.bins(2) should be (1L)
+    monitor.bins(3) should be (1L)
+
+  }
+
   "must choose min and max values wisely" in {
     val monitor = new NumberMonitor(carla, canBeNegative = true, bitSize = 4)
     monitor.minValue should be (BigInt(8))

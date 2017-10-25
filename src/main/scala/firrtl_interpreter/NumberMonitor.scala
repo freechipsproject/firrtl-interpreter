@@ -17,15 +17,24 @@ class NumberMonitor(val name: String, val canBeNegative: Boolean, val bitSize: I
   var mu: Double = 0.0
   var sq: Double = 0.0
 
-  val minPossible: BigInt = if(canBeNegative) - (1L << (bitSize - 1)) else 0
-  val maxPossible: BigInt = if(canBeNegative) (1L << (bitSize- 1)) - 1 else 1 << (bitSize - 1)
+  val minPossible: BigInt = if(canBeNegative) - (Big1 << (bitSize - 1)) else 0
+  val maxPossible: BigInt = if(canBeNegative) (Big1 << (bitSize - 1)) - 1 else (Big1 << bitSize) - Big1
+  val adjustedMaxPossible: BigInt = maxPossible - minPossible
+
+  // These are the minimum and maximum values seen by update
   var minValue: BigInt    = BigInt(1) << (bitSize - 1)
   var maxValue: BigInt    = -(BigInt(1) << (bitSize - 1)) - BigInt(1)
-  val adjustedMaxPossible: BigInt = maxPossible - minPossible
 
   val bins: Array[Long] = Array.fill(numberOfBins)(0L)
 
-  val divisor: BigInt = if(numberOfBins > 0 ) (adjustedMaxPossible + 1) / BigInt(numberOfBins) else BigInt(1)
+  val divisor: BigInt = {
+    if(numberOfBins > 0 && adjustedMaxPossible > numberOfBins ) {
+      (adjustedMaxPossible + 1) / BigInt(numberOfBins)
+    }
+    else {
+      BigInt(1)
+    }
+  }
   private val doBinning = if(numberOfBins > 2) updateBins _ else noBinning _
 
   def noBinning(value: BigInt): Unit = Unit
