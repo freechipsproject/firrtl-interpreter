@@ -85,8 +85,6 @@ object Memory {
 
       val memoryInterfaceSymbols = Seq(en, clk, addr, rdata, mode, mask, wdata)
 
-      //TODO (chick) figure this out.  What happens read pipeline when write mode is on, and vice versa.
-
       val pipelineReadDataSymbols = (0 until memory.readLatency).map { n =>
         Symbol(s"$expandedName.$readWriterString.pipeline_read_$n", memory.dataType, WireKind)
       }

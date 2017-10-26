@@ -48,6 +48,7 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
   def contains(name: String): Boolean = nameToSymbol.contains(name)
 
   def render: String = {
+    Symbol.renderHeader + "\n" +
     keys.toArray.sorted.map { name =>
       nameToSymbol(name).render
     }.mkString("\n")

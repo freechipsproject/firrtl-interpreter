@@ -22,7 +22,7 @@ case class Symbol(
   //    f"${s"$dataType<$bitWidth>"}%12s $dataSize index $index%5d $name%-40.40s"
   //  }
   def render: String = {
-    f"$name%-40.40s $dataSize%3.3s $dataType%4.4s $bitWidth%6d $slots%1d $index%6d $cardinalNumber%6d"
+    f"$name%-40.40s $dataSize%3.3s $dataType%4.4s $bitWidth%6d $slots%6d $index%6d $cardinalNumber%6d"
   }
 }
 
@@ -30,6 +30,10 @@ object Symbol {
   def apply(name: String, firrtlType: firrtl.ir.Type, firrtlKind: Kind, slots: Int = 1): Symbol = {
     Symbol(name, DataSize(firrtlType), DataType(firrtlType),
       firrtlKind, DataSize.getBitWidth(firrtlType), slots, firrtlType)
+  }
+
+  def renderHeader: String = {
+    f"""${"name"}%-40.40s ${"Bin"}%3.3s ${"Type"}%4.4s ${"Width"}%6s ${"Slots"}%6s ${"Index"}%6s ${"Depend"}%6s"""
   }
 }
 

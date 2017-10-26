@@ -46,9 +46,10 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     SymbolTable(loweredAst, Seq.empty)
   }
 
-  println(s"Symbol table:\n${symbolTable.render}")
   val dataStore = DataStore(numberOfBuffers = 1)
   symbolTable.allocateData(dataStore)
+  println(s"Symbol table:\n${symbolTable.render}")
+
   val scheduler = new Scheduler(dataStore, symbolTable)
   val program = Program(symbolTable, dataStore, scheduler)
 
@@ -58,7 +59,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     compiler.compile(loweredAst, blackBoxFactories)
   }
 
-  println(s"Scheduler before sort ${scheduler.render}")
+  // println(s"Scheduler before sort ${scheduler.renderHeader}")
   scheduler.sortCombinationalAssigns()
   println(s"Scheduler after sort ${scheduler.render}")
 

@@ -199,9 +199,12 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     }
 
     def runVerbose(): Unit = {
-      println(s"${memorySymbol.name}:${memorySymbol.index} <= ${expression()}")
       if(enable() > 0) {
+        println(s"${memorySymbol.name}:${memorySymbol.index}(${getMemoryIndex.apply()}) <= ${expression()}")
         currentIntArray(index + getMemoryIndex.apply()) = expression()
+      }
+      else {
+        println(s"${memorySymbol.name}:${memorySymbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
       }
     }
 
@@ -223,9 +226,12 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     }
 
     def runVerbose(): Unit = {
-      println(s"${memorySymbol.name}:${memorySymbol.index} <= ${expression()}")
       if(enable() > 0) {
+        println(s"${memorySymbol.name}:${memorySymbol.index}(${getMemoryIndex.apply()}) <= ${expression()}")
         currentLongArray(index + getMemoryIndex.apply()) = expression()
+      }
+      else {
+        println(s"${memorySymbol.name}:${memorySymbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
       }
     }
 
@@ -247,9 +253,12 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     }
 
     def runVerbose(): Unit = {
-      println(s"${memorySymbol.name}:${memorySymbol.index} <= ${expression()}")
       if(enable() > 0) {
+        println(s"${memorySymbol.name}:${memorySymbol.index}(${getMemoryIndex.apply()}) <= ${expression()}")
         currentBigArray(index + getMemoryIndex.apply()) = expression()
+      }
+      else {
+        println(s"${memorySymbol.name}:${memorySymbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
       }
     }
 

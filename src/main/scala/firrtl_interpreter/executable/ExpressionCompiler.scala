@@ -535,19 +535,17 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
       /**
         * Construct the machinery to move data into and out of the memory stack
-        * @param memory
-        * @param expandedName
-        * @param scheduler
+        * @param memory       current memory
+        * @param expandedName full path name
+        * @param scheduler    handle to execution components
         */
       def buildMemoryInternals(memory: DefMemory, expandedName: String, scheduler: Scheduler): Unit = {
         val symbolTable = scheduler.symbolTable
         val memorySymbol = symbolTable(expandedName)
-        val addrWidth = IntWidth(requiredBitsForUInt(memory.depth - 1))
 
         memory.readers.foreach { readerString =>
           val readerName = s"$expandedName.$readerString"
           val enable = symbolTable(s"$readerName.en")
-          val clk    = symbolTable(s"$readerName.clk")
           val addr   = symbolTable(s"$readerName.addr")
           val data   = symbolTable(s"$readerName.data")
 
@@ -557,7 +555,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
           getAssigner(pipelineReadSymbols.head, makeGetIndirect(memorySymbol, data, enable, addr))
 
-          pipelineReadSymbols.zip(pipelineReadSymbols.tail).foreach { case (target, source) =>
+          pipelineReadSymbols.zip(pipelineReadSymbols.tail).foreach { case (source, target) =>
             getAssigner(target, makeGet(source))
           }
         }
@@ -566,7 +564,6 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           val writerName = s"$expandedName.$writerString"
 
           val enable = symbolTable(s"$writerName.en")
-          val clk    = symbolTable(s"$writerName.clk")
           val addr   = symbolTable(s"$writerName.addr")
           val mask   = symbolTable(s"$writerName.mask")
           val data   = symbolTable(s"$writerName.data")
@@ -603,7 +600,6 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           val writerName = s"$expandedName.$readWriterString"
 
           val enable =  symbolTable(s"$writerName.en")
-          val clk    =  symbolTable(s"$writerName.clk")
           val addr   =  symbolTable(s"$writerName.addr")
           val rdata  =  symbolTable(s"$writerName.rdata")
           val mode   =  symbolTable(s"$writerName.wmode")
@@ -616,7 +612,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
           getAssigner(pipelineReadSymbols.head, makeGetIndirect(memorySymbol, rdata, enable, addr))
 
-          pipelineReadSymbols.zip(pipelineReadSymbols.tail).foreach { case (target, source) =>
+          pipelineReadSymbols.zip(pipelineReadSymbols.tail).foreach { case (source, target) =>
             getAssigner(target, makeGet(source))
           }
 
@@ -782,7 +778,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
     def processPorts(module: DefModule): Unit = {
       for(port <- module.ports) {
-        val symbol = symbolTable(expand(port.name))
+        //TODO (chick) what should go here. val symbol = symbolTable(expand(port.name))
       }
     }
 

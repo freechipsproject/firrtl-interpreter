@@ -132,7 +132,58 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
 
   behavior of "read-write memory"
 
-  it should "run this circuit" in {
+  it should "work with a simple example" in {
+    val input =
+      """
+        |circuit target_memory :
+        |  module target_memory :
+        |    input clock      : Clock
+        |    input index      : UInt<12>
+        |    input do_write   : UInt<1>
+        |    input do_enable  : UInt<1>
+        |    input write_data : UInt<12>
+        |    output read_data : UInt<12>
+        |
+        |    mem ram :
+        |      data-type => UInt<12>
+        |      depth => 16
+        |      read-latency => 1
+        |      write-latency => 1
+        |      readwriter => RW_0
+        |      read-under-write => undefined
+        |
+        |    ram.RW_0.clk <= clock
+        |    ram.RW_0.addr <= index
+        |    ram.RW_0.en <= UInt<1>("h1")
+        |
+        |    ram.RW_0.wmode <= do_write
+        |    read_data <= ram.RW_0.rdata
+        |    ram.RW_0.wdata <= write_data
+        |    ram.RW_0.wmask <= UInt<1>("h1")
+      """.stripMargin
+
+    val tester = new InterpretiveTester(input) {
+      // setVerbose(true)
+
+      poke("do_write", 1)
+      for(i <- 0 until 10) {
+        poke("index", i)
+        poke("write_data", i * 3)
+        step()
+      }
+      poke("do_write", 0)
+      step(2)
+
+      for(i <- 0 until 10) {
+        poke("index", i)
+        step()
+        expect("read_data", i * 3)
+      }
+    }
+    tester.report()
+  }
+
+  it should "run this more complex circuit" in {
     val input =
       """
         |circuit target_memory :
@@ -172,7 +223,7 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
         |
         |    mem ram :
         |      data-type => UInt<12>
-        |      depth => 1024
+        |      depth => 16
         |      read-latency => 1
         |      write-latency => 1
         |      readwriter => RW_0
