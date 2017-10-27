@@ -42,4 +42,50 @@ class ChronometrySpec extends FreeSpec with Matchers {
       println(events.mkString("\n"))
     }
   }
+
+  "How slow is one clock" in {
+    val toDo = 10000000L
+
+    val utc = new UTC()
+    val clock0 = ScheduledClock(Symbol("dog", UIntType(IntWidth(1)), WireKind ), 100)
+    utc.register(clock0)
+
+    val startTime = System.currentTimeMillis()
+    for(i <- 0L until toDo) {
+      val events = utc.nextClocks()
+      if(i % (toDo / 10) == 0) {
+        println(s"Events at time ${utc.time}")
+        println(events.mkString("\n"))
+      }
+    }
+    val stopTime = System.currentTimeMillis()
+
+    val eps = toDo.toDouble / (stopTime - startTime)
+    println(f"$toDo events in ${(stopTime - startTime) / 1000.0}%10.5f seconds, rate = $eps%10.5f KHz utc = ${utc.time}")
+  }
+
+  "How slow are three clocks" in {
+    val toDo = 10000000L
+
+    val utc = new UTC()
+    val clock0 = ScheduledClock(Symbol("dog", UIntType(IntWidth(1)), WireKind ), 100)
+    val clock1 = ScheduledClock(Symbol("cat", UIntType(IntWidth(1)), WireKind ), 300)
+    val clock2 = ScheduledClock(Symbol("fox", UIntType(IntWidth(1)), WireKind ), 17)
+    utc.register(clock0)
+    utc.register(clock1)
+    utc.register(clock2)
+
+    val startTime = System.currentTimeMillis()
+    for(i <- 0L until toDo) {
+      val events = utc.nextClocks()
+      if(i % (toDo / 10) == 0) {
+        println(s"Events at time ${utc.time}")
+        println(events.mkString("\n"))
+      }
+    }
+    val stopTime = System.currentTimeMillis()
+
+    val eps = toDo.toDouble * 1000 / (stopTime - startTime)
+    println(f"$toDo events in ${(stopTime - startTime) / 1000.0}%10.5f seconds, rate = $eps%10.5f KHz utc = ${utc.time}")
+  }
 }
