@@ -3,7 +3,7 @@
 package firrtl_interpreter.executable
 
 import firrtl.Kind
-import firrtl.ir.IntWidth
+import firrtl.ir.{Info, IntWidth, NoInfo}
 import firrtl_interpreter.InterpreterException
 
 case class Symbol(
@@ -13,7 +13,8 @@ case class Symbol(
     dataKind:   Kind,
     bitWidth:   Int,
     slots:      Int,
-    firrtlType: firrtl.ir.Type
+    firrtlType: firrtl.ir.Type,
+    info:       Info
 ) {
   var index: Int = -1
   var cardinalNumber: Int = -1
@@ -22,18 +23,18 @@ case class Symbol(
   //    f"${s"$dataType<$bitWidth>"}%12s $dataSize index $index%5d $name%-40.40s"
   //  }
   def render: String = {
-    f"$name%-40.40s $dataSize%3.3s $dataType%4.4s $bitWidth%6d $slots%6d $index%6d $cardinalNumber%6d"
+    f"$name%-40.40s $dataSize%3.3s $dataType%4.4s $bitWidth%6d $slots%6d $index%6d $cardinalNumber%6d $info"
   }
 }
 
 object Symbol {
-  def apply(name: String, firrtlType: firrtl.ir.Type, firrtlKind: Kind, slots: Int = 1): Symbol = {
+  def apply(name: String, firrtlType: firrtl.ir.Type, firrtlKind: Kind, slots: Int = 1, info: Info = NoInfo): Symbol = {
     Symbol(name, DataSize(firrtlType), DataType(firrtlType),
-      firrtlKind, DataSize.getBitWidth(firrtlType), slots, firrtlType)
+      firrtlKind, DataSize.getBitWidth(firrtlType), slots, firrtlType, info)
   }
 
   def renderHeader: String = {
-    f"""${"name"}%-40.40s ${"Bin"}%3.3s ${"Type"}%4.4s ${"Width"}%6s ${"Slots"}%6s ${"Index"}%6s ${"Depend"}%6s"""
+    f"""${"name"}%-40.40s ${"Bin"}%3.3s ${"Type"}%4.4s ${"Width"}%6s ${"Slots"}%6s ${"Index"}%6s ${"Depend"}%6s Info"""
   }
 }
 

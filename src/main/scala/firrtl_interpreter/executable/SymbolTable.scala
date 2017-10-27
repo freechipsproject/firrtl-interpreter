@@ -122,7 +122,7 @@ object SymbolTable extends LazyLogging {
               dependencies(symbol) = expressionToReferences(con.expr)
           }
 
-        case WDefInstance(info, instanceName, moduleName, _) =>
+        case WDefInstance(_, instanceName, moduleName, _) =>
           val subModule = FindModule(moduleName, circuit)
           val newPrefix = if (modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
           logger.debug(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
@@ -131,22 +131,22 @@ object SymbolTable extends LazyLogging {
         case DefNode(info, name, expression) =>
           logger.debug(s"declaration:DefNode:$name:${expression.serialize} ${expressionToReferences(expression)}")
           val expandedName = expand(name)
-          val symbol = Symbol(expandedName, expression.tpe, firrtl.NodeKind)
+          val symbol = Symbol(expandedName, expression.tpe, firrtl.NodeKind, info = info)
           nameToSymbol(expandedName) = symbol
           dependencies(symbol) = expressionToReferences(expression)
 
         case DefWire(info, name, tpe) =>
           logger.debug(s"declaration:DefWire:$name")
           val expandedName = expand(name)
-          val symbol = Symbol(expandedName, tpe, WireKind)
+          val symbol = Symbol(expandedName, tpe, WireKind, info = info)
           nameToSymbol(expandedName) = symbol
           dependencies(symbol) = Set.empty
 
         case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
           val expandedName = expand(name)
 
-          val registerIn = Symbol(expandedName + "/in", tpe, RegKind)
-          val registerOut = Symbol(expandedName, tpe,RegKind)
+          val registerIn = Symbol(expandedName + "/in", tpe, RegKind, info = info)
+          val registerOut = Symbol(expandedName, tpe,RegKind, info = info)
           registerNames += registerOut.name
           nameToSymbol(registerIn.name) = registerIn
           nameToSymbol(registerOut.name) = registerOut
