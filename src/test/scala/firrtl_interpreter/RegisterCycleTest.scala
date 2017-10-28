@@ -5,7 +5,7 @@ package firrtl_interpreter
 import org.scalatest.{Matchers, FreeSpec}
 
 class RegisterCycleTest extends FreeSpec with Matchers {
-  "cycle behavtest-only firior should not crash on various register init methods" - {
+  "cycle behavior test-only intepreter should not crash on various register init methods" - {
     "method 1" in {
       val input =
         """
@@ -47,6 +47,9 @@ class RegisterCycleTest extends FreeSpec with Matchers {
         tester.poke("io_In", 1)
         tester.poke("reset", 0)
         tester.step(1)
+        println(s"System state:")
+        println(s"${tester.interpreter.program.header}")
+        println(s"System state: ${tester.interpreter.program.dataInColumns}")
         tester.expect("io_Out", 1)
       }
     }

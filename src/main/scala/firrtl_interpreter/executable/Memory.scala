@@ -2,6 +2,7 @@
 
 package firrtl_interpreter.executable
 
+import firrtl.graph.MutableDiGraph
 import firrtl_interpreter._
 import firrtl.{MemKind, WireKind}
 import firrtl.ir.{DefMemory, IntWidth}
@@ -13,7 +14,8 @@ object Memory {
   def buildSymbols(
                     memory: DefMemory,
                     expandedName: String,
-                    dependencies: mutable.HashMap[Symbol, Set[Symbol]]
+                    keysDependOnSymbols: MutableDiGraph[Symbol],
+                    symbolsDependOnKeys: MutableDiGraph[Symbol]
   ): Seq[Symbol] = {
     val memorySymbol = Symbol(expandedName, memory.dataType, MemKind, memory.depth)
     val addrWidth = IntWidth(requiredBitsForUInt(memory.depth-1))
@@ -21,7 +23,8 @@ object Memory {
     def buildWriteDependencies(rootSymbol: Symbol, pipelineSymbols: Seq[Symbol]): Unit = {
       val chain = (Seq(rootSymbol) ++ pipelineSymbols).reverse
       chain.zip(chain.tail).foreach { case (target, source) =>
-        dependencies(target) = Set(source)
+        keysDependOnSymbols.addEdge(source, target)
+        symbolsDependOnKeys.addEdge(target, source)
       }
     }
 
@@ -40,7 +43,8 @@ object Memory {
       }
       val chain = Seq(data) ++ pipelineDataSymbols
       chain.zip(chain.tail).foreach { case (target, source) =>
-        dependencies(target) = Set(source)
+        keysDependOnSymbols.addEdge(source, target)
+        symbolsDependOnKeys.addEdge(target, source)
       }
       readerInterfaceSymbols ++ pipelineDataSymbols
     }
@@ -90,7 +94,8 @@ object Memory {
       }
       val chain = Seq(rdata) ++ pipelineReadDataSymbols
       chain.zip(chain.tail).foreach { case (target, source) =>
-        dependencies(target) = Set(source)
+        keysDependOnSymbols.addEdge(source, target)
+        symbolsDependOnKeys.addEdge(target, source)
       }
 
       val pipelineEnableSymbols = (0 until memory.writeLatency).flatMap { n =>

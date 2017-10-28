@@ -174,6 +174,8 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     expectationsMet += 1
   }
 
+  var cycleCount: Long = 0L
+
   /**
     * Cycles the circuit n steps (with a default of one)
     * At each step registers and memories are advanced and all other elements recomputed
@@ -184,6 +186,7 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     if(interpreter.checkStopped(s"step($n)")) return
 
     for(_ <- 0 until n) {
+      cycleCount += 1
       interpreter.cycle()
     }
   }
@@ -212,7 +215,7 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     s"test ${interpreter.loweredAst.main} " +
       s"$status $expectationsMet tests passed " +
 //      s"in ${interpreter.circuitState.stateCounter} cycles " +
-      f"taking $elapsedSeconds%.6f seconds"
+      f"in $cycleCount cycles in $elapsedSeconds%.6f seconds"
   }
   /**
     * A simplistic report of the number of expects that passed and

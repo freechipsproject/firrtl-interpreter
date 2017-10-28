@@ -3,11 +3,13 @@
 package firrtl_interpreter.executable
 
 import firrtl._
+import firrtl.graph.{DiGraph, MutableDiGraph}
 import firrtl.ir._
 import firrtl_interpreter.utils.TSort
 import firrtl_interpreter.{BlackBoxFactory, BlackBoxImplementation, FindModule, InterpreterException}
 import logger.LazyLogging
 
+import scala.collection.immutable.Set
 import scala.collection.mutable
 
 class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
@@ -17,6 +19,8 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
       this(key)
     }
   }
+  var keyDependsOnSymbols: DiGraph[Symbol] = new DiGraph[Symbol](Map.empty)
+  var symbolDependsOnKeys: DiGraph[Symbol] = new DiGraph[Symbol](Map.empty)
 
   def allocateData(dataStore: DataStore): Unit = {
     nameToSymbol.values.foreach { symbol =>
@@ -65,7 +69,11 @@ object SymbolTable extends LazyLogging {
 
     val nameToSymbol = new mutable.HashMap[String, Symbol]()
 
-    val dependencies: mutable.HashMap[Symbol, SymbolSet] = new mutable.HashMap[Symbol, SymbolSet]
+//    val dependencies: mutable.HashMap[Symbol, SymbolSet] = new mutable.HashMap[Symbol, SymbolSet]
+
+    val keysDependOnSymbols: MutableDiGraph[Symbol] = new MutableDiGraph[Symbol]
+    val symbolsDependOnKeys: MutableDiGraph[Symbol] = new MutableDiGraph[Symbol]
+
     val registerNames: mutable.HashSet[String] = new mutable.HashSet[String]()
     val inputPorts = new mutable.HashSet[String]
     val outputPorts = new mutable.HashSet[String]
@@ -102,6 +110,13 @@ object SymbolTable extends LazyLogging {
         result
       }
 
+      def addDependency(symbol: Symbol, dependentSymbols: Set[Symbol]): Unit = {
+        dependentSymbols.foreach { dependentSymbol =>
+          keysDependOnSymbols.addEdge(symbol, dependentSymbol)
+          symbolsDependOnKeys.addEdge(dependentSymbol, symbol)
+        }
+      }
+
       s match {
         case block: Block =>
           block.stmts.foreach { subStatement =>
@@ -119,7 +134,7 @@ object SymbolTable extends LazyLogging {
               }
               val symbol = nameToSymbol(name)
 
-              dependencies(symbol) = expressionToReferences(con.expr)
+              addDependency(symbol, expressionToReferences(con.expr))
           }
 
         case WDefInstance(_, instanceName, moduleName, _) =>
@@ -133,14 +148,13 @@ object SymbolTable extends LazyLogging {
           val expandedName = expand(name)
           val symbol = Symbol(expandedName, expression.tpe, firrtl.NodeKind, info = info)
           nameToSymbol(expandedName) = symbol
-          dependencies(symbol) = expressionToReferences(expression)
+          addDependency(symbol, expressionToReferences(expression))
 
         case DefWire(info, name, tpe) =>
           logger.debug(s"declaration:DefWire:$name")
           val expandedName = expand(name)
           val symbol = Symbol(expandedName, tpe, WireKind, info = info)
           nameToSymbol(expandedName) = symbol
-          dependencies(symbol) = Set.empty
 
         case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
           val expandedName = expand(name)
@@ -150,16 +164,13 @@ object SymbolTable extends LazyLogging {
           registerNames += registerOut.name
           nameToSymbol(registerIn.name) = registerIn
           nameToSymbol(registerOut.name) = registerOut
-          dependencies(registerIn) = Set.empty
-          dependencies(registerOut) = Set.empty
 
         case defMemory: DefMemory =>
           val expandedName = expand(defMemory.name)
           logger.debug(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
 
-          Memory.buildSymbols(defMemory, expandedName, dependencies).foreach { symbol =>
+          Memory.buildSymbols(defMemory, expandedName, keysDependOnSymbols, symbolsDependOnKeys).foreach { symbol =>
             nameToSymbol(symbol.name) = symbol
-            dependencies(symbol) = Set.empty
           }
 
 
@@ -190,7 +201,6 @@ object SymbolTable extends LazyLogging {
           val expandedName = expand(port.name)
           val symbol = Symbol(expandedName, port.tpe, PortKind)
           nameToSymbol(expandedName) = symbol
-          dependencies(symbol) = Set.empty
         }
       }
     }
@@ -203,7 +213,6 @@ object SymbolTable extends LazyLogging {
           val expandedName = expand(port.name)
           val symbol = Symbol(expandedName, port.tpe, PortKind)
           nameToSymbol(expandedName) = symbol
-          dependencies(symbol) = Set.empty
           if(modulePrefix.isEmpty) {  // this is true only at top level
             if(port.direction == Input) {
               inputPorts += symbol.name
@@ -251,22 +260,20 @@ object SymbolTable extends LazyLogging {
 
     processModule("", module)
 
-//    logger.debug(s"For module ${module.name} dependencyGraph =")
-//    nameToSymbol.keys.toSeq.sorted foreach { k =>
-//      val symbol = nameToSymbol(k)
-//      println(f"$symbol%-50.50s ${dependencies(symbol).map(_.name).mkString(",").take(100)}")
-//    }
+    val keysDependOnSymbolsDiGraph = DiGraph(keysDependOnSymbols)
+    val symbolsDependOnKeysDiGraph = DiGraph(symbolsDependOnKeys)
 
-    val sorted: Iterable[Symbol] = try {
-      TSort(dependencies.toMap, Seq.empty[Symbol])
-    }
-    catch {
-      case e: Throwable =>
-        println(s"Exception during topological sort, most likely missing terminals, or loops")
-        TSort.showMissingTerminals(dependencies.toMap)
-        println(s"Loops: ${TSort.findLoops(dependencies.toMap)}")
-        throw e
-    }
+
+    val sorted: Seq[Symbol] = keysDependOnSymbolsDiGraph.linearize
+//      TSort(dependencies.toMap, Seq.empty[Symbol])
+//    }
+//    catch {
+//      case e: Throwable =>
+//        println(s"Exception during topological sort, most likely missing terminals, or loops")
+//        TSort.showMissingTerminals(dependencies.toMap)
+//        println(s"Loops: ${TSort.findLoops(dependencies.toMap)}")
+//        throw e
+//    }
 
     sorted.zipWithIndex.foreach { case (symbol, index) => symbol.cardinalNumber = index }
 
@@ -278,6 +285,7 @@ object SymbolTable extends LazyLogging {
     symbolTable.registerNames ++= registerNames
     symbolTable.inputPortsNames    ++= inputPorts
     symbolTable.outputPortsNames   ++= outputPorts
+
     symbolTable
   }
 }

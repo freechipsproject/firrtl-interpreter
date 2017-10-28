@@ -36,7 +36,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     * @param value  The desired verbose setting
     */
   def setVerbose(value: Boolean = true): Unit = {
-    Logger.setLevel(classOf[FirrtlTerp], LogLevel.Debug)
+    Logger.setLevel(classOf[FirrtlTerp], LogLevel.None)
     //TODO: This is supposed to set verbose execution
   }
 
@@ -204,13 +204,17 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 
   def evaluateCircuit(specificDependencies: Seq[String] = Seq()): Unit = {
     program.dataStore.advanceBuffers()
-    println(s"h --  ${program.header}")
     program.scheduler.executeCombinational()
-    println(s"c --  ${program.dataInColumns}")
     program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
-    println(s"r --  ${program.dataInColumns}")
     program.scheduler.executeCombinational()
-    println(s"c --  ${program.dataInColumns}")
+//    println(s"c --  ${program.dataInColumns}")    program.dataStore.advanceBuffers()
+//    println(s"h --  ${program.header}")
+//    program.scheduler.executeCombinational()
+//    println(s"c --  ${program.dataInColumns}")
+//    program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
+//    println(s"r --  ${program.dataInColumns}")
+//    program.scheduler.executeCombinational()
+//    println(s"c --  ${program.dataInColumns}")
   }
 
   def reEvaluate(name: String): Unit = {
@@ -277,37 +281,16 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 
   def step(steps: Int = 1): Unit = {
     program.dataStore.advanceBuffers()
-    println(s"a --  ${program.dataInColumns}")
     program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
-    println(s"h --  ${program.header}")
-    println(s"r --  ${program.dataInColumns}")
     program.scheduler.executeCombinational()
-    println(s"c --  ${program.dataInColumns}")
+//    program.dataStore.advanceBuffers()
+//    println(s"a --  ${program.dataInColumns}")
+//    program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
+//    println(s"h --  ${program.header}")
+//    println(s"r --  ${program.dataInColumns}")
+//    program.scheduler.executeCombinational()
+//    println(s"c --  ${program.dataInColumns}")
   }
-
-//  println(s"h --  ${program.header}")
-//  println(s"i --  ${program.dataInColumns}")
-//
-//  poke("io_a", 33)
-//  poke("io_b", 11)
-//  poke("io_e", 1)
-//
-//  println(s"p --  ${program.dataInColumns}")
-//
-//  step()
-//
-//  poke("io_e", 0)
-//  println(s"p --  ${program.dataInColumns}")
-//  step()
-//
-//  var count = 0
-////  while(peek("io_v") == 0 && count < 50 && peek("x") > 0) {
-//  while(/*peek("io_v") == 0 &&*/ count < 12) {
-//    count += 1
-//    step()
-//  }
-//
-//  println(timer.report())
 }
 
 object FirrtlTerp {
