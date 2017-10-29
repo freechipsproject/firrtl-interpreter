@@ -61,6 +61,8 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 
   // println(s"Scheduler before sort ${scheduler.renderHeader}")
   scheduler.sortCombinationalAssigns()
+  scheduler.sortTriggeredAssigns()
+
   println(s"Scheduler after sort ${scheduler.render}")
 
   /**

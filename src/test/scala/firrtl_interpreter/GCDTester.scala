@@ -195,7 +195,7 @@ class GCDTester extends FlatSpec with Matchers {
     cycle = tester.cycleCount
 
     println(
-      f"processed $cycle cycles $elapsedSeconds%.6f seconds ${cycle.toDouble / (1000.0 * elapsedSeconds)}%5.3f MHz"
+      f"processed $cycle cycles $elapsedSeconds%.6f seconds ${cycle.toDouble / (1000000.0 * elapsedSeconds)}%5.3f MHz"
     )
     tester.report()
 

@@ -264,16 +264,7 @@ object SymbolTable extends LazyLogging {
     val symbolsDependOnKeysDiGraph = DiGraph(symbolsDependOnKeys)
 
 
-    val sorted: Seq[Symbol] = keysDependOnSymbolsDiGraph.linearize
-//      TSort(dependencies.toMap, Seq.empty[Symbol])
-//    }
-//    catch {
-//      case e: Throwable =>
-//        println(s"Exception during topological sort, most likely missing terminals, or loops")
-//        TSort.showMissingTerminals(dependencies.toMap)
-//        println(s"Loops: ${TSort.findLoops(dependencies.toMap)}")
-//        throw e
-//    }
+    val sorted: Seq[Symbol] = symbolsDependOnKeysDiGraph.linearize
 
     sorted.zipWithIndex.foreach { case (symbol, index) => symbol.cardinalNumber = index }
 

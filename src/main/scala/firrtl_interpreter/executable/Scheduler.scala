@@ -47,22 +47,26 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) {
   }
 
   def sortCombinationalAssigns(): Unit = {
-    combinationalAssigns = combinationalAssigns.sortBy {
-      case assign: dataStore.AssignInt =>
-        symbolTable.sortKey(IntSize, assign.index)
-      case assign: dataStore.AssignLong =>
-        symbolTable.sortKey(LongSize, assign.index)
-      case assign: dataStore.AssignBig =>
-        symbolTable.sortKey(BigSize, assign.index)
-      case assign: dataStore.AssignIntIndirect =>
-        symbolTable.sortKey(IntSize, assign.index)
-      case assign: dataStore.AssignLongIndirect =>
-        symbolTable.sortKey(LongSize, assign.index)
-      case assign: dataStore.AssignBigIndirect =>
-        symbolTable.sortKey(BigSize, assign.index)
-      case assigner =>
-        throw InterpreterException(s"unknown assigner found in sort combinational assigns $assigner")
+    combinationalAssigns = combinationalAssigns.sortBy { assigner: Assigner =>
+      val symbol = dataStore.assignerToSymbol(assigner)
+      symbolTable.sortKey(symbol.dataSize, symbol.index)
     }
+  }
+
+  def sortTriggeredAssigns(): Unit = {
+    triggeredAssigns.foreach { case (trigger, assigners) =>
+      triggeredAssigns(trigger) = assigners.sortBy { assigner: Assigner =>
+        val symbol = dataStore.assignerToSymbol(assigner)
+        symbolTable.sortKey(symbol.dataSize, symbol.index)
+      }
+    }
+
+//    triggeredAssigns.foreach { case (trigger, assigners) =>
+//      val assignedSymbols = assigners.map(dataStore.assignerToSymbol(_)).toList.distinct
+//      val dependentSymbols = assignedSymbols.flatMap { symbol =>
+//        symbolTable.symbolDependsOnKeys.reachableFrom(symbol)
+//      }
+//    }
   }
 
   def makeFresh(): Unit = {

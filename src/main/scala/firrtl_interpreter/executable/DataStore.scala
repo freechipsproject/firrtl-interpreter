@@ -14,7 +14,7 @@ import scala.collection.mutable
   *
   * @param numberOfBuffers Number of buffers
   */
-class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
+class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
   assert(numberOfBuffers > 0, s"DataStore: numberOfBuffers $numberOfBuffers must be > 0")
 
   private val nextIndexFor = new mutable.HashMap[DataSize, Int]
@@ -25,6 +25,8 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
   def numberOfInts: Int  = nextIndexFor(IntSize)
   def numberOfLongs: Int = nextIndexFor(LongSize)
   def numberOfBigs: Int  = nextIndexFor(BigSize)
+
+  val symbolToAssigner: mutable.HashMap[Symbol, Assigner] = new mutable.HashMap()
 
   def getSizes: (Int, Int, Int) = {
     (nextIndexFor(IntSize), nextIndexFor(LongSize), nextIndexFor(BigSize))
@@ -156,7 +158,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
                              getMemoryIndex: FuncInt,
                              enable: FuncInt
                            ) extends IntExpressionResult {
-    val memoryLocation = memorySymbol.index
+    val memoryLocation: Int = memorySymbol.index
     def apply(): Int = {
       currentIntArray(memoryLocation + getMemoryIndex())
     }
@@ -167,7 +169,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
                              getMemoryIndex: FuncInt,
                              enable: FuncInt
                            ) extends LongExpressionResult {
-    val memoryLocation = memorySymbol.index
+    val memoryLocation: Int = memorySymbol.index
     def apply(): Long = {
       currentLongArray(memoryLocation + getMemoryIndex())
     }
@@ -178,7 +180,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
                              getMemoryIndex: FuncInt,
                              enable: FuncInt
                            ) extends BigExpressionResult {
-    val memoryLocation = memorySymbol.index
+    val memoryLocation: Int = memorySymbol.index
     def apply(): Big = {
       currentBigArray(memoryLocation + getMemoryIndex())
     }
@@ -263,6 +265,19 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     }
 
     val run: FuncUnit = if (optimizationLevel == 0) runVerbose _ else runQuiet _
+  }
+
+  def assignerToSymbol(assigner: Assigner): Symbol = {
+    assigner match {
+        case assign: AssignInt =>          assign.symbol
+        case assign: AssignLong =>         assign.symbol
+        case assign: AssignBig =>          assign.symbol
+        case assign: AssignIntIndirect =>  assign.memorySymbol
+        case assign: AssignLongIndirect => assign.memorySymbol
+        case assign: AssignBigIndirect =>  assign.memorySymbol
+        case assign =>
+          throw InterpreterException(s"unknown assigner found in sort combinational assigns $assigner")
+    }
   }
 
   def getSizeAndIndex(assigner: Assigner): (DataSize, Int) = {
