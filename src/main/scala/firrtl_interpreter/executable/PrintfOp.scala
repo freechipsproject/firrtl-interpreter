@@ -2,7 +2,8 @@
 
 package firrtl_interpreter.executable
 
-import firrtl.ir.{Info, StringLit}
+import firrtl.WireKind
+import firrtl.ir._
 
 case class PrintfOp(
                      info: Info,
@@ -10,6 +11,8 @@ case class PrintfOp(
                      args: Seq[ExpressionResult],
                      condition: ExpressionResult
                    ) extends Assigner {
+
+  val symbol: Symbol = PrintfOp.PrintfOpSymbol
 
   def run: FuncUnit = {
     val conditionValue = condition match {
@@ -28,4 +31,10 @@ case class PrintfOp(
     }
     () => Unit
   }
+}
+
+object PrintfOp {
+  val PrintfOpSymbol = Symbol("printfop", IntSize, UnsignedInt, WireKind, 1, 1, UIntType(IntWidth(1)), NoInfo)
+  PrintfOpSymbol.index = 0
+  PrintfOpSymbol.cardinalNumber = 0
 }

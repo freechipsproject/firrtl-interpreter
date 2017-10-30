@@ -2,7 +2,8 @@
 
 package firrtl_interpreter.executable
 
-import firrtl.ir.Info
+import firrtl.WireKind
+import firrtl.ir.{Info, IntWidth, NoInfo, UIntType}
 import firrtl_interpreter.FirrtlTerp
 
 case class StopOp(
@@ -11,6 +12,8 @@ case class StopOp(
                    condition: ExpressionResult,
                    parent: FirrtlTerp
                  ) extends Assigner {
+
+  val symbol = StopOp.StopOpSymbol
 
   def run: FuncUnit = {
     val conditionValue = condition match {
@@ -23,4 +26,10 @@ case class StopOp(
     }
     () => Unit
   }
+}
+
+object StopOp {
+  val StopOpSymbol = Symbol("stopop", IntSize, UnsignedInt, WireKind, 1, 1, UIntType(IntWidth(1)), NoInfo)
+  StopOpSymbol.index = 0
+  StopOpSymbol.cardinalNumber = 0
 }

@@ -14,7 +14,7 @@ import scala.collection.mutable
   *
   * @param numberOfBuffers Number of buffers
   */
-class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
+class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
   assert(numberOfBuffers > 0, s"DataStore: numberOfBuffers $numberOfBuffers must be > 0")
 
   private val nextIndexFor = new mutable.HashMap[DataSize, Int]
@@ -269,12 +269,14 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
 
   def assignerToSymbol(assigner: Assigner): Symbol = {
     assigner match {
-        case assign: AssignInt =>          assign.symbol
-        case assign: AssignLong =>         assign.symbol
-        case assign: AssignBig =>          assign.symbol
-        case assign: AssignIntIndirect =>  assign.memorySymbol
+        case assign: AssignInt          => assign.symbol
+        case assign: AssignLong         => assign.symbol
+        case assign: AssignBig          => assign.symbol
+        case assign: AssignIntIndirect  => assign.memorySymbol
         case assign: AssignLongIndirect => assign.memorySymbol
-        case assign: AssignBigIndirect =>  assign.memorySymbol
+        case assign: AssignBigIndirect  => assign.memorySymbol
+        case assign: PrintfOp           => assign.symbol
+        case assign: StopOp             => assign.symbol
         case assign =>
           throw InterpreterException(s"unknown assigner found in sort combinational assigns $assigner")
     }

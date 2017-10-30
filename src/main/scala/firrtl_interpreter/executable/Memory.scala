@@ -7,10 +7,19 @@ import firrtl_interpreter._
 import firrtl.{MemKind, WireKind}
 import firrtl.ir.{DefMemory, IntWidth}
 
-import scala.collection.mutable
-
 object Memory {
   //scalastyle:off method.length
+  /**
+    * Builds all the symbols and dependencies for the specified memory.
+    * Pipelines are constructed as registers with a regular name and
+    * a /in name.  Data travels up-index through a pipeline for both
+    * read and write pipelines.
+    * @param memory              the specified memory
+    * @param expandedName        the full name of the memory
+    * @param keysDependOnSymbols external graph of dependencies
+    * @param symbolsDependOnKeys external graph of dependencies
+    * @return
+    */
   def buildSymbols(
                     memory: DefMemory,
                     expandedName: String,
@@ -18,61 +27,77 @@ object Memory {
                     symbolsDependOnKeys: MutableDiGraph[Symbol]
   ): Seq[Symbol] = {
     val memorySymbol = Symbol(expandedName, memory.dataType, MemKind, memory.depth)
-    val addrWidth = IntWidth(requiredBitsForUInt(memory.depth-1))
+    val addrWidth = IntWidth(requiredBitsForUInt(memory.depth - 1))
 
-    def buildWriteDependencies(rootSymbol: Symbol, pipelineSymbols: Seq[Symbol]): Unit = {
-      val chain = (Seq(rootSymbol) ++ pipelineSymbols).reverse
-      chain.zip(chain.tail).foreach { case (target, source) =>
-        keysDependOnSymbols.addEdge(source, target)
-        symbolsDependOnKeys.addEdge(target, source)
+    def buildPipelineDependencies(rootSymbol:      Symbol,
+                                  pipelineSymbols: Seq[Symbol],
+                                  tailSymbol:      Option[Symbol] = None): Unit = {
+
+      val chain = Seq(rootSymbol) ++ pipelineSymbols ++ (if(tailSymbol.isDefined) Seq(tailSymbol.get) else Seq.empty)
+
+      chain.sliding(2, 2).withFilter(_.length == 2).toList.foreach {
+        case source :: target :: Nil =>
+          keysDependOnSymbols.addEdge(target, source)
+          symbolsDependOnKeys.addEdge(source, target)
+        case _ =>
       }
     }
 
     val readerSymbols = memory.readers.flatMap { readerString =>
       val readerName = s"$expandedName.$readerString"
 
-      val en   = Symbol(s"$readerName.en", firrtl.ir.UIntType(IntWidth(1)), WireKind)
-      val clk  = Symbol(s"$readerName.clk", firrtl.ir.UIntType(IntWidth(1)), WireKind)
+      val en   = Symbol(s"$readerName.en",   firrtl.ir.UIntType(IntWidth(1)), WireKind)
+      val clk  = Symbol(s"$readerName.clk",  firrtl.ir.UIntType(IntWidth(1)), WireKind)
       val addr = Symbol(s"$readerName.addr", firrtl.ir.UIntType(addrWidth), WireKind)
       val data = Symbol(s"$readerName.data", memory.dataType, WireKind)
 
       val readerInterfaceSymbols = Seq(en, clk, addr, data)
 
-      val pipelineDataSymbols = (0 until memory.readLatency).map { n =>
-        Symbol(s"$expandedName.$readerString.pipeline_$n", memory.dataType, WireKind)
+      val pipelineDataSymbols = (0 until memory.readLatency).flatMap { n =>
+        Seq(
+          Symbol(s"$expandedName.$readerString.pipeline_$n/in", memory.dataType, WireKind),
+          Symbol(s"$expandedName.$readerString.pipeline_$n", memory.dataType, WireKind)
+        )
       }
-      val chain = Seq(data) ++ pipelineDataSymbols
-      chain.zip(chain.tail).foreach { case (target, source) =>
-        keysDependOnSymbols.addEdge(source, target)
-        symbolsDependOnKeys.addEdge(target, source)
-      }
+
+      buildPipelineDependencies(addr, pipelineDataSymbols, Some(data))
+
       readerInterfaceSymbols ++ pipelineDataSymbols
     }
 
     val writerSymbols = memory.writers.flatMap { writerString =>
       val writerName = s"$expandedName.$writerString"
-      val en =  Symbol(s"$writerName.en", firrtl.ir.UIntType(IntWidth(1)), WireKind)
-      val clk =  Symbol(s"$writerName.clk", firrtl.ir.UIntType(IntWidth(1)), WireKind)
-      val addr =  Symbol(s"$writerName.addr", firrtl.ir.UIntType(addrWidth), WireKind)
-      val mask =  Symbol(s"$writerName.mask", firrtl.ir.UIntType(IntWidth(1)), WireKind)
-      val data =  Symbol(s"$writerName.data", memory.dataType, WireKind)
+      val en   = Symbol(s"$writerName.en", firrtl.ir.UIntType(IntWidth(1)), WireKind)
+      val clk  = Symbol(s"$writerName.clk", firrtl.ir.UIntType(IntWidth(1)), WireKind)
+      val addr = Symbol(s"$writerName.addr", firrtl.ir.UIntType(addrWidth), WireKind)
+      val mask = Symbol(s"$writerName.mask", firrtl.ir.UIntType(IntWidth(1)), WireKind)
+      val data = Symbol(s"$writerName.data", memory.dataType, WireKind)
 
       val memoryInterfaceSymbols = Seq(en, clk, addr, mask, data)
 
       val pipelineEnableSymbols = (0 until memory.writeLatency).flatMap { n =>
-        Seq(Symbol(s"$expandedName.$writerString.pipeline_en_$n", memory.dataType, WireKind))
+        Seq(
+          Symbol(s"$expandedName.$writerString.pipeline_en_$n/in", memory.dataType, WireKind),
+          Symbol(s"$expandedName.$writerString.pipeline_en_$n", memory.dataType, WireKind)
+        )
       }
-      buildWriteDependencies(en, pipelineEnableSymbols)
+      buildPipelineDependencies(en, pipelineEnableSymbols)
 
       val pipelineDataSymbols = (0 until memory.writeLatency).flatMap { n =>
-        Seq(Symbol(s"$expandedName.$writerString.pipeline_data_$n", memory.dataType, WireKind))
+        Seq(
+          Symbol(s"$expandedName.$writerString.pipeline_data_$n/in", memory.dataType, WireKind),
+          Symbol(s"$expandedName.$writerString.pipeline_data_$n", memory.dataType, WireKind)
+        )
       }
-      buildWriteDependencies(data, pipelineDataSymbols)
+      buildPipelineDependencies(data, pipelineDataSymbols)
 
       val pipelineAddrSymbols = (0 until memory.writeLatency).flatMap { n =>
-        Seq(Symbol(s"$expandedName.$writerString.pipeline_addr_$n", memory.dataType, WireKind))
+        Seq(
+          Symbol(s"$expandedName.$writerString.pipeline_addr_$n/in", memory.dataType, WireKind),
+          Symbol(s"$expandedName.$writerString.pipeline_addr_$n", memory.dataType, WireKind)
+        )
       }
-      buildWriteDependencies(addr, pipelineAddrSymbols)
+      buildPipelineDependencies(addr, pipelineAddrSymbols)
 
       memoryInterfaceSymbols ++ pipelineEnableSymbols ++ pipelineAddrSymbols ++ pipelineDataSymbols
     }
@@ -94,24 +119,24 @@ object Memory {
       }
       val chain = Seq(rdata) ++ pipelineReadDataSymbols
       chain.zip(chain.tail).foreach { case (target, source) =>
-        keysDependOnSymbols.addEdge(source, target)
-        symbolsDependOnKeys.addEdge(target, source)
+        symbolsDependOnKeys.addEdge(source, target)
+        keysDependOnSymbols.addEdge(target, source)
       }
 
       val pipelineEnableSymbols = (0 until memory.writeLatency).flatMap { n =>
         Seq(Symbol(s"$expandedName.$readWriterString.pipeline_en_$n", memory.dataType, WireKind))
       }
-      buildWriteDependencies(en, pipelineEnableSymbols)
+      buildPipelineDependencies(en, pipelineEnableSymbols)
 
       val pipelineWriteDataSymbols = (0 until memory.writeLatency).flatMap { n =>
         Seq(Symbol(s"$expandedName.$readWriterString.pipeline_write_data_$n", memory.dataType, WireKind))
       }
-      buildWriteDependencies(wdata, pipelineWriteDataSymbols)
+      buildPipelineDependencies(wdata, pipelineWriteDataSymbols)
 
       val pipelineAddrSymbols = (0 until memory.writeLatency).flatMap { n =>
         Seq(Symbol(s"$expandedName.$readWriterString.pipeline_write_addr_$n", memory.dataType, WireKind))
       }
-      buildWriteDependencies(addr, pipelineAddrSymbols)
+      buildPipelineDependencies(addr, pipelineAddrSymbols)
 
       memoryInterfaceSymbols    ++
         pipelineReadDataSymbols ++
