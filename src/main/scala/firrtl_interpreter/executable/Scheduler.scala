@@ -3,10 +3,11 @@
 package firrtl_interpreter.executable
 
 import firrtl_interpreter.InterpreterException
+import logger.LazyLogging
 
 import scala.collection.mutable
 
-class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) {
+class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends LazyLogging {
   var combinationalAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
   val bufferAdvanceAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
 
@@ -24,7 +25,7 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) {
   }
 
   def executeCombinational(): Unit = {
-    println(s"Executing combinational assigns")
+    logger.debug(s"Executing combinational assigns")
     combinationalAssigns.foreach {
       assign => assign.run()
     }

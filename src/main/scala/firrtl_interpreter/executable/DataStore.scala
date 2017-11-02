@@ -14,7 +14,7 @@ import scala.collection.mutable
   *
   * @param numberOfBuffers Number of buffers
   */
-class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
+class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
   assert(numberOfBuffers > 0, s"DataStore: numberOfBuffers $numberOfBuffers must be > 0")
 
   private val nextIndexFor = new mutable.HashMap[DataSize, Int]
