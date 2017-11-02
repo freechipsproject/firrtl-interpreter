@@ -530,9 +530,6 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         }
       }
 
-      //TODO (chick) This must be modified to be on the right clock
-      //TODO (chick) Does mask need to be pipelined
-
       /**
         * Construct the machinery to move data into and out of the memory stack
         * @param memory       current memory
@@ -543,56 +540,135 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         val symbolTable = scheduler.symbolTable
         val memorySymbol = symbolTable(expandedName)
 
+        /**
+          * construct a pipeline of registers based on the latency
+          * @param portString   reader or writer port name
+          * @param pipelineName name of data being pipelined
+          * @param latency      length of pipeline
+          * @return
+          */
+        def buildPipeLine(portString: String, pipelineName: String, latency: Int): Seq[Symbol] = {
+          (0 until latency).flatMap { n =>
+            Seq(
+              symbolTable(s"$portString.pipeline_${pipelineName}_$n/in"),
+              symbolTable(s"$portString.pipeline_${pipelineName}_$n")
+//              symbolTable(s"$expandedName.$portString.pipeline_${pipelineName}_$n/in"),
+//              symbolTable(s"$expandedName.$portString.pipeline_${pipelineName}_$n")
+            )
+          }
+        }
+
+        /**
+          * Makes a read chain of pipeline registers.  These must be ordered reg0/in, reg0, reg1/in ... regN/in, regN
+          * This will advance the registers on the specified clock,
+          * and combinationally pass the register value to the next register's input down the chain
+          * Data flows from low indexed pipeline elements to high ones
+
+          * @param clock          trigger
+          * @param portName       port name
+          * @param pipelineName   element being pipelined
+          * @param data           data where memory data will go
+          * @param addr           address of data in memory
+          * @param enable         memory enabled
+          */
+        def buildReadPipelineAssigners(
+                                        clock:        Symbol,
+                                        portName:     String,
+                                        pipelineName: String,
+                                        data:         Symbol,
+                                        addr:         Symbol,
+                                        enable:       Symbol
+                                      ): Unit = {
+
+          val pipelineReadSymbols = buildPipeLine(portName, pipelineName, memory.readLatency)
+          val chain = Seq() ++ pipelineReadSymbols ++ Seq(data)
+
+          triggeredAssign(makeGet(clock), chain.head, makeGetIndirect(memorySymbol, data, enable, addr))
+
+          getAssigner(chain.head, makeGetIndirect(memorySymbol, data, enable, addr))
+
+          // This produces triggered: reg0 <= reg0/in, reg1 <= reg1/in etc.
+          chain.grouped(2).withFilter(_.length == 2).toList.foreach {
+            case source :: target :: Nil =>
+              triggeredAssign(makeGet(clock), target, makeGet(source))
+            case _ =>
+          }
+
+          // This produces reg0/in <= root, reg1/in <= reg0 etc.
+          chain.drop(1).grouped(2).withFilter(_.length == 2).toList.foreach {
+            case source :: target :: Nil =>
+              getAssigner(target, makeGet(source))
+            case _ =>
+          }
+        }
+
         memory.readers.foreach { readerString =>
           val readerName = s"$expandedName.$readerString"
           val enable = symbolTable(s"$readerName.en")
+          val clock  = symbolTable(s"$readerName.clk")
           val addr   = symbolTable(s"$readerName.addr")
           val data   = symbolTable(s"$readerName.data")
 
-          val pipelineReadSymbols = (0 until memory.readLatency).map { n =>
-            symbolTable(s"$expandedName.$readerString.pipeline_$n")
-          } ++ Seq(data)
+          buildReadPipelineAssigners(clock, readerName, "data", data, addr, enable)
+        }
 
-          getAssigner(pipelineReadSymbols.head, makeGetIndirect(memorySymbol, data, enable, addr))
+        /**
+          * compile the necessary assignments to complete a latency chain
+          * If latency is zero, this basically returns the root symbol.
+          * @param clockSymbol   used to create execution based on this trigger.
+          * @param rootSymbol    the head element of the pipeline, this is one of the memort ports
+          * @param writerString  name of the writer
+          * @param pipelineName  string representing the name of the root port
+          * @return
+          */
+        def buildWritePipelineAssigners(clockSymbol:     Symbol,
+                                        rootSymbol:      Symbol,
+                                        writerString:    String,
+                                        pipelineName:    String
+                                       ): Symbol = {
 
-          pipelineReadSymbols.zip(pipelineReadSymbols.tail).foreach { case (source, target) =>
-            getAssigner(target, makeGet(source))
+          val pipelineSymbols = buildPipeLine(writerString, pipelineName, memory.writeLatency)
+          val chain = Seq(rootSymbol) ++ pipelineSymbols
+
+          // This produces triggered: reg0 <= reg0/in, reg1 <= reg1/in etc.
+          chain.drop(1).grouped(2).withFilter(_.length == 2).toList.foreach {
+            case source :: target :: Nil =>
+              triggeredAssign(makeGet(clockSymbol), target, makeGet(source))
+            case _ =>
           }
+
+          // This produces reg0/in <= root, reg1/in <= reg0 etc.
+          chain.grouped(2).withFilter(_.length == 2).toList.foreach {
+            case source :: target :: Nil =>
+              getAssigner(target, makeGet(source))
+            case _ =>
+          }
+
+          chain.last
         }
 
         memory.writers.foreach { writerString =>
           val writerName = s"$expandedName.$writerString"
 
           val enable = symbolTable(s"$writerName.en")
+          val clock  = symbolTable(s"$writerName.clk")
           val addr   = symbolTable(s"$writerName.addr")
           val mask   = symbolTable(s"$writerName.mask")
           val data   = symbolTable(s"$writerName.data")
+          val valid  = symbolTable(s"$writerName.valid")
 
-          val pipelineEnableSymbols = Seq(enable) ++ (0 until memory.writeLatency).map { n =>
-            symbolTable(s"$expandedName.$writerString.pipeline_en_$n")
-          }
-          val pipelineDataSymbols = Seq(data) ++ (0 until memory.writeLatency).map { n =>
-            symbolTable(s"$expandedName.$writerString.pipeline_data_$n")
-          }
-          val pipelineAddrSymbols = Seq(addr) ++ (0 until memory.writeLatency).map { n =>
-            symbolTable(s"$expandedName.$writerString.pipeline_addr_$n")
-          }
+          // compute a valid so we only have to carry a single boolean up the write queue
+          getAssigner(valid, AndInts(dataStore.GetInt(enable.index).apply, dataStore.GetInt(mask.index).apply))
 
-          def connectPipeline(pipeline: Seq[Symbol]): Unit = {
-            pipeline.zip(pipeline.tail).foreach { case (source, target) =>
-              getAssigner(target, makeGet(source))
-            }
-          }
-
-          connectPipeline(pipelineEnableSymbols)
-          connectPipeline(pipelineDataSymbols)
-          connectPipeline(pipelineAddrSymbols)
+          val endOfValidPipeline = buildWritePipelineAssigners(clock, valid, writerName, "valid")
+          val endOfAddrPipeline  = buildWritePipelineAssigners(clock, addr, writerName, "addr")
+          val endOfDataPipeline  = buildWritePipelineAssigners(clock, data, writerName, "data")
 
           getIndirectAssigner(
             memorySymbol,
-            pipelineAddrSymbols.last,
-            pipelineEnableSymbols.last,
-            makeGet(pipelineDataSymbols.last)
+            endOfAddrPipeline,
+            endOfValidPipeline,
+            makeGet(endOfDataPipeline)
           )
         }
 
@@ -600,47 +676,34 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           val writerName = s"$expandedName.$readWriterString"
 
           val enable =  symbolTable(s"$writerName.en")
+          val clock  =  symbolTable(s"$writerName.clk")
           val addr   =  symbolTable(s"$writerName.addr")
           val rdata  =  symbolTable(s"$writerName.rdata")
           val mode   =  symbolTable(s"$writerName.wmode")
           val mask   =  symbolTable(s"$writerName.wmask")
           val wdata  =  symbolTable(s"$writerName.wdata")
+          val valid  = symbolTable(s"$writerName.valid")
 
-          val pipelineReadSymbols = (0 until memory.readLatency).map { n =>
-            symbolTable(s"$expandedName.$readWriterString.pipeline_read_$n")
-          } ++ Seq(rdata)
+          buildReadPipelineAssigners(clock, writerName, "rdata", rdata, addr, enable)
 
-          getAssigner(pipelineReadSymbols.head, makeGetIndirect(memorySymbol, rdata, enable, addr))
+          // compute a valid so we only have to carry a single boolean up the write queue
+          getAssigner(
+            valid,
+            AndInts(
+              AndInts(dataStore.GetInt(enable.index).apply, dataStore.GetInt(mask.index).apply).apply,
+              dataStore.GetInt(mode.index).apply
+            )
+          )
 
-          pipelineReadSymbols.zip(pipelineReadSymbols.tail).foreach { case (source, target) =>
-            getAssigner(target, makeGet(source))
-          }
-
-          val pipelineEnableSymbols = Seq(enable) ++ (0 until memory.writeLatency).map { n =>
-            symbolTable(s"$expandedName.$readWriterString.pipeline_en_$n")
-          }
-          val pipelineDataSymbols = Seq(wdata) ++ (0 until memory.writeLatency).map { n =>
-            symbolTable(s"$expandedName.$readWriterString.pipeline_write_data_$n")
-          }
-          val pipelineAddrSymbols = Seq(addr) ++ (0 until memory.writeLatency).map { n =>
-            symbolTable(s"$expandedName.$readWriterString.pipeline_write_addr_$n")
-          }
-
-          def connectPipeline(pipeline: Seq[Symbol]): Unit = {
-            pipeline.zip(pipeline.tail).foreach { case (source, target) =>
-              getAssigner(target, makeGet(source))
-            }
-          }
-
-          connectPipeline(pipelineEnableSymbols)
-          connectPipeline(pipelineDataSymbols)
-          connectPipeline(pipelineAddrSymbols)
+          val endOfValidPipeline = buildWritePipelineAssigners(clock, valid, writerName, "valid")
+          val endOfAddrPipeline  = buildWritePipelineAssigners(clock, addr,  writerName, "addr")
+          val endOfDataPipeline  = buildWritePipelineAssigners(clock, wdata, writerName, "wdata")
 
           getIndirectAssigner(
             memorySymbol,
-            pipelineAddrSymbols.last,
-            pipelineEnableSymbols.last,
-            makeGet(pipelineDataSymbols.last)
+            endOfAddrPipeline,
+            endOfValidPipeline,
+            makeGet(endOfDataPipeline)
           )
         }
       }

@@ -35,7 +35,7 @@ object Memory {
 
       val chain = Seq(rootSymbol) ++ pipelineSymbols ++ (if(tailSymbol.isDefined) Seq(tailSymbol.get) else Seq.empty)
 
-      chain.sliding(2, 2).withFilter(_.length == 2).toList.foreach {
+      chain.grouped(2).withFilter(_.length == 2).toList.foreach {
         case source :: target :: Nil =>
           keysDependOnSymbols.addEdge(target, source)
           symbolsDependOnKeys.addEdge(source, target)
@@ -67,21 +67,22 @@ object Memory {
 
     val writerSymbols = memory.writers.flatMap { writerString =>
       val writerName = s"$expandedName.$writerString"
-      val en   = Symbol(s"$writerName.en", firrtl.ir.UIntType(IntWidth(1)), WireKind)
-      val clk  = Symbol(s"$writerName.clk", firrtl.ir.UIntType(IntWidth(1)), WireKind)
-      val addr = Symbol(s"$writerName.addr", firrtl.ir.UIntType(addrWidth), WireKind)
-      val mask = Symbol(s"$writerName.mask", firrtl.ir.UIntType(IntWidth(1)), WireKind)
-      val data = Symbol(s"$writerName.data", memory.dataType, WireKind)
+      val en    = Symbol(s"$writerName.en", firrtl.ir.UIntType(IntWidth(1)), WireKind)
+      val clk   = Symbol(s"$writerName.clk", firrtl.ir.UIntType(IntWidth(1)), WireKind)
+      val addr  = Symbol(s"$writerName.addr", firrtl.ir.UIntType(addrWidth), WireKind)
+      val mask  = Symbol(s"$writerName.mask", firrtl.ir.UIntType(IntWidth(1)), WireKind)
+      val data  = Symbol(s"$writerName.data", memory.dataType, WireKind)
+      val valid = Symbol(s"$writerName.valid", firrtl.ir.UIntType(IntWidth(1)), WireKind)
 
-      val memoryInterfaceSymbols = Seq(en, clk, addr, mask, data)
+      val memoryInterfaceSymbols = Seq(en, clk, addr, mask, data, valid)
 
-      val pipelineEnableSymbols = (0 until memory.writeLatency).flatMap { n =>
+      val pipelineValidSymbols = (0 until memory.writeLatency).flatMap { n =>
         Seq(
-          Symbol(s"$expandedName.$writerString.pipeline_en_$n/in", memory.dataType, WireKind),
-          Symbol(s"$expandedName.$writerString.pipeline_en_$n", memory.dataType, WireKind)
+          Symbol(s"$expandedName.$writerString.pipeline_valid_$n/in", memory.dataType, WireKind),
+          Symbol(s"$expandedName.$writerString.pipeline_valid_$n", memory.dataType, WireKind)
         )
       }
-      buildPipelineDependencies(en, pipelineEnableSymbols)
+      buildPipelineDependencies(en, pipelineValidSymbols)
 
       val pipelineDataSymbols = (0 until memory.writeLatency).flatMap { n =>
         Seq(
@@ -99,7 +100,7 @@ object Memory {
       }
       buildPipelineDependencies(addr, pipelineAddrSymbols)
 
-      memoryInterfaceSymbols ++ pipelineEnableSymbols ++ pipelineAddrSymbols ++ pipelineDataSymbols
+      memoryInterfaceSymbols ++ pipelineValidSymbols ++ pipelineAddrSymbols ++ pipelineDataSymbols
     }
 
     val readerWriterSymbols = memory.readwriters.flatMap { readWriterString =>
@@ -111,30 +112,40 @@ object Memory {
       val mode  =  Symbol(s"$writerName.wmode", firrtl.ir.UIntType(IntWidth(1)), WireKind)
       val mask  =  Symbol(s"$writerName.wmask", firrtl.ir.UIntType(IntWidth(1)), WireKind)
       val wdata =  Symbol(s"$writerName.wdata", memory.dataType, WireKind)
+      val valid = Symbol(s"$writerName.valid", firrtl.ir.UIntType(IntWidth(1)), WireKind)
 
-      val memoryInterfaceSymbols = Seq(en, clk, addr, rdata, mode, mask, wdata)
+      val memoryInterfaceSymbols = Seq(en, clk, addr, rdata, mode, mask, wdata, valid)
 
-      val pipelineReadDataSymbols = (0 until memory.readLatency).map { n =>
-        Symbol(s"$expandedName.$readWriterString.pipeline_read_$n", memory.dataType, WireKind)
+      val pipelineReadDataSymbols = (0 until memory.readLatency).flatMap { n =>
+        Seq(
+          Symbol(s"$expandedName.$readWriterString.pipeline_rdata_$n/in", memory.dataType, WireKind),
+          Symbol(s"$expandedName.$readWriterString.pipeline_rdata_$n", memory.dataType, WireKind)
+        )
       }
-      val chain = Seq(rdata) ++ pipelineReadDataSymbols
-      chain.zip(chain.tail).foreach { case (target, source) =>
-        symbolsDependOnKeys.addEdge(source, target)
-        keysDependOnSymbols.addEdge(target, source)
-      }
+
+      buildPipelineDependencies(addr, pipelineReadDataSymbols, Some(rdata))
 
       val pipelineEnableSymbols = (0 until memory.writeLatency).flatMap { n =>
-        Seq(Symbol(s"$expandedName.$readWriterString.pipeline_en_$n", memory.dataType, WireKind))
+        Seq(
+          Symbol(s"$expandedName.$readWriterString.pipeline_valid_$n/in", memory.dataType, WireKind),
+          Symbol(s"$expandedName.$readWriterString.pipeline_valid_$n", memory.dataType, WireKind)
+        )
       }
       buildPipelineDependencies(en, pipelineEnableSymbols)
 
       val pipelineWriteDataSymbols = (0 until memory.writeLatency).flatMap { n =>
-        Seq(Symbol(s"$expandedName.$readWriterString.pipeline_write_data_$n", memory.dataType, WireKind))
+        Seq(
+          Symbol(s"$expandedName.$readWriterString.pipeline_wdata_$n/in", memory.dataType, WireKind),
+          Symbol(s"$expandedName.$readWriterString.pipeline_wdata_$n", memory.dataType, WireKind)
+        )
       }
       buildPipelineDependencies(wdata, pipelineWriteDataSymbols)
 
       val pipelineAddrSymbols = (0 until memory.writeLatency).flatMap { n =>
-        Seq(Symbol(s"$expandedName.$readWriterString.pipeline_write_addr_$n", memory.dataType, WireKind))
+        Seq(
+          Symbol(s"$expandedName.$readWriterString.pipeline_addr_$n/in", memory.dataType, WireKind),
+          Symbol(s"$expandedName.$readWriterString.pipeline_addr_$n", memory.dataType, WireKind)
+        )
       }
       buildPipelineDependencies(addr, pipelineAddrSymbols)
 
