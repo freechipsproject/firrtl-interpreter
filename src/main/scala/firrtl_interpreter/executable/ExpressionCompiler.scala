@@ -552,8 +552,6 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             Seq(
               symbolTable(s"$portString.pipeline_${pipelineName}_$n/in"),
               symbolTable(s"$portString.pipeline_${pipelineName}_$n")
-//              symbolTable(s"$expandedName.$portString.pipeline_${pipelineName}_$n/in"),
-//              symbolTable(s"$expandedName.$portString.pipeline_${pipelineName}_$n")
             )
           }
         }
@@ -653,12 +651,13 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           val enable = symbolTable(s"$writerName.en")
           val clock  = symbolTable(s"$writerName.clk")
           val addr   = symbolTable(s"$writerName.addr")
+          val wmode  = symbolTable(s"$writerName.wmode")
           val mask   = symbolTable(s"$writerName.mask")
           val data   = symbolTable(s"$writerName.data")
           val valid  = symbolTable(s"$writerName.valid")
 
           // compute a valid so we only have to carry a single boolean up the write queue
-          getAssigner(valid, AndInts(dataStore.GetInt(enable.index).apply, dataStore.GetInt(mask.index).apply))
+          getAssigner(valid, AndInts(dataStore.GetInt(wmode.index).apply, dataStore.GetInt(mask.index).apply))
 
           val endOfValidPipeline = buildWritePipelineAssigners(clock, valid, writerName, "valid")
           val endOfAddrPipeline  = buildWritePipelineAssigners(clock, addr, writerName, "addr")

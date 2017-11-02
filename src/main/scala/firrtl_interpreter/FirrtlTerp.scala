@@ -207,7 +207,10 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
   def evaluateCircuit(specificDependencies: Seq[String] = Seq()): Unit = {
     program.dataStore.advanceBuffers()
     program.scheduler.executeCombinational()
-    program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
+    program.scheduler.getTriggerExpressions.foreach { key =>
+      println(s"Running trigger expressions for $key")
+      program.scheduler.executeTriggeredAssigns(key)
+    }
     program.scheduler.executeCombinational()
 //    println(s"c --  ${program.dataInColumns}")    program.dataStore.advanceBuffers()
 //    println(s"h --  ${program.header}")
@@ -247,7 +250,9 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
       logger.debug(s"interpreter cycle() called, state is fresh")
     }
 
+    dataStore.AssignInt(symbolTable("clock"), GetIntConstant(1).apply).run()
     evaluateCircuit()
+    dataStore.AssignInt(symbolTable("clock"), GetIntConstant(0).apply).run()
 
     for (elem <- blackBoxFactories) {
       elem.cycle()
@@ -280,19 +285,6 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 
   def getInfoString: String = "Info"  //TODO (chick) flesh this out
   def getPrettyString: String = program.dataInColumns
-
-  def step(steps: Int = 1): Unit = {
-    program.dataStore.advanceBuffers()
-    program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
-    program.scheduler.executeCombinational()
-//    program.dataStore.advanceBuffers()
-//    println(s"a --  ${program.dataInColumns}")
-//    program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
-//    println(s"h --  ${program.header}")
-//    println(s"r --  ${program.dataInColumns}")
-//    program.scheduler.executeCombinational()
-//    println(s"c --  ${program.dataInColumns}")
-  }
 }
 
 object FirrtlTerp {

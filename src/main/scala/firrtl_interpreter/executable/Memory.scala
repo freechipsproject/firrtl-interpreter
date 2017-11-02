@@ -112,7 +112,7 @@ object Memory {
       val mode  =  Symbol(s"$writerName.wmode", firrtl.ir.UIntType(IntWidth(1)), WireKind)
       val mask  =  Symbol(s"$writerName.wmask", firrtl.ir.UIntType(IntWidth(1)), WireKind)
       val wdata =  Symbol(s"$writerName.wdata", memory.dataType, WireKind)
-      val valid = Symbol(s"$writerName.valid", firrtl.ir.UIntType(IntWidth(1)), WireKind)
+      val valid =  Symbol(s"$writerName.valid", firrtl.ir.UIntType(IntWidth(1)), WireKind)
 
       val memoryInterfaceSymbols = Seq(en, clk, addr, rdata, mode, mask, wdata, valid)
 
