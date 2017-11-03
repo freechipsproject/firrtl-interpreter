@@ -223,7 +223,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     evaluateCircuit(Seq(name))
   }
 
-  def checkStopped(attemptedCommand: String = "command"): Boolean = {
+  def checkStopped(attemptedCommand: => String = "command"): Boolean = {
     if(stopped) {
     }
     stopped
