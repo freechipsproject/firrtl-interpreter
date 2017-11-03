@@ -50,16 +50,14 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
 
   def sortCombinationalAssigns(): Unit = {
     combinationalAssigns = combinationalAssigns.sortBy { assigner: Assigner =>
-      val symbol = dataStore.assignerToSymbol(assigner)
-      symbolTable.sortKey(symbol.dataSize, symbol.index)
+      symbolTable.sortKey(assigner.symbol.dataSize, assigner.symbol.index)
     }
   }
 
   def sortTriggeredAssigns(): Unit = {
     triggeredAssigns.foreach { case (trigger, assigners) =>
       triggeredAssigns(trigger) = assigners.sortBy { assigner: Assigner =>
-        val symbol = dataStore.assignerToSymbol(assigner)
-        symbolTable.sortKey(symbol.dataSize, symbol.index)
+        symbolTable.sortKey(assigner.symbol.dataSize, assigner.symbol.index)
       }
     }
 

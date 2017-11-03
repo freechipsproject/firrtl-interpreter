@@ -21,6 +21,7 @@ package object executable {
   type FuncUnit = () => Unit
 
   trait Assigner {
+    val symbol: Symbol
     def run: FuncUnit
   }
 }

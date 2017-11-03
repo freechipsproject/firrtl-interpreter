@@ -187,12 +187,12 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
   }
 
   case class AssignIntIndirect(
-                               memorySymbol: Symbol,
+                               symbol: Symbol,
                                getMemoryIndex: FuncInt,
                                enable: FuncInt,
                                expression: FuncInt
                               ) extends Assigner {
-    val index: Int = memorySymbol.index
+    val index: Int = symbol.index
 
     def runQuiet(): Unit = {
       if(enable() > 0) {
@@ -202,11 +202,11 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
 
     def runVerbose(): Unit = {
       if(enable() > 0) {
-        println(s"${memorySymbol.name}:${memorySymbol.index}(${getMemoryIndex.apply()}) <= ${expression()}")
+        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= ${expression()}")
         currentIntArray(index + getMemoryIndex.apply()) = expression()
       }
       else {
-        println(s"${memorySymbol.name}:${memorySymbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
+        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
       }
     }
 
@@ -214,12 +214,12 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
   }
 
   case class AssignLongIndirect(
-                               memorySymbol: Symbol,
+                               symbol: Symbol,
                                getMemoryIndex: FuncInt,
                                enable: FuncInt,
                                expression: FuncLong
                               ) extends Assigner {
-    val index: Int = memorySymbol.index
+    val index: Int = symbol.index
 
     def runQuiet(): Unit = {
       if(enable() > 0) {
@@ -229,11 +229,11 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
 
     def runVerbose(): Unit = {
       if(enable() > 0) {
-        println(s"${memorySymbol.name}:${memorySymbol.index}(${getMemoryIndex.apply()}) <= ${expression()}")
+        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= ${expression()}")
         currentLongArray(index + getMemoryIndex.apply()) = expression()
       }
       else {
-        println(s"${memorySymbol.name}:${memorySymbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
+        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
       }
     }
 
@@ -241,12 +241,12 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
   }
 
   case class AssignBigIndirect(
-                                 memorySymbol: Symbol,
+                                 symbol: Symbol,
                                  getMemoryIndex: FuncInt,
                                  enable: FuncInt,
                                  expression: FuncBig
                                ) extends Assigner {
-    val index: Int = memorySymbol.index
+    val index: Int = symbol.index
 
     def runQuiet(): Unit = {
       if(enable() > 0) {
@@ -256,30 +256,15 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
 
     def runVerbose(): Unit = {
       if(enable() > 0) {
-        println(s"${memorySymbol.name}:${memorySymbol.index}(${getMemoryIndex.apply()}) <= ${expression()}")
+        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= ${expression()}")
         currentBigArray(index + getMemoryIndex.apply()) = expression()
       }
       else {
-        println(s"${memorySymbol.name}:${memorySymbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
+        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
       }
     }
 
     val run: FuncUnit = if (optimizationLevel == 0) runVerbose _ else runQuiet _
-  }
-
-  def assignerToSymbol(assigner: Assigner): Symbol = {
-    assigner match {
-        case assign: AssignInt          => assign.symbol
-        case assign: AssignLong         => assign.symbol
-        case assign: AssignBig          => assign.symbol
-        case assign: AssignIntIndirect  => assign.memorySymbol
-        case assign: AssignLongIndirect => assign.memorySymbol
-        case assign: AssignBigIndirect  => assign.memorySymbol
-        case assign: PrintfOp           => assign.symbol
-        case assign: StopOp             => assign.symbol
-        case assign =>
-          throw InterpreterException(s"unknown assigner found in sort combinational assigns $assigner")
-    }
   }
 
   def getSizeAndIndex(assigner: Assigner): (DataSize, Int) = {
