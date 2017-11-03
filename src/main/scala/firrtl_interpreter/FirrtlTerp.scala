@@ -6,10 +6,9 @@ import firrtl.PortKind
 import firrtl.ir.Circuit
 import firrtl_interpreter.executable._
 import firrtl_interpreter.real.DspRealFactory
-import logger.{LazyLogging, LogLevel, Logger}
 
 //scalastyle:off magic.number
-class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) extends LazyLogging {
+class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
 
   var lastStopResult: Option[Int] = None
@@ -36,7 +35,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     * @param value  The desired verbose setting
     */
   def setVerbose(value: Boolean = true): Unit = {
-    Logger.setLevel(classOf[FirrtlTerp], LogLevel.None)
+    // Logger.setLevel(classOf[FirrtlTerp], LogLevel.None)
     //TODO: This is supposed to set verbose execution
   }
 
@@ -81,9 +80,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     //TODO: (chick) circuitState.writeVCD()
   }
 
-  logger.debug(s"symbol table size is ${symbolTable.size}, dataStore allocations ${dataStore.getSizes}")
 
-  logger.debug(s"SymbolTable:\n${program.symbolTable.render}")
 
   setVerbose(interpreterOptions.setVerbose)
 
@@ -208,7 +205,6 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     program.dataStore.advanceBuffers()
     program.scheduler.executeCombinational()
     program.scheduler.getTriggerExpressions.foreach { key =>
-      logger.debug(s"Running trigger expressions for $key")
       program.scheduler.executeTriggeredAssigns(key)
     }
     program.scheduler.executeCombinational()
@@ -229,25 +225,19 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 
   def checkStopped(attemptedCommand: String = "command"): Boolean = {
     if(stopped) {
-      logger.debug(s"circuit has been stopped: ignoring $attemptedCommand")
     }
     stopped
   }
 
   def cycle(showState: Boolean = false): Unit = {
     //TODO: (chick) VCD stuff is missing from here
-    logger.debug("interpreter cycle called " + "="*80)
     if(checkStopped("cycle")) return
 
     if(isStale) {
-      logger.debug("interpreter cycle() called, state is stale, re-evaluate Circuit")
-      logger.debug(program.dataInColumns)
 
-      logger.debug(s"process reset")
 //      evaluateCircuit()
     }
     else {
-      logger.debug(s"interpreter cycle() called, state is fresh")
     }
 
     dataStore.AssignInt(symbolTable("clock"), GetIntConstant(1).apply).run()
