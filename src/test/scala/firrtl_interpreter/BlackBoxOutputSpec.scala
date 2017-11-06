@@ -44,16 +44,21 @@ class FanOutAdderFactory extends BlackBoxFactory {
 class BlackBoxCounter extends BlackBoxImplementation {
   val name: String = "BlackBoxCounter"
   var counter = BigInt(0)
+  var clearSet: Boolean = false
 
   def execute(inputValues: Seq[BigInt], tpe: Type, outputName: String): BigInt = {
     if(inputValues.head == Big1) {
+      clearSet = true
       counter = 0
+    }
+    else {
+      clearSet = false
     }
     counter
   }
 
   override def cycle(): Unit = {
-    counter += 1
+    if(! clearSet) counter += 1
   }
 
   override def outputDependencies(outputName: String): Seq[String] = {

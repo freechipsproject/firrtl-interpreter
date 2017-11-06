@@ -194,6 +194,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     program.dataStore.advanceBuffers()
     program.scheduler.executeCombinational()
     program.scheduler.getTriggerExpressions.foreach { key =>
+      println(s"Running triggered expressions for $key")
       program.scheduler.executeTriggeredAssigns(key)
     }
     program.scheduler.executeCombinational()

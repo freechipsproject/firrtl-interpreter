@@ -883,21 +883,6 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
       case extModule: ExtModule => // Look to see if we have an implementation for this
         logger.debug(s"got external module ${extModule.name} instance $modulePrefix")
         processPorts(extModule)
-        /* use exists while looking for the right factory, short circuits iteration when found */
-//        logger.debug(s"Factories: ${dependencyGraph.blackBoxFactories.mkString("\n")}")
-//        val implementationFound = dependencyGraph.blackBoxFactories.exists { factory =>
-//          logger.debug("Found an existing factory")
-//          factory.createInstance(modulePrefix, extModule.defname) match {
-//            case Some(implementation) =>
-//              processExternalInstance(extModule, modulePrefix, implementation, dependencyGraph)
-//              true
-//            case _ => false
-//          }
-//        }
-//        if(! implementationFound) {
-//          println( s"""WARNING: external module "${extModule.defname}"($modulePrefix:${extModule.name})""" +
-//            """was not matched with an implementation""")
-//        }
     }
   }
 
