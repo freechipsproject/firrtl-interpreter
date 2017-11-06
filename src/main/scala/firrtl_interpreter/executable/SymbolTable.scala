@@ -5,7 +5,6 @@ package firrtl_interpreter.executable
 import firrtl._
 import firrtl.graph.{DiGraph, MutableDiGraph}
 import firrtl.ir._
-import firrtl_interpreter.utils.TSort
 import firrtl_interpreter.{BlackBoxFactory, BlackBoxImplementation, FindModule, InterpreterException}
 import logger.LazyLogging
 
@@ -81,12 +80,6 @@ object SymbolTable extends LazyLogging {
     val inputPorts = new mutable.HashSet[String]
     val outputPorts = new mutable.HashSet[String]
 
-    def getInfo: String = {
-      f"""
-         |Circuit Info:
-     """.stripMargin
-    }
-
     // scalastyle:off
     def processDependencyStatements(modulePrefix: String, s: Statement): Unit = {
       def expand(name: String): String = if (modulePrefix.isEmpty) name else modulePrefix + "." + name
@@ -159,7 +152,7 @@ object SymbolTable extends LazyLogging {
           val symbol = Symbol(expandedName, tpe, WireKind, info = info)
           nameToSymbol(expandedName) = symbol
 
-        case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
+        case DefRegister(info, name, tpe, _, _, _) =>
           val expandedName = expand(name)
 
           val registerIn = Symbol(expandedName + "/in", tpe, RegKind, info = info)
@@ -200,10 +193,10 @@ object SymbolTable extends LazyLogging {
 
       for (port <- extModule.ports) {
         if (port.direction == Output) {
-          val outputDependencies = instance.outputDependencies(port.name)
-          val expandedName = expand(port.name)
-          val symbol = Symbol(expandedName, port.tpe, PortKind)
-          nameToSymbol(expandedName) = symbol
+          instance.outputDependencies(port.name).foreach { inputPortName =>
+            keysDependOnSymbols.addEdge(nameToSymbol(expand(port.name)), nameToSymbol(expand(inputPortName)))
+            symbolsDependOnKeys.addEdge(nameToSymbol(expand(inputPortName)), nameToSymbol(expand(port.name)))
+          }
         }
       }
     }

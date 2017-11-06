@@ -2,7 +2,6 @@
 
 package firrtl_interpreter.executable
 
-import firrtl_interpreter.InterpreterException
 import logger.LazyLogging
 
 import scala.collection.mutable
@@ -75,7 +74,7 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
   }
 
   def render: String = {
-    s"combinational assigns (${combinationalAssigns.size}\n" +
+    s"combinational assigns (${combinationalAssigns.size})\n" +
     combinationalAssigns.map { assigner =>
       symbolTable(dataStore, assigner).render
     }.mkString("\n")

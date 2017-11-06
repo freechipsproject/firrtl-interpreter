@@ -2,7 +2,7 @@
 
 package firrtl_interpreter.executable
 
-import firrtl_interpreter.InterpreterException
+import firrtl_interpreter.{BlackBoxImplementation, InterpreterException}
 
 import scala.collection.mutable
 
@@ -265,6 +265,23 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 1) {
     }
 
     val run: FuncUnit = if (optimizationLevel == 0) runVerbose _ else runQuiet _
+  }
+
+  case class BlackBoxShim(
+      unexpandedName: String,
+      outputName:     Symbol,
+      inputs:         Seq[Symbol],
+      implementation: BlackBoxImplementation
+  )
+  extends BigExpressionResult {
+
+    val dataStore = DataStore.this
+
+    def apply(): Big = {
+      val inputValues = inputs.map { input => dataStore(input) }
+      val bigInt = implementation.execute(inputValues, outputName.firrtlType, unexpandedName)
+      bigInt
+    }
   }
 
   def getSizeAndIndex(assigner: Assigner): (DataSize, Int) = {

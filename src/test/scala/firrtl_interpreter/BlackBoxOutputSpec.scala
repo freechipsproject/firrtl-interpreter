@@ -80,7 +80,7 @@ class BlackBoxOutputSpec extends FreeSpec with Matchers {
         |
         |
         |  module FanOutTest :
-        |    input clk : Clock
+        |    input clock : Clock
         |    input reset : UInt<1>
         |    input in : UInt<64>
         |    output out1 : UInt<64>
@@ -125,7 +125,7 @@ class BlackBoxOutputSpec extends FreeSpec with Matchers {
         |
         |
         |  module CounterTest :
-        |    input clk : Clock
+        |    input clock : Clock
         |    input reset : UInt<1>
         |    input clear : UInt<64>
         |    output counter : UInt<64>

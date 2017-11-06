@@ -13,6 +13,8 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
   val symbolTable: SymbolTable = program.symbolTable
   val scheduler:   Scheduler   = program.scheduler
 
+  val blackBoxFactories: Seq[BlackBoxFactory] = parent.blackBoxFactories
+
   def getWidth(tpe: firrtl.ir.Type): Int = {
     tpe match {
       case GroundType(IntWidth(width)) => width.toInt
@@ -425,16 +427,17 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             v
           case UIntLiteral(value, IntWidth(width)) =>
             DataSize(width) match {
-              case IntSize => GetIntConstant(value.toInt)
-              //              case LongSize => GetLongConstant(value.toInt)
-              case BigSize => GetBigConstant(value.toInt)
+              case IntSize  => GetIntConstant(value.toInt)
+              case LongSize => GetLongConstant(value.toInt)
+              case BigSize  => GetBigConstant(value.toInt)
             }
           case SIntLiteral(value, IntWidth(width)) =>
             DataSize(width) match {
-              case IntSize => GetIntConstant(value.toInt)
-              //              case LongSize => GetLongConstant(value.toInt)
-              case BigSize => GetBigConstant(value.toInt)
-            }          case _ =>
+              case IntSize  => GetIntConstant(value.toInt)
+              case LongSize => GetLongConstant(value.toInt)
+              case BigSize  => GetBigConstant(value.toInt)
+            }
+          case _ =>
             throw new InterpreterException(s"bad expression $expression")
         }
         result
@@ -443,8 +446,11 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
       def getAssigner(symbol: Symbol, expressionResult: ExpressionResult): Assigner = {
         val assigner = (symbol.dataSize, expressionResult) match {
           case (IntSize,  result: IntExpressionResult)  => dataStore.AssignInt(symbol, result.apply)
+          case (IntSize,  result: LongExpressionResult) => dataStore.AssignInt(symbol, ToInt(result.apply).apply)
+          case (IntSize,  result: BigExpressionResult)  => dataStore.AssignInt(symbol, ToInt(result.apply).apply)
           case (LongSize, result: IntExpressionResult)  => dataStore.AssignLong(symbol, ToLong(result.apply).apply)
           case (LongSize, result: LongExpressionResult) => dataStore.AssignLong(symbol, result.apply)
+          case (LongSize, result: BigExpressionResult)  => dataStore.AssignLong(symbol, BigToLong(result.apply).apply)
           case (BigSize,  result: IntExpressionResult)  => dataStore.AssignBig(symbol, ToBig(result.apply).apply)
           case (BigSize,  result: LongExpressionResult) => dataStore.AssignBig(symbol, LongToBig(result.apply).apply)
           case (BigSize,  result: BigExpressionResult)  => dataStore.AssignBig(symbol, result.apply)
@@ -473,7 +479,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
                                expressionResult: ExpressionResult
                              ): Assigner = {
 
-        val getIndex = dataStore.GetInt(indexSymbol.index).apply _
+        val getIndex  = dataStore.GetInt(indexSymbol.index).apply _
         val getEnable = dataStore.GetInt(enableSymbol.index).apply _
 
         val assigner = (symbol.dataSize, expressionResult) match {
@@ -744,6 +750,31 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           val newPrefix = if(modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
           logger.debug(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
           processModule(newPrefix, subModule, circuit)
+
+          subModule match {
+            case extModule: ExtModule =>
+              val implementationFound = blackBoxFactories.exists { factory =>
+                factory.createInstance(modulePrefix, extModule.defname) match {
+                  case Some(implementation) =>
+                    for(port <- extModule.ports if port.direction == Output) {
+                      val portSymbol = symbolTable(expand(instanceName + "." + port.name))
+                      val inputSymbols = implementation.outputDependencies(port.name).map { inputName =>
+                        symbolTable(expand(instanceName + "." + inputName))
+                      }
+                      val shim = dataStore.BlackBoxShim(port.name, portSymbol, inputSymbols, implementation)
+                      getAssigner(portSymbol, shim)
+                    }
+                    true
+                  case _ => false
+                }
+              }
+              if (!implementationFound) {
+                println(
+                  s"""WARNING: external module "${extModule.defname}"($modulePrefix:${extModule.name})""" +
+                    """was not matched with an implementation""")
+              }
+            case _ =>
+          }
 
         case DefNode(info, name, expression) =>
           logger.debug(s"declaration:DefNode:$name:${expression.serialize}")

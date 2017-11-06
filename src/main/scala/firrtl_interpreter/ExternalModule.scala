@@ -54,7 +54,7 @@ abstract class BlackBoxImplementation {
   def cycle(): Unit
 
   /**
-    * returns a list of names of inputs that the nanmed output depends on.
+    * returns a list of names of inputs that this output depends on.
     * @note The order of this list will determine the order of the inputValues argument to the execute method
     * @param outputName the output whose dependencies are being described
     * @return

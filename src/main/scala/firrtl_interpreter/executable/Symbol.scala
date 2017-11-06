@@ -16,7 +16,7 @@ case class Symbol(
     firrtlType: firrtl.ir.Type,
     info:       Info
 ) {
-  var index: Int = -1
+  var index:          Int = -1
   var cardinalNumber: Int = -1
 
   //  override def toString: String = {
