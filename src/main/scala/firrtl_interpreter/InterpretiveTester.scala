@@ -95,28 +95,6 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
         fail(ie, Some(s"Error: poke($name, $value)"))
     }
   }
-  /**
-    * Pokes value to the port referenced by string
-    * Warning: pokes to components other than input ports is currently
-    * not supported but does not cause an error warning
-    * This feature should be supported soon
-    *
-    * @param name the name of a port
-    * @param value a value to put on that port
-    */
-  def poke(name: String, value: Concrete): Unit = {
-    if(interpreter.checkStopped(s"poke($name, $value)")) return
-
-    try {
-      val isRegister = interpreter.symbolTable.isRegister(name)
-//      interpreter.circuitState.vcdLowerClock()
-      interpreter.setValue(name, value, registerPoke = isRegister)
-    }
-    catch {
-      case ie: InterpreterException =>
-        fail(ie, Some(s"Error: poke($name, $value)"))
-    }
-  }
 
   /** inspect a value of a named circuit component
     *
@@ -126,27 +104,7 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
   def peek(name: String): BigInt = {
     if(interpreter.checkStopped(s"peek($name)")) return 0
 
-    interpreter.getValue(name) match {
-      case ConcreteUInt(value, _, _) => value
-      case ConcreteSInt(value, _, _) => value
-      case _ =>
-        fail(new InterpreterException(s"Error:peek($name) value not found"))
-    }
-  }
-
-  /** inspect a value of a named circuit component
-    *
-    * @param name the name of a circuit component
-    * @return An internal concrete value currently set at name
-    */
-  def peekConcrete(name: String): Concrete = {
-    if(interpreter.checkStopped(s"peekConcrete($name)")) return Concrete.poisonedUInt(1)
-
-    interpreter.getValue(name) match {
-      case c: Concrete => c
-      case _ =>
-        fail(new InterpreterException(s"Error:peek($name) value not found"))
-    }
+    interpreter.getValue(name)
   }
 
   /**
@@ -156,20 +114,11 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     * @param expectedValue the BigInt value required
     */
   def expect(name: String, expectedValue: BigInt): Unit = {
-    def testValue(concrete: Concrete): Unit = {
-      if (concrete.value != expectedValue) {
-        if(! interpreter.verbose) interpreter.reEvaluate(name)
-          fail(new InterpreterException (s"Error:expect($name, $expectedValue) got ${concrete.showValue}"))
-      }
-    }
-    if(interpreter.checkStopped(s"expect($name, $expectedValue)")) return
-
-    interpreter.getValue(name) match {
-      case value: ConcreteUInt  => testValue(value)
-      case value: ConcreteSInt  => testValue(value)
-      case value: ConcreteClock => testValue(value)
-      case _ =>
-        fail(new InterpreterException(s"Error:expect($name, $expectedValue) value not found"))
+    interpreter.program.scheduler.executeCombinational()
+    val value = interpreter.getValue(name)
+    if(value != expectedValue) {
+      if(! interpreter.verbose) interpreter.reEvaluate(name)
+      fail(new InterpreterException (s"Error:expect($name, $expectedValue) got ${value}"))
     }
     expectationsMet += 1
   }

@@ -4,6 +4,7 @@ package firrtl_interpreter.executable
 
 import firrtl.PrimOps._
 import firrtl._
+import firrtl.graph.MutableDiGraph
 import firrtl.ir._
 import firrtl_interpreter._
 
@@ -651,13 +652,12 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           val enable = symbolTable(s"$writerName.en")
           val clock  = symbolTable(s"$writerName.clk")
           val addr   = symbolTable(s"$writerName.addr")
-          val wmode  = symbolTable(s"$writerName.wmode")
           val mask   = symbolTable(s"$writerName.mask")
           val data   = symbolTable(s"$writerName.data")
           val valid  = symbolTable(s"$writerName.valid")
 
           // compute a valid so we only have to carry a single boolean up the write queue
-          getAssigner(valid, AndInts(dataStore.GetInt(wmode.index).apply, dataStore.GetInt(mask.index).apply))
+          getAssigner(valid, AndInts(dataStore.GetInt(enable.index).apply, dataStore.GetInt(mask.index).apply))
 
           val endOfValidPipeline = buildWritePipelineAssigners(clock, valid, writerName, "valid")
           val endOfAddrPipeline  = buildWritePipelineAssigners(clock, addr, writerName, "addr")
@@ -747,7 +747,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
         case DefNode(info, name, expression) =>
           logger.debug(s"declaration:DefNode:$name:${expression.serialize}")
-          getAssignerByName(name, processExpression(expression))
+          getAssignerByName(expand(name), processExpression(expression))
 
         case DefWire(info, name, tpe) =>
           logger.debug(s"declaration:DefWire:$name")
@@ -827,13 +827,14 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
     def processExternalInstance(extModule: ExtModule,
                                 modulePrefix: String,
                                 instance: BlackBoxImplementation,
-                                dependencyGraph: DependencyGraph): Unit = {
+                                dependencyGraph: MutableDiGraph[Symbol]): Unit = {
       def expand(name: String): String = modulePrefix + "." + name
 
       for(port <- extModule.ports) {
         if(port.direction == Output) {
           val outputDependencies = instance.outputDependencies(port.name)
-          dependencyGraph(expand(port.name)) = BlackBoxOutput(port.name, instance, outputDependencies, port.tpe)
+          // TODO (chick) get this to work
+          // dependencyGraph(expand(port.name)) = BlackBoxOutput(port.name, instance, outputDependencies, port.tpe)
         }
       }
     }

@@ -62,6 +62,13 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   scheduler.sortCombinationalAssigns()
   scheduler.sortTriggeredAssigns()
 
+  val clockOption: Option[Symbol] = {
+    symbolTable.get("clock") match {
+      case Some(clock) => Some(clock)
+      case _           => symbolTable.get("clk")
+    }
+  }
+
   println(s"Scheduler after sort ${scheduler.render}")
 
   /**
@@ -86,15 +93,14 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
   var isStale: Boolean = false
 
-  def getValue(name: String): Concrete = {
+  def getValue(name: String): BigInt = {
     assert(symbolTable.contains(name),
       s"Error: getValue($name) is not an element of this circuit")
 
     if(isStale) scheduler.makeFresh()
 
     val symbol = symbolTable(name)
-    TypeInstanceFactory(symbol.firrtlType, dataStore(symbolTable(name))
-    )
+    dataStore(symbol)
   }
 
   /**
@@ -102,16 +108,14 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     * @param name signal to get and show computation
     * @return
     */
-  def getSpecifiedValue(name: String): Concrete = {
+  def getSpecifiedValue(name: String): BigInt = {
     //TODO: (chick) Show this in some other way
     assert(symbolTable.contains(name),
       s"Error: getValue($name) is not an element of this circuit")
 
     if(isStale) scheduler.makeFresh()
 
-    val symbol = symbolTable(name)
-    TypeInstanceFactory(symbol.firrtlType, dataStore(symbolTable(name))
-    )
+    dataStore(symbolTable(name))
   }
 
   /**
@@ -122,33 +126,18 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     * @param registerPoke changes which side of a register is poked
     * @return the concrete value that was derived from type and value
     */
-  def setValue(name: String, value: Concrete, force: Boolean = true, registerPoke: Boolean = false): Concrete = {
+  def setValue(name: String, value: BigInt, force: Boolean = true, registerPoke: Boolean = false): BigInt = {
     assert(symbolTable.contains(name))
     val symbol = symbolTable(name)
 
     if(!force) {
       assert(symbol.dataKind == PortKind,
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
-      if(checkStopped("setValue")) return Concrete.poisonedUInt(1)
+      if(checkStopped("setValue")) return Big0
     }
 
-    dataStore(symbol) = value.value
+    dataStore(symbol) = value
     value
-  }
-
-  /**
-    * Creates a concrete based on current circuit and the value and poisoned state
-    * It uses the type of any existing value for name and if it can't find that it
-    * looks up the type in the dependency graph
-    * this handles setting SInts with negative values, from positive bigInts when sized appropriately
-    * @param name  name of value to set
-    * @param value new value
-    * @return the concrete value that was derived from type and value
-    */
-  def makeConcreteValue(name: String, value: BigInt, poisoned: Boolean = false): Concrete = {
-    //TODO: (chick) former poison functionality is not here right now
-    val symbol = symbolTable(name)
-    TypeInstanceFactory(symbol.firrtlType, dataStore(symbolTable(name)))
   }
 
   /**
@@ -160,18 +149,18 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     * @return the concrete value that was derived from type and value
     */
   def setValueWithBigInt(
-      name: String, value: BigInt, force: Boolean = true, registerPoke: Boolean = false): Concrete = {
+      name: String, value: BigInt, force: Boolean = true, registerPoke: Boolean = false): BigInt = {
     assert(symbolTable.contains(name))
     val symbol = symbolTable(name)
 
     if(!force) {
       assert(symbol.dataKind == PortKind,
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
-      if(checkStopped("setValue")) return Concrete.poisonedUInt(1)
+      if(checkStopped("setValue")) return Big0
     }
 
     dataStore(symbol) = value
-    makeConcreteValue(name, value)
+    value
   }
 
   def isRegister(name: String): Boolean = {
@@ -240,9 +229,9 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     else {
     }
 
-    dataStore.AssignInt(symbolTable("clock"), GetIntConstant(1).apply).run()
+    clockOption.foreach { clock => dataStore.AssignInt(clock, GetIntConstant(1).apply).run() }
     evaluateCircuit()
-    dataStore.AssignInt(symbolTable("clock"), GetIntConstant(0).apply).run()
+    clockOption.foreach { clock => dataStore.AssignInt(clock, GetIntConstant(0).apply).run() }
 
     for (elem <- blackBoxFactories) {
       elem.cycle()

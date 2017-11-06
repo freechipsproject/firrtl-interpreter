@@ -49,6 +49,9 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
     apply(size, index)
   }
 
+  def get(name: String): Option[Symbol] = nameToSymbol.get(name)
+  def getOrElse(name: String, default: => Symbol): Symbol = nameToSymbol.getOrElse(name, default)
+
   def contains(name: String): Boolean = nameToSymbol.contains(name)
 
   def render: String = {

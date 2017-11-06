@@ -104,7 +104,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
       .find { change => change.wire.fullName == "clock"}
       .foreach { clock: Change =>
         needToStep =
-          interpreter.getValue(clock.wire.fullName).value == BigInt(0) &&
+          interpreter.getValue(clock.wire.fullName) == BigInt(0) &&
           clock.value == BigInt(1)
       }
 
@@ -152,14 +152,19 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
         }
         else if(interpreter.symbolTable.contains(fullName)) {
           val isRegister = interpreter.isRegister(fullName)
-          val newConcreteValue = interpreter.makeConcreteValue(fullName, newValue)
+          val name = if(isRegister) {
+            fullName + "/in"
+          }
+          else {
+            fullName
+          }
 
           if(currentTimeIndex == 0) {
             /* if first time increment populate components other than inputs */
-            interpreter.setValue(fullName, newConcreteValue, registerPoke = isRegister)
+            interpreter.setValue(name, newValue, registerPoke = isRegister)
           }
-          interpreter.setValue(fullName, newConcreteValue, registerPoke = isRegister)
-          showProgress(s"recording: $fullName to ${newConcreteValue.value} $message")
+          interpreter.setValue(name, newValue, registerPoke = isRegister)
+          showProgress(s"recording: $name to ${newValue} $message")
         }
         else {
           // showProgress(s"Don't know how to process entry: change $fullName to $newValue")
@@ -272,20 +277,6 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
         val prefix = if (mismatch) Console.RED else ""
         val suffix = if (mismatch) Console.RESET else ""
         console.println(prefix + message + suffix)
-      }
-      for (key <- interpreter.getOutputPorts) {
-        val value = interpreter.getValue(key)
-        val expected =  interpreter.getValue(key)
-        (value.poisoned, expected.poisoned) match {
-          case (true, true) =>
-            show(mismatch = false, f"output $key is poison expected poison")
-          case (false, true) =>
-            show(mismatch = true, f"output $key is $value expected poison")
-          case (true, false) =>
-            show(mismatch = true, f"output $key is poisoned expected $expected")
-          case (false, false) =>
-            show(mismatch = value.value != expected.value, f"output $key is ${value.value} expected ${expected.value}")
-        }
       }
     }
   }

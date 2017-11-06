@@ -14,13 +14,13 @@ import org.scalatest.{FreeSpec, Matchers}
 class FanOutAdder extends BlackBoxImplementation {
   override def name: String = "FanOutAdder"
 
-  override def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
+  override def execute(inputValues: Seq[BigInt], tpe: Type, outputName: String): BigInt = {
     val inc = outputName match {
       case "out1" => 1
       case "out2" => 2
       case "out3" => 3
     }
-    inputValues.head + ConcreteUInt(inc, 3)
+    inputValues.head + BigInt(inc)
   }
 
   override def cycle(): Unit = {}
@@ -45,11 +45,11 @@ class BlackBoxCounter extends BlackBoxImplementation {
   val name: String = "BlackBoxCounter"
   var counter = BigInt(0)
 
-  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
-    if(inputValues.head.value == Big1) {
+  def execute(inputValues: Seq[BigInt], tpe: Type, outputName: String): BigInt = {
+    if(inputValues.head == Big1) {
       counter = 0
     }
-    TypeInstanceFactory(tpe, counter)
+    counter
   }
 
   override def cycle(): Unit = {

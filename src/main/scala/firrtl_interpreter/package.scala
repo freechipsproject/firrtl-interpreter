@@ -29,6 +29,17 @@ package object firrtl_interpreter {
   }
   def ceilingLog2(x: Int): Int = scala.math.ceil(scala.math.log(x) / scala.math.log(2)).toInt
 
+  def makeRandom(tpe: firrtl.ir.Type): BigInt = {
+    tpe match {
+      case UIntType(IntWidth(n)) =>
+        BigInt(numbits = n.toInt, rnd = random)
+      case SIntType(IntWidth(n)) =>
+        BigInt(numbits = n.toInt + 1, rnd = random) - (Big1 << n.toInt)
+      case ClockType =>
+        BigInt(numbits = 1, rnd = random)
+    }
+  }
+
 //  /**
 //    * give the minimum number required to hold @num adding one for sign as necessary
 //    *

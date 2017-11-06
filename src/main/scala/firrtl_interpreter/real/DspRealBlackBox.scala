@@ -27,13 +27,13 @@ abstract class DspRealTwoArgumentToDouble extends BlackBoxImplementation {
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
+  def execute(inputValues: Seq[BigInt], tpe: Type, outputName: String): BigInt = {
     val arg1 :: arg2 :: _ = inputValues
-    val doubleArg1 = bigIntBitsToDouble(arg1.value)
-    val doubleArg2 = bigIntBitsToDouble(arg2.value)
+    val doubleArg1 = bigIntBitsToDouble(arg1)
+    val doubleArg2 = bigIntBitsToDouble(arg2)
     val doubleResult = twoOp(doubleArg1, doubleArg2)
     val result = doubleToBigIntBits(doubleResult)
-    ConcreteSInt(result, DspReal.UnderlyingWidth, arg1.poisoned | arg2.poisoned).asUInt
+    result
 
 //    TypeInstanceFactory(tpe, result)
   }
@@ -55,12 +55,12 @@ abstract class DspRealOneArgumentToDouble extends BlackBoxImplementation {
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
+  def execute(inputValues: Seq[BigInt], tpe: Type, outputName: String): BigInt = {
     val arg1 :: _ = inputValues
-    val doubleArg1 = bigIntBitsToDouble(arg1.value)
+    val doubleArg1 = bigIntBitsToDouble(arg1)
     val doubleResult = oneOp(doubleArg1)
     val result = doubleToBigIntBits(doubleResult)
-    ConcreteSInt(result, DspReal.UnderlyingWidth, arg1.poisoned).asUInt
+    result
   }
 }
 
@@ -81,13 +81,13 @@ abstract class DspRealTwoArgumentToBoolean extends BlackBoxImplementation {
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
+  def execute(inputValues: Seq[BigInt], tpe: Type, outputName: String): BigInt = {
     val arg1 :: arg2 :: _ = inputValues
-    val doubleArg1 = bigIntBitsToDouble(arg1.value)
-    val doubleArg2 = bigIntBitsToDouble(arg2.value)
+    val doubleArg1 = bigIntBitsToDouble(arg1)
+    val doubleArg2 = bigIntBitsToDouble(arg2)
     val booleanResult = twoOp(doubleArg1, doubleArg2)
     val result = if(booleanResult) Big1 else Big0
-    TypeInstanceFactory(tpe, result, arg1.poisoned || arg2.poisoned)
+    result
   }
 }
 
@@ -146,10 +146,10 @@ class DspRealToInt(val name: String) extends BlackBoxImplementation {
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
+  def execute(inputValues: Seq[BigInt], tpe: Type, outputName: String): BigInt = {
     val arg1 :: _ = inputValues
-    val result = arg1.value
-    TypeInstanceFactory(tpe, result)
+    val result = arg1
+    result
   }
 }
 
@@ -161,10 +161,10 @@ class DspRealFromInt(val name: String) extends BlackBoxImplementation {
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
+  def execute(inputValues: Seq[BigInt], tpe: Type, outputName: String): BigInt = {
     val arg1 :: _ = inputValues
-    val result = arg1.value
-    TypeInstanceFactory(tpe, result)
+    val result = arg1
+    result
   }
 }
 

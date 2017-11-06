@@ -15,7 +15,7 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
       """
         |circuit ChirrtlMems :
         |  module ChirrtlMems :
-        |    input clk : Clock
+        |    input clock : Clock
         |    input reset : UInt<1>
         |    mem ram :
         |      data-type => UInt<32>
@@ -25,37 +25,37 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
         |      reader => r
         |      writer => w
         |      read-under-write => undefined
-        |    node newClock = clk
+        |    node newClock = clock
         |    wire wen : UInt<1>
-        |    reg raddr : UInt<4>, clk with :
+        |    reg raddr : UInt<4>, clock with :
         |      reset => (reset, UInt<1>("h0"))
-        |    node newerClock = clk
-        |    reg waddr : UInt<4>, clk with :
+        |    node newerClock = clock
+        |    reg waddr : UInt<4>, clock with :
         |      reset => (reset, UInt<1>("h0"))
         |    node GEN_0 = not(reset)
         |    node GEN_1 = gt(waddr, UInt<1>("h1"))
         |    node GEN_2 = and(GEN_0, GEN_1)
         |    node GEN_3 = neq(ram.r.data, raddr)
         |    node GEN_4 = and(GEN_2, GEN_3)
-        |    printf(clk, GEN_4, "Assertion failed! r =/= raddr\n")
+        |    printf(clock, GEN_4, "Assertion failed! r =/= raddr\n")
         |    node GEN_5 = not(reset)
         |    node GEN_6 = gt(waddr, UInt<1>("h1"))
         |    node GEN_7 = and(GEN_5, GEN_6)
         |    node GEN_8 = neq(ram.r.data, raddr)
         |    node GEN_9 = and(GEN_7, GEN_8)
-        |    stop(clk, GEN_9, 1)
+        |    stop(clock, GEN_9, 1)
         |    node GEN_10 = not(reset)
         |    node GEN_11 = eq(raddr, UInt<4>("hf"))
         |    node GEN_12 = and(GEN_10, GEN_11)
-        |    stop(clk, GEN_12, 0)
+        |    stop(clock, GEN_12, 0)
         |    ram.r.addr <= raddr
         |    ram.r.en <= UInt<1>("h1")
-        |    ram.r.clk <= clk
+        |    ram.r.clk <= clock
         |    ram.w.data <= validif(wen, waddr)
         |    ram.w.mask <= wen
         |    ram.w.addr <= validif(wen, waddr)
         |    ram.w.en <= wen
-        |    ram.w.clk <= validif(wen, clk)
+        |    ram.w.clk <= validif(wen, clock)
         |    wen <= not(reset)
         |    node GEN_13 = eq(waddr, UInt<1>("h0"))
         |    node GEN_14 = add(raddr, UInt<1>("h1"))
@@ -82,7 +82,7 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
     val input =
       """circuit Test :
         |  module Test :
-        |    input clk : Clock
+        |    input clock : Clock
         |    input a : UInt<1>
         |    input b : UInt<1>
         |    input select : UInt<1>
@@ -94,13 +94,13 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
         |      write-latency => 1
         |      reader => read
         |      writer => write
-        |    m.read.clk <= clk
+        |    m.read.clk <= clock
         |    m.read.en <= UInt<1>(1)
         |    m.read.addr is invalid
         |    node x = m.read.data
         |    node y = m.read.data[0].b
         |
-        |    m.write.clk <= clk
+        |    m.write.clk <= clock
         |    m.write.en <= UInt<1>(0)
         |    m.write.mask is invalid
         |    m.write.addr is invalid

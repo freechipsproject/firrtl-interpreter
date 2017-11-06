@@ -12,12 +12,12 @@ class LifeCellSpec extends FlatSpec with Matchers {
       """
         |circuit LifeCell :
         |  module LifeCell :
-        |    input clk : Clock
+        |    input clock : Clock
         |    input reset : UInt<1>
         |    output io : {flip running : UInt<1>, flip top_left : UInt<4>, flip top_center : UInt<4>, flip top_right : UInt<4>, flip mid_left : UInt<4>, flip mid_right : UInt<4>, flip bot_left : UInt<4>, flip bot_center : UInt<4>, flip bot_right : UInt<4>, flip set_alive : UInt<1>, flip set_dead : UInt<1>, is_alive : UInt<1>}
         |
         |    io is invalid
-        |    reg is_alive : UInt<1>, clk
+        |    reg is_alive : UInt<1>, clock
         |    node T_13 = add(io.top_left, io.top_center)
         |    node sum0 = tail(T_13, 1)
         |    node T_14 = add(io.top_right, io.mid_left)

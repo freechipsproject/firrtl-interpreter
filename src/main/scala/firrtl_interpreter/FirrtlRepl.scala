@@ -475,7 +475,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
             case Some(componentName) =>
               try {
                 val value = interpreter.getSpecifiedValue(componentName)
-                console.println(s"peek $componentName ${value.showValue}")
+                console.println(s"peek $componentName ${value}")
               }
               catch {
                 case e: Exception =>
@@ -514,7 +514,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
                     case Some(_) =>
                       try {
                         val value = interpreter.getSpecifiedValue(settableThing)
-                        console.println(s"rpeek $settableThing ${value.showValue}")
+                        console.println(s"rpeek $settableThing ${value}")
                         true
                       }
                       catch { case _: Exception => false}
@@ -541,7 +541,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
         def run(args: Array[String]): Unit = {
           for(symbol <- interpreter.symbols) {
             try {
-              val newValue = TypeInstanceFactory.makeRandom(symbol.firrtlType, poisoned = false)
+              val newValue = makeRandom(symbol.firrtlType)
               interpreter.setValue(symbol.name, newValue)
               console.println(s"setting ${symbol.name} to $newValue")
             }
@@ -685,11 +685,11 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
                 val value = valueString.toInt
 
                 var tries = 0
-                while(tries < maxNumberOfSteps && interpreter.getValue(componentName).value != BigInt(value)) {
+                while(tries < maxNumberOfSteps && interpreter.getValue(componentName) != BigInt(value)) {
                   interpreter.cycle()
                   tries += 1
                 }
-                if(interpreter.getValue(componentName).value != BigInt(value)) {
+                if(interpreter.getValue(componentName) != BigInt(value)) {
                   console.println(
                     s"waitfor exhausted $componentName did not take on value $value in $maxNumberOfSteps cycles")
                 }

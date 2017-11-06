@@ -22,7 +22,7 @@ case class BlackBoxOutput(name: String,
   def mapExpr(f: Expression => Expression): Expression = f(this)
   def mapType(f: Type => Type): Expression = this
   def mapWidth(f: Width => Width): Expression = this
-  def execute(inputValues: Seq[Concrete]): Concrete = {
+  def execute(inputValues: Seq[BigInt]): BigInt = {
     implementation.execute(inputValues, tpe: Type, name)
   }
   def serialize: String = s"BlackBoxOutput($name,$tpe)"
@@ -46,7 +46,7 @@ abstract class BlackBoxImplementation {
     * @param outputName  The name of this output
     * @return            Computed current concrete value for the name output
     */
-  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String = ""): Concrete
+  def execute(inputValues: Seq[BigInt], tpe: Type, outputName: String = ""): BigInt
 
   /**
     * Called whenever the cycle command of the interpreter is called.

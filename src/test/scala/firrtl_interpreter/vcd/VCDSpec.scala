@@ -177,7 +177,7 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
         |
       """.stripMargin
 
-    logger.Logger.setLevel(LogLevel.Debug)
+    // logger.Logger.setLevel(LogLevel.Debug)
 
     val manager = new InterpreterOptionsManager {
       interpreterOptions = interpreterOptions.copy(writeVCD = true)

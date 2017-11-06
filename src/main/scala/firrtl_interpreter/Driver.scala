@@ -12,7 +12,7 @@ case class InterpreterOptions(
     allowCycles:       Boolean              = false,
     randomSeed:        Long                 = System.currentTimeMillis(),
     blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty,
-    maxExecutionDepth: Long                 = ExpressionExecutionStack.defaultMaxExecutionDepth,
+    maxExecutionDepth: Long                 = -1,
     showFirrtlAtLoad:  Boolean              = false,
     lowCompileAtLoad:  Boolean              = true)
   extends firrtl.ComposableOptions {

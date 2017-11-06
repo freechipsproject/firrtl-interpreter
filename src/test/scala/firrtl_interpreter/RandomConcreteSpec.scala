@@ -2,7 +2,8 @@
 
 package firrtl_interpreter
 
-import org.scalatest.{Matchers, FlatSpec}
+import firrtl.ir.{IntWidth, SIntType}
+import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.mutable
 
@@ -19,10 +20,10 @@ class RandomConcreteSpec extends FlatSpec with Matchers {
       (low to high).foreach { b => range += b }
 
       while (count < 10000 && range.nonEmpty) {
-        val c = Concrete.randomSInt(width)
+        val c = makeRandom(SIntType(IntWidth(width)))
         // println(s"got rand sint $c")
 
-        range -= c.value
+        range -= c
         count += 1
       }
 
