@@ -514,6 +514,44 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
     None
   }
 
+  def executeFormattedPrint(formatString: String, allArgs: Seq[Any]): String = {
+    val outBuffer = new StringBuilder
+    var s = formatString
+    var args = allArgs
+
+    while(s.nonEmpty) {
+      s.indexOf("%") match {
+        case -1 =>
+          outBuffer ++= s
+          s = ""
+        case offset =>
+          outBuffer ++= s.take(offset)
+          s = s.drop(offset + 1)
+          s.headOption match {
+            case Some('%') =>
+              outBuffer ++= "%"
+              s = s.tail
+            case Some('b') =>
+              outBuffer ++= BigInt(args.head.toString).toString(2)
+              args = args.tail
+              s = s.tail
+            case Some('c') =>
+              outBuffer += BigInt(args.head.toString).toChar
+              args = args.tail
+              s = s.tail
+            case Some(specifier)   =>
+              //noinspection ScalaUnnecessaryParentheses
+              outBuffer ++= (s"%$specifier").format(BigInt(args.head.toString))
+              args = args.tail
+              s = s.tail
+            case _ =>
+              s = ""
+          }
+      }
+    }
+    StringContext.treatEscapes(outBuffer.toString())
+  }
+
   def checkPrints(): Unit = {
     for(printStatement <- dependencyGraph.prints) {
       val condition = evaluate(printStatement.en)
@@ -521,8 +559,8 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
         val resolvedArgs = printStatement.args.map { arg =>
           evaluate(arg).value
         }
-        val formatString = printStatement.string.toString
-        printf(formatString, resolvedArgs:_*)
+        val formatString = printStatement.string.serialize
+        print(executeFormattedPrint(formatString, resolvedArgs))
       }
     }
   }
