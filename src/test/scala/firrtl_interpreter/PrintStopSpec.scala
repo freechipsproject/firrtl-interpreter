@@ -18,7 +18,7 @@ class PrintStopSpec extends FlatSpec with Matchers {
 
     val interpreter = FirrtlTerp(input)
 
-    for (cycle_number <- 0 to 10) {
+    for (_ <- 0 to 10) {
       interpreter.doCycles(2)
       interpreter.stopped should be (false)
     }
@@ -87,7 +87,28 @@ class PrintStopSpec extends FlatSpec with Matchers {
         |  module Stop0 :
         |    input clk : Clock
         |
+        |    printf(clk, UInt(1), "HELLO WORLD int %d hex %x SIint %d\n", UInt(7), UInt(31), SInt(2) )
         |    printf(clk, UInt(1), "HELLO WORLD int %d hex %x SIint %d\n", UInt(7), UInt(31), SInt(-2) )
+        |
+      """.stripMargin
+
+    val interpreter = FirrtlTerp(input)
+
+    interpreter.doCycles(2)
+
+    printf("Hello dog")
+
+  }
+
+  it should "support printf formatting with binary" in {
+    val input =
+      """
+        |circuit Stop0 :
+        |  module Stop0 :
+        |    input clk : Clock
+        |
+        |    printf(clk, UInt(1), "char %c int %d hex %x SIint %d %b\n", UInt(77), UInt(7), UInt(255), SInt(-2), SInt(7) )
+        |    printf(clk, UInt(1), "char %c int %d hex %x SIint %d %b\n", UInt(48), UInt(7), UInt(255), SInt(-2), SInt(-7) )
         |
       """.stripMargin
 
