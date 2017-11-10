@@ -17,8 +17,7 @@ class NumberMonitor(val name: String, val canBeNegative: Boolean, val bitSize: I
   var mu: Double = 0.0
   var sq: Double = 0.0
 
-  val minPossible: BigInt = if(canBeNegative) - (Big1 << (bitSize - 1)) else 0
-  val maxPossible: BigInt = if(canBeNegative) (Big1 << (bitSize - 1)) - 1 else (Big1 << bitSize) - Big1
+  val (minPossible, maxPossible) = if(canBeNegative) extremaOfSIntOfWidth(bitSize) else extremaOfUIntOfWidth(bitSize)
   val adjustedMaxPossible: BigInt = maxPossible - minPossible
 
   // These are the minimum and maximum values seen by update
@@ -106,7 +105,7 @@ class MonitorManager(options: InterpreterOptions) {
   val prettyPrintReport: Boolean = options.prettyPrintReport
 
   private val binLogSize = math.log(numberOfBins) / math.log(2)
-  if(binLogSize != binLogSize.toInt) {
+  if(numberOfBins > 0 && binLogSize != binLogSize.toInt) {
     throw InterpreterException(
       s"monitorHistogramBins $numberOfBins must be a power of 2, but is not"
     )

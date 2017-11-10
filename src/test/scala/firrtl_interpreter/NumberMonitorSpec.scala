@@ -88,6 +88,21 @@ class NumberMonitorSpec extends FreeSpec with Matchers {
 
   }
 
+  "when no bins things should still run" in {
+    val monitor = new NumberMonitor(carla, canBeNegative = false, 2, 0)
+    monitor.divisor should be (Big1)
+    monitor.minPossible should be (Big0)
+    monitor.maxPossible should be (BigInt(3))
+    monitor.adjustedMaxPossible should be (BigInt(3))
+
+    monitor.update(0)
+    monitor.update(1)
+    monitor.update(2)
+    monitor.update(3)
+
+    monitor.mean should be (6 / 4.0)
+  }
+
   "when possible values less than bins, just use bin per value, using negatives" in {
     val monitor = new NumberMonitor(carla, canBeNegative = true, 2, 32)
     monitor.divisor should be (Big1)
@@ -119,8 +134,8 @@ class NumberMonitorSpec extends FreeSpec with Matchers {
     println(s"monitor.minPossible ${monitor.minPossible}")
     println(s"monitor.maxPossible ${monitor.maxPossible}")
 
-    val lower = BigInt("-9223372036854775808", 10)
-    val upper = BigInt("9223372036854775807", 10)
+    val lower = BigInt("-170141183460469231731687303715884105728", 10)
+    val upper = BigInt("170141183460469231731687303715884105727", 10)
 
     monitor.minPossible should be (lower)
     monitor.maxPossible should be (upper)
