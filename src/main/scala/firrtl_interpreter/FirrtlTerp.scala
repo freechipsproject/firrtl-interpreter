@@ -198,14 +198,14 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
       program.scheduler.executeTriggeredAssigns(key)
     }
     program.scheduler.executeCombinational()
-//    println(s"c --  ${program.dataInColumns}")    program.dataStore.advanceBuffers()
-//    println(s"h --  ${program.header}")
-//    program.scheduler.executeCombinational()
-//    println(s"c --  ${program.dataInColumns}")
-//    program.scheduler.getTriggerExpressions.foreach { key => program.scheduler.executeTriggeredAssigns(key) }
-//    println(s"r --  ${program.dataInColumns}")
-//    program.scheduler.executeCombinational()
-//    println(s"c --  ${program.dataInColumns}")
+    if (stopped) {
+      lastStopResult match {
+        case Some(0) =>
+          throw StopException(s"Success: Stop result 0")
+        case Some(errorResult) =>
+          throw StopException(s"Failure: Stop result $errorResult")
+      }
+    }
   }
 
   def reEvaluate(name: String): Unit = {
