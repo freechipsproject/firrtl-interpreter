@@ -7,7 +7,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.mutable
 
-class RandomConcreteSpec extends FlatSpec with Matchers {
+class MakeRandomSpec extends FlatSpec with Matchers {
   behavior of "random sint generator"
 
   they should "work over all possible values of given width" in {
