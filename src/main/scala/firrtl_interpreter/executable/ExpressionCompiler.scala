@@ -4,7 +4,6 @@ package firrtl_interpreter.executable
 
 import firrtl.PrimOps._
 import firrtl._
-import firrtl.graph.MutableDiGraph
 import firrtl.ir._
 import firrtl_interpreter._
 
@@ -855,34 +854,12 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
     }
     // scalastyle:on
 
-    def processExternalInstance(extModule: ExtModule,
-                                modulePrefix: String,
-                                instance: BlackBoxImplementation,
-                                dependencyGraph: MutableDiGraph[Symbol]): Unit = {
-      def expand(name: String): String = modulePrefix + "." + name
-
-      for(port <- extModule.ports) {
-        if(port.direction == Output) {
-          val outputDependencies = instance.outputDependencies(port.name)
-          // TODO (chick) get this to work
-          // dependencyGraph(expand(port.name)) = BlackBoxOutput(port.name, instance, outputDependencies, port.tpe)
-        }
-      }
-    }
-
-    def processPorts(module: DefModule): Unit = {
-      for(port <- module.ports) {
-        //TODO (chick) what should go here. val symbol = symbolTable(expand(port.name))
-      }
-    }
-
     myModule match {
       case module: firrtl.ir.Module =>
-        processPorts(module)
         processStatements(module.body)
       case extModule: ExtModule => // Look to see if we have an implementation for this
         logger.debug(s"got external module ${extModule.name} instance $modulePrefix")
-        processPorts(extModule)
+        // all handling of an instance at the compiler stage occurs at a DefInstance above.
     }
   }
 

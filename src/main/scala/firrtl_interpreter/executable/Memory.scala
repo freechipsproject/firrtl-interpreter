@@ -37,8 +37,8 @@ object Memory {
 
       chain.grouped(2).withFilter(_.length == 2).toList.foreach {
         case source :: target :: Nil =>
-          keysDependOnSymbols.addEdge(target, source)
-          symbolsDependOnKeys.addEdge(source, target)
+          keysDependOnSymbols.addPairWithEdge(target, source)
+          symbolsDependOnKeys.addPairWithEdge(source, target)
         case _ =>
       }
     }

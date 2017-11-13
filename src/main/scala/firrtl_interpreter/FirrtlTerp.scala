@@ -119,7 +119,9 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   }
 
   /**
-    * Update the circuit state with the supplied information
+    * Update the circuit state with the supplied information.
+    * IMPORTANT: This should never be used internally.
+    *
     * @param name  name of value to set
     * @param value new concrete value
     * @param force allows setting components other than top level inputs
@@ -136,30 +138,8 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
       if(checkStopped("setValue")) return Big0
     }
 
-    dataStore(symbol) = value
-    value
-  }
-
-  /**
-    * Update the circuit state with the supplied information
-    * @param name  name of value to set
-    * @param value new value
-    * @param force allows setting components other than top level inputs
-    * @param registerPoke changes which side of a register is poked
-    * @return the concrete value that was derived from type and value
-    */
-  def setValueWithBigInt(
-      name: String, value: BigInt, force: Boolean = true, registerPoke: Boolean = false): BigInt = {
-    assert(symbolTable.contains(name))
-    val symbol = symbolTable(name)
-
-    if(!force) {
-      assert(symbol.dataKind == PortKind,
-        s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
-      if(checkStopped("setValue")) return Big0
-    }
-
-    dataStore(symbol) = value
+    val adjustedValue = symbol.valueFrom(value)
+    dataStore(symbol) = adjustedValue
     value
   }
 
@@ -194,7 +174,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     program.dataStore.advanceBuffers()
     program.scheduler.executeCombinational()
     program.scheduler.getTriggerExpressions.foreach { key =>
-      println(s"Running triggered expressions for $key")
+      // println(s"Running triggered expressions for $key")
       program.scheduler.executeTriggeredAssigns(key)
     }
     program.scheduler.executeCombinational()
@@ -204,6 +184,8 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
           throw StopException(s"Success: Stop result 0")
         case Some(errorResult) =>
           throw StopException(s"Failure: Stop result $errorResult")
+        case result =>
+          throw StopException(s"Failure: Stop with unexpected result $result")
       }
     }
   }
@@ -238,7 +220,6 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
       elem.cycle()
     }
 
-
     if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${program.dataInColumns}")
   }
 
@@ -272,26 +253,6 @@ object FirrtlTerp {
 
   def apply(input: String, optionsManager: HasInterpreterSuite = new InterpreterOptionsManager): FirrtlTerp = {
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
-    val interpreter = new FirrtlTerp(ast, optionsManager)
-
-    /* run the circuit once to get the circuit state fully populated. Evaluate all makes sure both
-    branches of muxes get computed, while we are at we can compute the sort key order
-     */
-    try {
-//      val saveUseTopologicalSortedKeys = interpreter.evaluator.useTopologicalSortedKeys
-//      val saveEvaluateAll = interpreter.evaluator.evaluateAll
-//
-//      interpreter.evaluator.evaluateAll = true
-//      interpreter.evaluator.useTopologicalSortedKeys = true
-//      interpreter.evaluateCircuit()
-//
-//      interpreter.evaluator.useTopologicalSortedKeys = saveUseTopologicalSortedKeys
-//      interpreter.evaluator.evaluateAll = saveEvaluateAll
-    }
-    catch {
-      case ie: InterpreterException =>
-        println(s"Error: InterpreterExecption(${ie.getMessage} during warmup evaluation")
-    }
-    interpreter
+    new FirrtlTerp(ast, optionsManager)
   }
 }

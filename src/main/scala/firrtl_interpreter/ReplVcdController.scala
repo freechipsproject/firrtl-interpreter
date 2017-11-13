@@ -147,7 +147,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
         if (inputs.contains(fullName)) {
           showProgress(s"poke $fullName $newValue $message")
 
-          interpreter.setValueWithBigInt(fullName, newValue)
+          interpreter.setValue(fullName, newValue)
           interpreter.setValue(fullName, interpreter.getValue(fullName))
         }
         else if(interpreter.symbolTable.contains(fullName)) {

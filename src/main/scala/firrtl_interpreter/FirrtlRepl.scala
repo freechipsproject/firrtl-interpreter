@@ -396,7 +396,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
             case (Some(portName), Some(valueString)) =>
               try {
                 val numberValue = parseNumber(valueString)
-                interpreter.setValueWithBigInt(portName, numberValue)
+                interpreter.setValue(portName, numberValue)
               }
               catch {
                 case e: Exception =>
@@ -433,7 +433,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
                 val setThings = settableThings.flatMap { settableThing =>
                   portRegex.findFirstIn(settableThing) match {
                     case Some(_) =>
-                      interpreter.setValueWithBigInt(settableThing, pokeValue)
+                      interpreter.setValue(settableThing, pokeValue)
                       Some(settableThing)
                     case _ => None
                   }
@@ -624,13 +624,13 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
           getOneArg("reset [numberOfSteps]", Some("1")) match {
             case Some(numberOfStepsString) =>
               try {
-                interpreter.setValueWithBigInt("reset", 1)
+                interpreter.setValue("reset", 1)
                 val numberOfSteps = numberOfStepsString.toInt
                 for(_ <- 0 until numberOfSteps) {
                   interpreter.cycle()
                   interpreter.evaluateCircuit()
                 }
-                interpreter.setValueWithBigInt("reset", 0)
+                interpreter.setValue("reset", 0)
                 // console.println(interpreter.circuitState.prettyString())
               }
               catch {

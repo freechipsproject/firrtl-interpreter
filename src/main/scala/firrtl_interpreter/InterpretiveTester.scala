@@ -88,7 +88,7 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     try {
       val isRegister = interpreter.symbolTable.isRegister(name)
 //      interpreter.circuitState.vcdLowerClock()
-      interpreter.setValueWithBigInt(name, value, registerPoke = isRegister)
+      interpreter.setValue(name, value, registerPoke = isRegister)
     }
     catch {
       case ie: InterpreterException =>

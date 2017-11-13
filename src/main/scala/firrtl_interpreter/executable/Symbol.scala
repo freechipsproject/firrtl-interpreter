@@ -2,9 +2,9 @@
 
 package firrtl_interpreter.executable
 
-import firrtl.Kind
+import firrtl.{Kind, WireKind}
 import firrtl.ir.{Info, IntWidth, NoInfo}
-import firrtl_interpreter.InterpreterException
+import firrtl_interpreter._
 
 case class Symbol(
     name: String,
@@ -19,6 +19,34 @@ case class Symbol(
   var index:          Int = -1
   var cardinalNumber: Int = -1
 
+  def valueFrom(bigInt: BigInt): BigInt = {
+    dataType match {
+      case SignedInt =>
+        val (lo, hi) = extremaOfSIntOfWidth(bitWidth)
+        val mask = makeMask(bitWidth)
+        if(bigInt > hi) {
+          val result = ((bigInt - lo) & mask) + lo
+          result
+        }
+        else if(bigInt < lo) {
+          val result = hi - ((bigInt.abs - (lo.abs + 1)) % mask)
+          result
+        }
+        else {
+          bigInt
+        }
+      case UnsignedInt =>
+        if(bigInt < 0) {
+          val (lo, hi) = extremaOfUIntOfWidth(bitWidth)
+          val mask = makeMask(bitWidth)
+          ((hi + 1) - (bigInt.abs & mask) & mask)
+        }
+        else {
+          bigInt & makeMask(bitWidth)
+        }
+    }
+  }
+
   //  override def toString: String = {
   //    f"${s"$dataType<$bitWidth>"}%12s $dataSize index $index%5d $name%-40.40s"
   //  }
@@ -28,7 +56,12 @@ case class Symbol(
 }
 
 object Symbol {
-  def apply(name: String, firrtlType: firrtl.ir.Type, firrtlKind: Kind, slots: Int = 1, info: Info = NoInfo): Symbol = {
+  def apply(
+             name:       String,
+             firrtlType: firrtl.ir.Type,
+             firrtlKind: Kind = WireKind,
+             slots:      Int = 1,
+             info:       Info = NoInfo): Symbol = {
     Symbol(name, DataSize(firrtlType), DataType(firrtlType),
       firrtlKind, DataSize.getBitWidth(firrtlType), slots, firrtlType, info)
   }

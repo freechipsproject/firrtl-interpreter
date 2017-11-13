@@ -1,0 +1,53 @@
+// See LICENSE for license details.
+
+package firrtl_interpreter
+
+import firrtl_interpreter.executable._
+import firrtl.ir.IntWidth
+import firrtl_interpreter.executable.Big
+import org.scalatest.{FreeSpec, Matchers}
+
+
+// scalastyle:off magic.number
+class BitStuffSpec extends FreeSpec with Matchers {
+  "should be able to limit bigint to bits that fit in type UInt" in {
+    val symbol = Symbol("twoBit", firrtl.ir.UIntType(IntWidth(2)))
+
+    symbol.valueFrom(4) should be (Big0)
+    symbol.valueFrom(3) should be (Big(3))
+    symbol.valueFrom(2) should be (Big(2))
+    symbol.valueFrom(1) should be (Big1)
+    symbol.valueFrom(0) should be (Big0)
+    symbol.valueFrom(-1) should be (Big(3))
+    symbol.valueFrom(-2) should be (Big(2))
+    symbol.valueFrom(-3) should be (Big(1))
+    symbol.valueFrom(-4) should be (Big(0))
+    symbol.valueFrom(-5) should be (Big(3))
+    symbol.valueFrom(-6) should be (Big(2))
+    symbol.valueFrom(-7) should be (Big(1))
+    symbol.valueFrom(-8) should be (Big(0))
+    symbol.valueFrom(-9) should be (Big(3))
+  }
+
+  "should be able to limit bigint to bits that fit in type SInt" in {
+    val symbol = Symbol("twoBit", firrtl.ir.SIntType(IntWidth(2)))
+
+    symbol.valueFrom(7) should be (Big(-1))
+    symbol.valueFrom(6) should be (Big(-2))
+    symbol.valueFrom(5) should be (Big(1))
+    symbol.valueFrom(4) should be (Big(0))
+    symbol.valueFrom(3) should be (Big(-1))
+    symbol.valueFrom(2) should be (Big(-2))
+    symbol.valueFrom(1) should be (Big1)
+    symbol.valueFrom(0) should be (Big0)
+    symbol.valueFrom(-1) should be (Big(-1))
+    symbol.valueFrom(-2) should be (Big(-2))
+    symbol.valueFrom(-3) should be (Big(1))
+    symbol.valueFrom(-4) should be (Big(0))
+    symbol.valueFrom(-1) should be (Big(-1))
+    symbol.valueFrom(-2) should be (Big(-2))
+    symbol.valueFrom(-3) should be (Big(1))
+    symbol.valueFrom(-4) should be (Big(0))
+
+  }
+}

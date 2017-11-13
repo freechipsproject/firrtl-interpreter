@@ -18,8 +18,8 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
       this(key)
     }
   }
-  var keyDependsOnSymbols: DiGraph[Symbol] = new DiGraph[Symbol](Map.empty)
-  var symbolDependsOnKeys: DiGraph[Symbol] = new DiGraph[Symbol](Map.empty)
+  var keyDependsOnSymbols: DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
+  var symbolDependsOnKeys: DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
 
   def allocateData(dataStore: DataStore): Unit = {
     nameToSymbol.values.foreach { symbol =>
@@ -108,8 +108,8 @@ object SymbolTable extends LazyLogging {
 
       def addDependency(symbol: Symbol, dependentSymbols: Set[Symbol]): Unit = {
         dependentSymbols.foreach { dependentSymbol =>
-          keysDependOnSymbols.addEdge(symbol, dependentSymbol)
-          symbolsDependOnKeys.addEdge(dependentSymbol, symbol)
+          keysDependOnSymbols.addPairWithEdge(symbol, dependentSymbol)
+          symbolsDependOnKeys.addPairWithEdge(dependentSymbol, symbol)
         }
       }
 
@@ -194,8 +194,8 @@ object SymbolTable extends LazyLogging {
       for (port <- extModule.ports) {
         if (port.direction == Output) {
           instance.outputDependencies(port.name).foreach { inputPortName =>
-            keysDependOnSymbols.addEdge(nameToSymbol(expand(port.name)), nameToSymbol(expand(inputPortName)))
-            symbolsDependOnKeys.addEdge(nameToSymbol(expand(inputPortName)), nameToSymbol(expand(port.name)))
+            keysDependOnSymbols.addPairWithEdge(nameToSymbol(expand(port.name)), nameToSymbol(expand(inputPortName)))
+            symbolsDependOnKeys.addPairWithEdge(nameToSymbol(expand(inputPortName)), nameToSymbol(expand(port.name)))
           }
         }
       }

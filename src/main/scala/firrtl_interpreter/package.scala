@@ -1,3 +1,4 @@
+import firrtl.passes.CheckWidths.BitsWidthException
 // See LICENSE for license details.
 
 //scalastyle:off package.object.name
@@ -17,6 +18,16 @@ package object firrtl_interpreter {
 
   def randomBigInt(width: Int): BigInt = {
     BigInt(width, random)
+  }
+
+  def makeMask(bitWidth: Int): BigInt = {
+    (Big1 << bitWidth) - 1
+  }
+
+  def maskToWidth(value: BigInt, bitWidth: Int): BigInt = {
+    val mask = makeMask(bitWidth)
+    val result = value & mask
+    result
   }
 
   def boolToInt(condition: Boolean): Int = if(condition) 1 else 0

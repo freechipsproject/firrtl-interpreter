@@ -24,7 +24,7 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
   }
 
   def executeCombinational(): Unit = {
-    println(s"Executing combinational assigns")
+    // println(s"Executing combinational assigns")
     combinationalAssigns.foreach {
       assign => assign.run()
     }
