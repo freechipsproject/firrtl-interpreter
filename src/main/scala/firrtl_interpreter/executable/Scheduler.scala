@@ -25,8 +25,8 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
 
   def executeCombinational(): Unit = {
     // println(s"Executing combinational assigns")
-    combinationalAssigns.foreach {
-      assign => assign.run()
+    combinationalAssigns.foreach { assign =>
+      assign.run()
     }
   }
 
@@ -77,6 +77,12 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
     s"combinational assigns (${combinationalAssigns.size})\n" +
     combinationalAssigns.map { assigner =>
       symbolTable(dataStore, assigner).render
+    }.mkString("\n") + "\n\n" +
+    triggeredAssigns.keys.toList.map { key =>
+      s"Triggered assigns for $key\n" +
+      triggeredAssigns(key).map { assigner =>
+        "  " + symbolTable(dataStore, assigner).render
+      }.mkString("\n")
     }.mkString("\n")
   }
 }

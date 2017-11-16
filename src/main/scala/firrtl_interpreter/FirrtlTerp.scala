@@ -119,7 +119,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   }
 
   /**
-    * Update the circuit state with the supplied information.
+    * Update the dataStore with the supplied information.
     * IMPORTANT: This should never be used internally.
     *
     * @param name  name of value to set

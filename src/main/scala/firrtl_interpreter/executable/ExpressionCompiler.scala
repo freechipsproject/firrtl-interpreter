@@ -741,7 +741,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
               name
             }
           }
-          val lhsName = expand(renameIfRegister(con.loc.serialize))
+          val lhsName = renameIfRegister(expand(con.loc.serialize))
           getAssignerByName(lhsName, processExpression(con.expr))
 
         case WDefInstance(info, instanceName, moduleName, _) =>
@@ -796,32 +796,34 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           val registerIn  = symbolTable(s"$expandedName${ExpressionCompiler.RegisterInputSuffix}")
           val registerOut = symbolTable(expandedName)
 
+          val addResetTrigger = resetResult match {
+            case GetIntConstant(n) => n != 0
+            case _                 => true
+          }
+
           registerIn.dataSize match {
             case IntSize =>
               triggeredAssign(clockResult, registerOut, dataStore.GetInt(registerIn.index))
-              resetValue match {
-                case rv: IntExpressionResult =>
-                  triggeredAssign(resetResult, registerOut, rv)
-                case rv: LongExpressionResult =>
-                  triggeredAssign(resetResult, registerOut, LongToInt(rv.apply))
-                case rv: BigExpressionResult =>
-                  triggeredAssign(resetResult, registerOut, ToInt(rv.apply))
+              if(addResetTrigger) resetValue match {
+                case rv: IntExpressionResult  => triggeredAssign(resetResult, registerOut, rv)
+                case rv: LongExpressionResult => triggeredAssign(resetResult, registerOut, LongToInt(rv.apply))
+                case rv: BigExpressionResult  => triggeredAssign(resetResult, registerOut, ToInt(rv.apply))
               }
             case LongSize =>
               scheduler.combinationalAssigns += dataStore.AssignLong(registerOut, dataStore.GetLong(registerIn.index).apply)
               triggeredAssign(clockResult, registerOut, dataStore.GetLong(registerIn.index))
-              resetValue match {
-                case rv: IntExpressionResult => triggeredAssign(resetResult, registerOut, ToLong(rv.apply))
+              if(addResetTrigger) resetValue match {
+                case rv: IntExpressionResult  => triggeredAssign(resetResult, registerOut, ToLong(rv.apply))
                 case rv: LongExpressionResult => triggeredAssign(resetResult, registerOut, rv)
-                case rv: BigExpressionResult => triggeredAssign(resetResult, registerOut, BigToLong(rv.apply))
+                case rv: BigExpressionResult  => triggeredAssign(resetResult, registerOut, BigToLong(rv.apply))
               }
             case BigSize =>
               scheduler.combinationalAssigns += dataStore.AssignBig(registerOut, dataStore.GetBig(registerIn.index).apply)
               triggeredAssign(clockResult, registerOut, dataStore.GetBig(registerIn.index))
-              resetValue match {
-                case rv: IntExpressionResult => triggeredAssign(resetResult, registerOut, ToBig(rv.apply))
+              if(addResetTrigger) resetValue match {
+                case rv: IntExpressionResult  => triggeredAssign(resetResult, registerOut, ToBig(rv.apply))
                 case rv: LongExpressionResult => triggeredAssign(resetResult, registerOut, LongToBig(rv.apply))
-                case rv: BigExpressionResult => triggeredAssign(resetResult, registerOut, rv)
+                case rv: BigExpressionResult  => triggeredAssign(resetResult, registerOut, rv)
               }
             case _ =>
               throw InterpreterException(s"bad register $statement")
