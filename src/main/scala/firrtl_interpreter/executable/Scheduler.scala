@@ -63,7 +63,7 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
 //    triggeredAssigns.foreach { case (trigger, assigners) =>
 //      val assignedSymbols = assigners.map(dataStore.assignerToSymbol(_)).toList.distinct
 //      val dependentSymbols = assignedSymbols.flatMap { symbol =>
-//        symbolTable.symbolDependsOnKeys.reachableFrom(symbol)
+//        symbolTable.parentsOf.reachableFrom(symbol)
 //      }
 //    }
   }

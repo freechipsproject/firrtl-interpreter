@@ -18,8 +18,8 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
       this(key)
     }
   }
-  var keyDependsOnSymbols: DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
-  var symbolDependsOnKeys: DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
+  var childrenOf: DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
+  var parentsOf: DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
 
   def allocateData(dataStore: DataStore): Unit = {
     nameToSymbol.values.foreach { symbol =>
@@ -82,21 +82,21 @@ object SymbolTable extends LazyLogging {
 
 //    val dependencies: mutable.HashMap[Symbol, SymbolSet] = new mutable.HashMap[Symbol, SymbolSet]
 
-    val keysDependOnSymbols: MutableDiGraph[Symbol] = new MutableDiGraph[Symbol]
-    val symbolsDependOnKeys: MutableDiGraph[Symbol] = new MutableDiGraph[Symbol]
+    val childrenOf: MutableDiGraph[Symbol] = new MutableDiGraph[Symbol]
+    val parentsOf: MutableDiGraph[Symbol] = new MutableDiGraph[Symbol]
 
     val registerNames: mutable.HashSet[String] = new mutable.HashSet[String]()
     val inputPorts = new mutable.HashSet[String]
     val outputPorts = new mutable.HashSet[String]
 
     def recordDependency(symbolA: Symbol, symbolB: Symbol): Unit = {
-      if(!keysDependOnSymbols.contains(symbolA)) keysDependOnSymbols.addVertex(symbolA)
-      if(!keysDependOnSymbols.contains(symbolB)) keysDependOnSymbols.addVertex(symbolB)
-      if(!symbolsDependOnKeys.contains(symbolA)) symbolsDependOnKeys.addVertex(symbolA)
-      if(!symbolsDependOnKeys.contains(symbolB)) symbolsDependOnKeys.addVertex(symbolB)
+      if(!childrenOf.contains(symbolA)) childrenOf.addVertex(symbolA)
+      if(!childrenOf.contains(symbolB)) childrenOf.addVertex(symbolB)
+      if(!parentsOf.contains(symbolA)) parentsOf.addVertex(symbolA)
+      if(!parentsOf.contains(symbolB)) parentsOf.addVertex(symbolB)
 
-      keysDependOnSymbols.addEdge(symbolB, symbolA)
-      symbolsDependOnKeys.addEdge(symbolA, symbolB)    }
+      childrenOf.addEdge(symbolB, symbolA)
+      parentsOf.addEdge(symbolA, symbolB)    }
 
     // scalastyle:off
     def processDependencyStatements(modulePrefix: String, s: Statement): Unit = {
@@ -182,7 +182,7 @@ object SymbolTable extends LazyLogging {
           val expandedName = expand(defMemory.name)
           logger.debug(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
 
-          Memory.buildSymbols(defMemory, expandedName, keysDependOnSymbols, symbolsDependOnKeys).foreach { symbol =>
+          Memory.buildSymbols(defMemory, expandedName, childrenOf, parentsOf).foreach { symbol =>
             nameToSymbol(symbol.name) = symbol
           }
 
@@ -271,10 +271,10 @@ object SymbolTable extends LazyLogging {
 
     processModule("", module)
 
-    val keysDependOnSymbolsDiGraph = DiGraph(keysDependOnSymbols)
-    val symbolsDependOnKeysDiGraph = DiGraph(symbolsDependOnKeys)
+    val childrenOfDiGraph = DiGraph(childrenOf)
+    val parentsOfDiGraph = DiGraph(parentsOf)
 
-    val sorted: Seq[Symbol] = symbolsDependOnKeysDiGraph.linearize
+    val sorted: Seq[Symbol] = childrenOfDiGraph.linearize
 
     sorted.zipWithIndex.foreach { case (symbol, index) => symbol.cardinalNumber = index }
 
@@ -286,8 +286,8 @@ object SymbolTable extends LazyLogging {
     symbolTable.registerNames ++= registerNames
     symbolTable.inputPortsNames    ++= inputPorts
     symbolTable.outputPortsNames   ++= outputPorts
-    symbolTable.symbolDependsOnKeys = symbolsDependOnKeysDiGraph
-    symbolTable.keyDependsOnSymbols = keysDependOnSymbolsDiGraph
+    symbolTable.parentsOf = parentsOfDiGraph
+    symbolTable.childrenOf = childrenOfDiGraph
 
     symbolTable
   }
