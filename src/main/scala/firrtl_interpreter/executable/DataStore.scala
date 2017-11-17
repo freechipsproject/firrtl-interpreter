@@ -50,7 +50,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
   var currentBigArray:   Array[Big]  = bigData(currentBufferIndex)
   var previousIntArray:  Array[Int]  = intData(previousBufferIndex)
   var previousLongArray: Array[Long] = longData(previousBufferIndex)
-  var currentBigSource:  Array[Big]  = bigData(previousBufferIndex)
+  var previousBigArray:  Array[Big]  = bigData(previousBufferIndex)
 
   def allocateBuffers(): Unit = {
     intData  = Array.fill(numberOfBuffers, numberOfInts)(0)
@@ -62,7 +62,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     currentBigArray  = bigData(currentBufferIndex)
     previousIntArray  = intData(previousBufferIndex)
     previousLongArray = longData(previousBufferIndex)
-    currentBigSource  = bigData(previousBufferIndex)
+    previousBigArray  = bigData(previousBufferIndex)
   }
 
   /**
@@ -93,11 +93,14 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
       currentIntArray  = intData(currentBufferIndex)
       currentLongArray = longData(currentBufferIndex)
       currentBigArray  = bigData(currentBufferIndex)
+
       previousIntArray  = intData(previousBufferIndex)
       previousLongArray = longData(previousBufferIndex)
-      currentBigSource  = bigData(previousBufferIndex)
+      previousBigArray  = bigData(previousBufferIndex)
 
-      for(i <- currentIntArray.indices) { currentIntArray(i) = previousIntArray(i) }
+      for(i <- currentIntArray.indices)  { currentIntArray(i)  = previousIntArray(i) }
+      for(i <- currentLongArray.indices) { currentLongArray(i) = previousLongArray(i) }
+      for(i <- currentBigArray.indices)  { currentBigArray(i)  = previousBigArray(i) }
     }
   }
 

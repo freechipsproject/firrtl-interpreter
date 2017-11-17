@@ -11,7 +11,7 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
   val bufferAdvanceAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
 
   /**
-    * associates an ExpressionResult (probably some kind of clock) with a bunch of assignments
+    * associates a Symbol with a bunch of assignments
     * that happen on leading edge of that expression
     */
   val triggeredAssigns: mutable.HashMap[Symbol, mutable.ArrayBuffer[Assigner]] = {

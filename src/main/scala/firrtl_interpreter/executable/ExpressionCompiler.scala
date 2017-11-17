@@ -785,10 +785,11 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           logger.debug(s"declaration:DefWire:$name")
 
         case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
+
+          //TODO (chick) There should only be once assignment per symbol so we have to  mux the reset and clock here
+
           logger.debug(s"declaration:DefRegister:$name")
-//          logger.debug(s"declaration:DefRegister:$name clock <- ${clockExpression.serialize} ${processExpression(clockExpression).serialize}")
-//          logger.debug(s"declaration:DefRegister:$name reset <- ${resetExpression.serialize} ${processExpression(resetExpression).serialize}")
-//          logger.debug(s"declaration:DefRegister:$name init  <- ${initValueExpression.serialize} ${processExpression(initValueExpression).serialize}")
+
           val expandedName = expand(name)
 
           val clockResult = processExpression(clockExpression)
@@ -815,7 +816,6 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
                 case rv: BigExpressionResult  => triggeredAssign(resetTrigger, registerOut, ToInt(rv.apply))
               }
             case LongSize =>
-              scheduler.combinationalAssigns += dataStore.AssignLong(registerOut, dataStore.GetLong(registerIn.index).apply)
               triggeredAssign(clockTrigger, registerOut, dataStore.GetLong(registerIn.index))
               if(addResetTrigger) resetValue match {
                 case rv: IntExpressionResult  => triggeredAssign(resetTrigger, registerOut, ToLong(rv.apply))
@@ -823,7 +823,6 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
                 case rv: BigExpressionResult  => triggeredAssign(resetTrigger, registerOut, BigToLong(rv.apply))
               }
             case BigSize =>
-              scheduler.combinationalAssigns += dataStore.AssignBig(registerOut, dataStore.GetBig(registerIn.index).apply)
               triggeredAssign(clockTrigger, registerOut, dataStore.GetBig(registerIn.index))
               if(addResetTrigger) resetValue match {
                 case rv: IntExpressionResult  => triggeredAssign(resetTrigger, registerOut, ToBig(rv.apply))
