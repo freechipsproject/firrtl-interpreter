@@ -45,7 +45,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     SymbolTable(loweredAst, blackBoxFactories)
   }
 
-  val dataStore = DataStore(numberOfBuffers = 1)
+  val dataStore = DataStore(numberOfBuffers = 10)
   symbolTable.allocateData(dataStore)
   println(s"Symbol table:\n${symbolTable.render}")
 

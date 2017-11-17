@@ -6,7 +6,8 @@ import scala.collection.mutable
 import firrtl_interpreter.executable._
 
 class UTC(scaleName: String = "picoseconds") {
-  var time: Long = 0L
+  private var time: Long = 0L
+  def currentTime:  Long = time
 
   val eventQueue = new mutable.PriorityQueue[Event]()
 

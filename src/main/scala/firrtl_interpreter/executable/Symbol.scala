@@ -51,7 +51,13 @@ case class Symbol(
   //    f"${s"$dataType<$bitWidth>"}%12s $dataSize index $index%5d $name%-40.40s"
   //  }
   def render: String = {
-    f"$name%-40.40s $dataSize%3.3s $dataType%4.4s $bitWidth%6d $slots%6d $index%6d $cardinalNumber%6d $info"
+    val dataSizeCode = dataSize match {
+      case IntSize  => "I"
+      case LongSize => "L"
+      case BigSize  => "B"
+    }
+    f"$name%-40.40s $dataSize%3.3s $dataType%4.4s $bitWidth%6d " +
+      f"$slots%6d $index%6d$dataSizeCode $cardinalNumber%6d $info"
   }
 }
 

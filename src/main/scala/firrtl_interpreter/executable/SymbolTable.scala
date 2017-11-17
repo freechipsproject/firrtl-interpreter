@@ -48,6 +48,15 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
     apply(size, index)
   }
 
+  def getSymbolFromGetter(expressionResult: ExpressionResult, dataStore: DataStore): Option[Symbol] = {
+    expressionResult match {
+      case dataStore.GetInt(index)  => symbols.find { symbol => symbol.dataSize == IntSize && symbol.index == index}
+      case dataStore.GetLong(index) => symbols.find { symbol => symbol.dataSize == LongSize && symbol.index == index}
+      case dataStore.GetBig(index)  => symbols.find { symbol => symbol.dataSize == BigSize && symbol.index == index}
+      case _ => None
+    }
+  }
+
   def get(name: String): Option[Symbol] = nameToSymbol.get(name)
   def getOrElse(name: String, default: => Symbol): Symbol = nameToSymbol.getOrElse(name, default)
 
@@ -80,6 +89,15 @@ object SymbolTable extends LazyLogging {
     val inputPorts = new mutable.HashSet[String]
     val outputPorts = new mutable.HashSet[String]
 
+    def recordDependency(symbolA: Symbol, symbolB: Symbol): Unit = {
+      if(!keysDependOnSymbols.contains(symbolA)) keysDependOnSymbols.addVertex(symbolA)
+      if(!keysDependOnSymbols.contains(symbolB)) keysDependOnSymbols.addVertex(symbolB)
+      if(!symbolsDependOnKeys.contains(symbolA)) symbolsDependOnKeys.addVertex(symbolA)
+      if(!symbolsDependOnKeys.contains(symbolB)) symbolsDependOnKeys.addVertex(symbolB)
+
+      keysDependOnSymbols.addEdge(symbolB, symbolA)
+      symbolsDependOnKeys.addEdge(symbolA, symbolB)    }
+
     // scalastyle:off
     def processDependencyStatements(modulePrefix: String, s: Statement): Unit = {
       def expand(name: String): String = if (modulePrefix.isEmpty) name else modulePrefix + "." + name
@@ -108,8 +126,7 @@ object SymbolTable extends LazyLogging {
 
       def addDependency(symbol: Symbol, dependentSymbols: Set[Symbol]): Unit = {
         dependentSymbols.foreach { dependentSymbol =>
-          keysDependOnSymbols.addPairWithEdge(symbol, dependentSymbol)
-          symbolsDependOnKeys.addPairWithEdge(dependentSymbol, symbol)
+          recordDependency(symbol, dependentSymbol)
         }
       }
 
@@ -169,7 +186,6 @@ object SymbolTable extends LazyLogging {
             nameToSymbol(symbol.name) = symbol
           }
 
-
         //      case IsInvalid(info, expression) =>
         //        IsInvalid(info, expressionToReferences(expression))
         case _: Stop   =>
@@ -194,8 +210,7 @@ object SymbolTable extends LazyLogging {
       for (port <- extModule.ports) {
         if (port.direction == Output) {
           instance.outputDependencies(port.name).foreach { inputPortName =>
-            keysDependOnSymbols.addPairWithEdge(nameToSymbol(expand(port.name)), nameToSymbol(expand(inputPortName)))
-            symbolsDependOnKeys.addPairWithEdge(nameToSymbol(expand(inputPortName)), nameToSymbol(expand(port.name)))
+            recordDependency(nameToSymbol(expand(port.name)), nameToSymbol(expand(inputPortName)))
           }
         }
       }
@@ -259,7 +274,6 @@ object SymbolTable extends LazyLogging {
     val keysDependOnSymbolsDiGraph = DiGraph(keysDependOnSymbols)
     val symbolsDependOnKeysDiGraph = DiGraph(symbolsDependOnKeys)
 
-
     val sorted: Seq[Symbol] = symbolsDependOnKeysDiGraph.linearize
 
     sorted.zipWithIndex.foreach { case (symbol, index) => symbol.cardinalNumber = index }
@@ -272,6 +286,8 @@ object SymbolTable extends LazyLogging {
     symbolTable.registerNames ++= registerNames
     symbolTable.inputPortsNames    ++= inputPorts
     symbolTable.outputPortsNames   ++= outputPorts
+    symbolTable.symbolDependsOnKeys = symbolsDependOnKeysDiGraph
+    symbolTable.keyDependsOnSymbols = keysDependOnSymbolsDiGraph
 
     symbolTable
   }

@@ -14,9 +14,9 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
     * associates an ExpressionResult (probably some kind of clock) with a bunch of assignments
     * that happen on leading edge of that expression
     */
-  val triggeredAssigns: mutable.HashMap[ExpressionResult, mutable.ArrayBuffer[Assigner]] = {
-    new mutable.HashMap[ExpressionResult, mutable.ArrayBuffer[Assigner]] {
-      override def default(key: ExpressionResult): mutable.ArrayBuffer[Assigner] = {
+  val triggeredAssigns: mutable.HashMap[Symbol, mutable.ArrayBuffer[Assigner]] = {
+    new mutable.HashMap[Symbol, mutable.ArrayBuffer[Assigner]] {
+      override def default(key: Symbol): mutable.ArrayBuffer[Assigner] = {
         this(key) = new mutable.ArrayBuffer[Assigner]()
         this(key)
       }
@@ -24,26 +24,26 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
   }
 
   def executeCombinational(): Unit = {
-    // println(s"Executing combinational assigns")
+     println(s"Executing combinational assigns")
     combinationalAssigns.foreach { assign =>
       assign.run()
     }
   }
 
-  def executeTriggeredAssigns(triggerExpression: ExpressionResult): Unit = {
-    val triggerValue = triggerExpression match {
-      case e: IntExpressionResult  => e.apply() > 0
-      case e: LongExpressionResult => e.apply() > 0L
-      case e: BigExpressionResult  => e.apply() > Big(0)
+  def executeTriggeredAssigns(symbol: Symbol): Unit = {
+    val triggerValue = symbol.dataSize match {
+      case IntSize  => dataStore.currentIntArray(symbol.index) > 0
+      case LongSize => dataStore.currentLongArray(symbol.index) > 0L
+      case BigSize  => dataStore.currentBigArray(symbol.index) > Big(0)
     }
     if(triggerValue) {
-      triggeredAssigns(triggerExpression).foreach {
+      triggeredAssigns(symbol).foreach {
         assign => assign.run()
       }
     }
   }
 
-  def getTriggerExpressions: Iterable[ExpressionResult] = {
+  def getTriggerExpressions: Iterable[Symbol] = {
     triggeredAssigns.keys
   }
 
