@@ -7,8 +7,7 @@ import logger.LazyLogging
 import scala.collection.mutable
 
 class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends LazyLogging {
-  var combinationalAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
-  val bufferAdvanceAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
+  var inputDependentAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
 
   /**
     * associates a Symbol with a bunch of assignments
@@ -24,8 +23,8 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
   }
 
   def executeCombinational(): Unit = {
-     println(s"Executing combinational assigns")
-    combinationalAssigns.foreach { assign =>
+    println(s"Executing assigns that depend on inputs")
+    inputDependentAssigns.foreach { assign =>
       assign.run()
     }
   }
@@ -48,7 +47,7 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
   }
 
   def sortCombinationalAssigns(): Unit = {
-    combinationalAssigns = combinationalAssigns.sortBy { assigner: Assigner =>
+    inputDependentAssigns = inputDependentAssigns.sortBy { assigner: Assigner =>
       symbolTable.sortKey(assigner.symbol.dataSize, assigner.symbol.index)
     }
   }
@@ -74,8 +73,8 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
   }
 
   def render: String = {
-    s"combinational assigns (${combinationalAssigns.size})\n" +
-    combinationalAssigns.map { assigner =>
+    s"combinational assigns (${inputDependentAssigns.size})\n" +
+    inputDependentAssigns.map { assigner =>
       symbolTable(dataStore, assigner).render
     }.mkString("\n") + "\n\n" +
     triggeredAssigns.keys.toList.map { key =>

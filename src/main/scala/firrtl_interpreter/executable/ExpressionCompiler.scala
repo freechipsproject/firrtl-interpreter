@@ -442,7 +442,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         result
       }
 
-      def getAssigner(symbol: Symbol, expressionResult: ExpressionResult): Assigner = {
+      def makeAssigner(symbol: Symbol, expressionResult: ExpressionResult): Assigner = {
         val assigner = (symbol.dataSize, expressionResult) match {
           case (IntSize,  result: IntExpressionResult)  => dataStore.AssignInt(symbol, result.apply)
           case (IntSize,  result: LongExpressionResult) => dataStore.AssignInt(symbol, ToInt(result.apply).apply)
@@ -463,15 +463,15 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             throw InterpreterException(
               s"Error:assignment size mismatch ($size)${symbol.name} <= ($expressionSize)$expressionResult")
         }
-        scheduler.combinationalAssigns += assigner
+        symbolTable.addAssigner(symbol, assigner)
         assigner
       }
 
-      def getAssignerByName(name: String, expressionResult: ExpressionResult): Assigner = {
-        getAssigner(symbolTable(name), expressionResult)
+      def makeAssignerByName(name: String, expressionResult: ExpressionResult): Assigner = {
+        makeAssigner(symbolTable(name), expressionResult)
       }
 
-      def getIndirectAssigner(
+      def makeIndirectAssigner(
                                symbol: Symbol,
                                indexSymbol: Symbol,
                                enableSymbol: Symbol,
@@ -504,7 +504,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             throw InterpreterException(
               s"Error:assignment size mismatch ($size)${symbol.name} <= ($expressionSize)$expressionResult")
         }
-        scheduler.combinationalAssigns += assigner
+        symbolTable.addAssigner(symbol, assigner)
         assigner
       }
 
@@ -589,7 +589,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
           triggeredAssign(Some(clock), chain.head, makeGetIndirect(memorySymbol, data, enable, addr))
 
-          getAssigner(chain.head, makeGetIndirect(memorySymbol, data, enable, addr))
+          makeAssigner(chain.head, makeGetIndirect(memorySymbol, data, enable, addr))
 
           // This produces triggered: reg0 <= reg0/in, reg1 <= reg1/in etc.
           chain.grouped(2).withFilter(_.length == 2).toList.foreach {
@@ -601,7 +601,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           // This produces reg0/in <= root, reg1/in <= reg0 etc.
           chain.drop(1).grouped(2).withFilter(_.length == 2).toList.foreach {
             case source :: target :: Nil =>
-              getAssigner(target, makeGet(source))
+              makeAssigner(target, makeGet(source))
             case _ =>
           }
         }
@@ -644,7 +644,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           // This produces reg0/in <= root, reg1/in <= reg0 etc.
           chain.grouped(2).withFilter(_.length == 2).toList.foreach {
             case source :: target :: Nil =>
-              getAssigner(target, makeGet(source))
+              makeAssigner(target, makeGet(source))
             case _ =>
           }
 
@@ -662,13 +662,13 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           val valid  = symbolTable(s"$writerName.valid")
 
           // compute a valid so we only have to carry a single boolean up the write queue
-          getAssigner(valid, AndInts(dataStore.GetInt(enable.index).apply, dataStore.GetInt(mask.index).apply))
+          makeAssigner(valid, AndInts(dataStore.GetInt(enable.index).apply, dataStore.GetInt(mask.index).apply))
 
           val endOfValidPipeline = buildWritePipelineAssigners(clock, valid, writerName, "valid")
           val endOfAddrPipeline  = buildWritePipelineAssigners(clock, addr, writerName, "addr")
           val endOfDataPipeline  = buildWritePipelineAssigners(clock, data, writerName, "data")
 
-          getIndirectAssigner(
+          makeIndirectAssigner(
             memorySymbol,
             endOfAddrPipeline,
             endOfValidPipeline,
@@ -691,7 +691,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           buildReadPipelineAssigners(clock, writerName, "rdata", rdata, addr, enable)
 
           // compute a valid so we only have to carry a single boolean up the write queue
-          getAssigner(
+          makeAssigner(
             valid,
             AndInts(
               AndInts(dataStore.GetInt(enable.index).apply, dataStore.GetInt(mask.index).apply).apply,
@@ -703,7 +703,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           val endOfAddrPipeline  = buildWritePipelineAssigners(clock, addr,  writerName, "addr")
           val endOfDataPipeline  = buildWritePipelineAssigners(clock, wdata, writerName, "wdata")
 
-          getIndirectAssigner(
+          makeIndirectAssigner(
             memorySymbol,
             endOfAddrPipeline,
             endOfValidPipeline,
@@ -744,7 +744,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             }
           }
           val lhsName = renameIfRegister(expand(con.loc.serialize))
-          getAssignerByName(lhsName, processExpression(con.expr))
+          makeAssignerByName(lhsName, processExpression(con.expr))
 
         case WDefInstance(info, instanceName, moduleName, _) =>
           val subModule = FindModule(moduleName, circuit)
@@ -763,7 +763,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
                         symbolTable(expand(instanceName + "." + inputName))
                       }
                       val shim = dataStore.BlackBoxShim(port.name, portSymbol, inputSymbols, implementation)
-                      getAssigner(portSymbol, shim)
+                      makeAssigner(portSymbol, shim)
                     }
                     true
                   case _ => false
@@ -779,7 +779,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
         case DefNode(info, name, expression) =>
           logger.debug(s"declaration:DefNode:$name:${expression.serialize}")
-          getAssignerByName(expand(name), processExpression(expression))
+          makeAssignerByName(expand(name), processExpression(expression))
 
         case DefWire(info, name, tpe) =>
           logger.debug(s"declaration:DefWire:$name")

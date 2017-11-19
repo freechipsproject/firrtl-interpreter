@@ -203,12 +203,13 @@ class SymbolTableSpec extends FreeSpec with Matchers {
     childrenOf.reachableFrom(symbolTable("io_in2")) should contain (symbolTable("b3/in"))
     childrenOf.reachableFrom(symbolTable("b3")) should contain (symbolTable("io_out1"))
 
-    println("All dependencies")
-    symbolTable.symbols.toList.sortBy(_.name).foreach { keySymbol =>
-      val dependents = symbolTable.childrenOf.reachableFrom(keySymbol)
+    val inputChildren = symbolTable
+      .getChildren(symbolTable.inputPortsNames.map(symbolTable(_)).toSeq)
+      .toList
+      .sortBy(_.cardinalNumber)
 
-      println(s"${keySymbol.name} => ${dependents.map(_.name).mkString(",")}")
-    }
+    println("Input dependencies")
+    println(inputChildren.map(s => s"${s.name}:${s.cardinalNumber}").mkString(","))
 
     tester.poke("io_in1", 0)
     tester.poke("io_in2", 0)

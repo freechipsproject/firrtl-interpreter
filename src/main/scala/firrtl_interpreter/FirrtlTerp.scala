@@ -15,6 +15,8 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   def stopped: Boolean = lastStopResult.nonEmpty
   var verbose: Boolean = false
 
+  var inputsChanged: Boolean = false
+
   val loweredAst: Circuit = if(interpreterOptions.lowCompileAtLoad) {
     ToLoFirrtl.lower(ast, optionsManager)
   } else {
@@ -59,6 +61,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   }
 
   // println(s"Scheduler before sort ${scheduler.renderHeader}")
+  scheduler.inputDependentAssigns ++= symbolTable.inputChildrenAssigners()
   scheduler.sortCombinationalAssigns()
   scheduler.sortTriggeredAssigns()
 
@@ -86,8 +89,6 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   def writeVCD(): Unit = {
     //TODO: (chick) circuitState.writeVCD()
   }
-
-
 
   setVerbose(interpreterOptions.setVerbose)
 

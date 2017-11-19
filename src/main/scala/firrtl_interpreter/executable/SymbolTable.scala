@@ -21,6 +21,14 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
   var childrenOf: DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
   var parentsOf: DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
 
+  private val toAssigner: mutable.HashMap[Symbol, Assigner] = new mutable.HashMap()
+  def addAssigner(symbol: Symbol, assigner: Assigner): Unit = {
+    if(toAssigner.contains(symbol)) {
+      throw new InterpreterException(s"Assigner already exists for $symbol")
+    }
+    toAssigner(symbol) = assigner
+  }
+
   def allocateData(dataStore: DataStore): Unit = {
     nameToSymbol.values.foreach { symbol =>
       symbol.index = dataStore.getIndex(symbol.dataSize, symbol.slots)
@@ -55,6 +63,17 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
       case dataStore.GetBig(index)  => symbols.find { symbol => symbol.dataSize == BigSize && symbol.index == index}
       case _ => None
     }
+  }
+
+  def getChildren(symbols: Seq[Symbol]): Set[Symbol] = {
+    symbols.flatMap { symbol =>
+      childrenOf.reachableFrom(symbol)
+    }.toSet
+  }
+
+  def inputChildrenAssigners(): Seq[Assigner] = {
+    val assigners = getChildren(inputPortsNames.map(nameToSymbol(_)).toSeq).flatMap { symbol => toAssigner.get(symbol)}.toSeq
+    assigners
   }
 
   def get(name: String): Option[Symbol] = nameToSymbol.get(name)
