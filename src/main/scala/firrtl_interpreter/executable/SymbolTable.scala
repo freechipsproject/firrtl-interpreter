@@ -200,6 +200,7 @@ object SymbolTable extends LazyLogging {
           nameToSymbol(registerIn.name) = registerIn
           nameToSymbol(registerOut.name) = registerOut
 
+          addDependency(registerOut, expressionToReferences(clockExpression))
           addDependency(registerIn, expressionToReferences(resetExpression))
 
         case defMemory: DefMemory =>
