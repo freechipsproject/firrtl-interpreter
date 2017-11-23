@@ -187,7 +187,7 @@ class GCDTester extends FlatSpec with Matchers {
       cycle += 1
 
 
-      //      tester.expect("io_z", z)
+      tester.expect("io_z", z)
     }
     val endTime = System.nanoTime()
     val elapsedSeconds = (endTime - startTime).toDouble / 1000000000.0
@@ -214,7 +214,7 @@ class GCDTester extends FlatSpec with Matchers {
     sizableTest(68)
   }
 
-  it should "run a lot of values" ignore {
+  it should "run a lot of values" in {
     manyValuesTest(24)
   }
 }

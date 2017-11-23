@@ -48,6 +48,7 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
   val outputPortsNames: mutable.HashSet[String] = new mutable.HashSet[String]
 
   def isRegister(name: String): Boolean = registerNames.contains(name)
+  def isTopLevelInput(name: String): Boolean = inputPortsNames.contains(name)
 
   def apply(name: String): Symbol = nameToSymbol(name)
   def apply(dataSize: DataSize, index: Int): Symbol = sizeAndIndexToSymbol(dataSize)(index)
@@ -195,7 +196,7 @@ object SymbolTable extends LazyLogging {
           val symbol = Symbol(expandedName, tpe, WireKind, info = info)
           nameToSymbol(expandedName) = symbol
 
-        case DefRegister(info, name, tpe, _, _, _) =>
+        case DefRegister(info, name, tpe, clockExpression, resetExpression, _) =>
           val expandedName = expand(name)
 
           val registerIn = Symbol(expandedName + "/in", tpe, RegKind, info = info)
@@ -203,6 +204,8 @@ object SymbolTable extends LazyLogging {
           registerNames += registerOut.name
           nameToSymbol(registerIn.name) = registerIn
           nameToSymbol(registerOut.name) = registerOut
+
+          addDependency(registerIn, expressionToReferences(resetExpression))
 
         case defMemory: DefMemory =>
           val expandedName = expand(defMemory.name)
@@ -309,11 +312,11 @@ object SymbolTable extends LazyLogging {
     // scalastyle:on cyclomatic.complexity
 
     val symbolTable = SymbolTable(nameToSymbol)
-    symbolTable.registerNames ++= registerNames
-    symbolTable.inputPortsNames    ++= inputPorts
-    symbolTable.outputPortsNames   ++= outputPorts
-    symbolTable.parentsOf = parentsOfDiGraph
-    symbolTable.childrenOf = childrenOfDiGraph
+    symbolTable.registerNames    ++= registerNames
+    symbolTable.inputPortsNames  ++= inputPorts
+    symbolTable.outputPortsNames ++= outputPorts
+    symbolTable.parentsOf        = parentsOfDiGraph
+    symbolTable.childrenOf       = childrenOfDiGraph
 
     symbolTable
   }

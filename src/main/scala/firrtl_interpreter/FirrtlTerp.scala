@@ -124,6 +124,8 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     assert(symbolTable.contains(name))
     val symbol = symbolTable(name)
 
+    inputsChanged = true
+
     if(!force) {
       assert(symbol.dataKind == PortKind,
         s"Error: setValue($name) not on input, use setValue($name, force=true) to override")
@@ -132,6 +134,13 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
     val adjustedValue = symbol.valueFrom(value)
     dataStore(symbol) = adjustedValue
+
+    if(! symbolTable.isTopLevelInput(name)) {
+      val sensitiveSignals = symbolTable.childrenOf.reachableFrom(symbolTable(name)).toSeq
+      val sensitiveAssigners = symbolTable.getAssigners(sensitiveSignals)
+      scheduler.executeAssigners(sensitiveAssigners)
+    }
+
     value
   }
 
@@ -241,15 +250,6 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
       cycle()
       if(stopped) return
     }
-  }
-
-  def poke(name: String, value: Int): Unit = {
-    val symbol = program.symbolTable(name)
-    program.dataStore(symbol) = value
-  }
-  def peek(name: String): Big = {
-    val symbol = program.symbolTable(name)
-    program.dataStore(symbol)
   }
 
   def getInfoString: String = "Info"  //TODO (chick) flesh this out

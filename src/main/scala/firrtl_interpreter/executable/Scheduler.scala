@@ -23,12 +23,23 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
   }
 
   /**
+    * Execute the seq of assigners
+    * @param assigners list of assigners
+    */
+  def executeAssigners(assigners: Seq[Assigner]): Unit = {
+    var index = 0
+    val lastIndex = assigners.length
+    while(index < lastIndex) {
+      assigners(index).run()
+      index += 1
+    }
+  }
+
+  /**
     *  updates signals that depend on inputs
     */
   def executeInputSensitivities(): Unit = {
-    inputDependentAssigns.foreach { assign =>
-      assign.run()
-    }
+    executeAssigners(inputDependentAssigns)
   }
 
   def executeTriggeredAssigns(symbol: Symbol): Unit = {
@@ -38,9 +49,7 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
       case BigSize  => dataStore.currentBigArray(symbol.index) > Big(0)
     }
     if(triggerValue) {
-      triggeredAssigns(symbol).foreach {
-        assign => assign.run()
-      }
+      executeAssigners(triggeredAssigns(symbol))
     }
   }
 
