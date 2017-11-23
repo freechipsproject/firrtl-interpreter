@@ -63,7 +63,7 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
   def sortInputSensitiveAssigns(): Unit = {
     val deduplicatedAssigns = inputDependentAssigns.distinct
     inputDependentAssigns = deduplicatedAssigns.sortBy { assigner: Assigner =>
-      symbolTable.sortKey(assigner.symbol.dataSize, assigner.symbol.index)
+      assigner.symbol.cardinalNumber
     }
   }
 
@@ -72,12 +72,31 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
     * trigger then deduplicate and sort all assignments that depend on that trigger
     */
   def sortTriggeredAssigns(): Unit = {
+    val unifiedTriggerAssigns = new mutable.HashMap[Symbol, mutable.ArrayBuffer[Assigner]]
+
     triggeredAssigns.foreach { case (trigger, assigners) =>
-      val sensitiveSymbols  = symbolTable.getChildren(assigners.map(_.symbol)).toSeq
+      val rootTrigger = {
+        val parents = symbolTable.getParents(Seq(trigger))
+        val rootParent = parents.minBy(_.cardinalNumber)
+        rootParent
+      }
+      if(unifiedTriggerAssigns.contains(rootTrigger)) {
+        unifiedTriggerAssigns(rootTrigger) ++= assigners
+      }
+      else {
+        unifiedTriggerAssigns(rootTrigger) = assigners
+      }
+    }
+
+    triggeredAssigns.clear()
+
+    unifiedTriggerAssigns.foreach { case (trigger, assigners) =>
+//      val sensitiveSymbols  = symbolTable.getChildren(assigners.map(_.symbol)).toSeq
+      val sensitiveSymbols  = symbolTable.getChildren(Seq(trigger)).toSeq
       val senstiveAssigners = (assigners ++ symbolTable.getAssigners(sensitiveSymbols)).distinct
 
       triggeredAssigns(trigger) = senstiveAssigners.sortBy { assigner: Assigner =>
-        symbolTable.sortKey(assigner.symbol.dataSize, assigner.symbol.index)
+        assigner.symbol.cardinalNumber
       }
     }
   }
@@ -89,12 +108,12 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
   def render: String = {
     s"combinational assigns (${inputDependentAssigns.size})\n" +
     inputDependentAssigns.map { assigner =>
-      symbolTable(dataStore, assigner).render
+      assigner.symbol.render
     }.mkString("\n") + "\n\n" +
     triggeredAssigns.keys.toList.map { key =>
       s"Triggered assigns for $key\n" +
       triggeredAssigns(key).map { assigner =>
-        "  " + symbolTable(dataStore, assigner).render
+        "  " + assigner.render
       }.mkString("\n")
     }.mkString("\n")
   }

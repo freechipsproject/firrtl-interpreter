@@ -13,7 +13,7 @@ case class StopOp(
                    parent: FirrtlTerp
                  ) extends Assigner {
 
-  val symbol = StopOp.StopOpSymbol
+  val symbol: Symbol = StopOp.StopOpSymbol
 
   def run: FuncUnit = {
     val conditionValue = condition match {
@@ -31,5 +31,5 @@ case class StopOp(
 object StopOp {
   val StopOpSymbol = Symbol("stopop", IntSize, UnsignedInt, WireKind, 1, 1, UIntType(IntWidth(1)), NoInfo)
   StopOpSymbol.index = 0
-  StopOpSymbol.cardinalNumber = 0
+  StopOpSymbol.cardinalNumber = Int.MaxValue
 }

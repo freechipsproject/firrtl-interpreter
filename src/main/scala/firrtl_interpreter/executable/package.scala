@@ -23,5 +23,6 @@ package object executable {
   trait Assigner {
     val symbol: Symbol
     def run: FuncUnit
+    def render: String = symbol.render
   }
 }

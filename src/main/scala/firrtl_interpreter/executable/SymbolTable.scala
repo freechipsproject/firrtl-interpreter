@@ -12,14 +12,11 @@ import scala.collection.immutable.Set
 import scala.collection.mutable
 
 class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
-  private val sizeAndIndexToSymbol = new mutable.HashMap[DataSize, mutable.HashMap[Int, Symbol]] {
-    override def default(key: DataSize): mutable.HashMap[Int, Symbol] = {
-      this(key) = new mutable.HashMap[Int, Symbol]
-      this(key)
-    }
-  }
+
   var childrenOf: DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
   var parentsOf: DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
+
+  var orphans: Seq[Symbol] = Seq.empty
 
   private val toAssigner: mutable.HashMap[Symbol, Assigner] = new mutable.HashMap()
   def addAssigner(symbol: Symbol, assigner: Assigner): Unit = {
@@ -32,7 +29,6 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
   def allocateData(dataStore: DataStore): Unit = {
     nameToSymbol.values.foreach { symbol =>
       symbol.index = dataStore.getIndex(symbol.dataSize, symbol.slots)
-      sizeAndIndexToSymbol(symbol.dataSize)(symbol.index) = symbol
     }
     dataStore.allocateBuffers()
   }
@@ -40,8 +36,6 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
   def size: Int = nameToSymbol.size
   def keys:Iterable[String] = nameToSymbol.keys
   def symbols:Iterable[Symbol] = nameToSymbol.values
-
-  def sortKey(dataSize: DataSize, index: Int): Int = sizeAndIndexToSymbol(dataSize)(index).cardinalNumber
 
   val registerNames:    mutable.HashSet[String] = new mutable.HashSet[String]
   val inputPortsNames:  mutable.HashSet[String] = new mutable.HashSet[String]
@@ -51,11 +45,6 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
   def isTopLevelInput(name: String): Boolean = inputPortsNames.contains(name)
 
   def apply(name: String): Symbol = nameToSymbol(name)
-  def apply(dataSize: DataSize, index: Int): Symbol = sizeAndIndexToSymbol(dataSize)(index)
-  def apply(dataStore: DataStore, assigner: Assigner): Symbol = {
-    val (size, index) = dataStore.getSizeAndIndex(assigner)
-    apply(size, index)
-  }
 
   def getSymbolFromGetter(expressionResult: ExpressionResult, dataStore: DataStore): Option[Symbol] = {
     expressionResult match {
@@ -64,6 +53,12 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
       case dataStore.GetBig(index)  => symbols.find { symbol => symbol.dataSize == BigSize && symbol.index == index}
       case _ => None
     }
+  }
+
+  def getParents(symbols: Seq[Symbol]): Set[Symbol] = {
+    symbols.flatMap { symbol =>
+      parentsOf.reachableFrom(symbol)
+    }.toSet
   }
 
   def getChildren(symbols: Seq[Symbol]): Set[Symbol] = {
@@ -317,6 +312,13 @@ object SymbolTable extends LazyLogging {
     symbolTable.outputPortsNames ++= outputPorts
     symbolTable.parentsOf        = parentsOfDiGraph
     symbolTable.childrenOf       = childrenOfDiGraph
+
+    val orphans = {
+      parentsOf.getVertices.filter { symbol =>
+        parentsOf.reachableFrom(symbol).isEmpty && ! symbolTable.isTopLevelInput(symbol.name)
+      }
+    }
+    symbolTable.orphans = orphans.toSeq
 
     symbolTable
   }

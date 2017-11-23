@@ -13,7 +13,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
-  var verbose: Boolean = false
+  var verbose: Boolean = true
 
   var inputsChanged: Boolean = false
 
@@ -73,6 +73,14 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   }
 
   println(s"Scheduler after sort ${scheduler.render}")
+
+  private val orphansAndSensitives = symbolTable.orphans ++ symbolTable.getChildren(symbolTable.orphans)
+  private val orphanAssigners = symbolTable.getAssigners(orphansAndSensitives)
+
+  if(verbose) {
+    println(s"Executing static assignments")
+  }
+  scheduler.executeAssigners(orphanAssigners)
 
   /**
     * Once a stop has occured, the interpreter will not allow pokes until
