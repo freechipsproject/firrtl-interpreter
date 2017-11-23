@@ -77,8 +77,12 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
     triggeredAssigns.foreach { case (trigger, assigners) =>
       val rootTrigger = {
         val parents = symbolTable.getParents(Seq(trigger))
-        val rootParent = parents.minBy(_.cardinalNumber)
-        rootParent
+        if(parents.isEmpty) {
+          trigger
+        }
+        else {
+          parents.minBy(_.cardinalNumber)
+        }
       }
       if(unifiedTriggerAssigns.contains(rootTrigger)) {
         unifiedTriggerAssigns(rootTrigger) ++= assigners
