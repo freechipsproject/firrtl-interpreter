@@ -325,7 +325,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 }
 
 object DataStore {
-  def apply(numberOfBuffers: Int): DataStore = {
-    new DataStore(numberOfBuffers)
+  def apply(numberOfBuffers: Int, optimizationLevel: Int = 1): DataStore = {
+    new DataStore(numberOfBuffers, optimizationLevel)
   }
 }

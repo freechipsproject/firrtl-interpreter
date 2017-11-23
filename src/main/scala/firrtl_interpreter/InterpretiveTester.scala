@@ -114,11 +114,11 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     * @param expectedValue the BigInt value required
     */
   def expect(name: String, expectedValue: BigInt): Unit = {
-    interpreter.program.scheduler.executeCombinational()
+    interpreter.program.scheduler.executeInputSensitivities()
     val value = interpreter.getValue(name)
     if(value != expectedValue) {
       if(! interpreter.verbose) interpreter.reEvaluate(name)
-      fail(new InterpreterException (s"Error:expect($name, $expectedValue) got ${value}"))
+      fail(new InterpreterException (s"Error:expect($name, $expectedValue) got $value"))
     }
     expectationsMet += 1
   }

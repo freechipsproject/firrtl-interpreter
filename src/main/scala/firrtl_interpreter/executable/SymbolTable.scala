@@ -72,7 +72,14 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
   }
 
   def inputChildrenAssigners(): Seq[Assigner] = {
-    val assigners = getChildren(inputPortsNames.map(nameToSymbol(_)).toSeq).flatMap { symbol => toAssigner.get(symbol)}.toSeq
+    val assigners = getChildren(inputPortsNames.map(nameToSymbol(_)).toSeq)
+      .flatMap { symbol => toAssigner.get(symbol)}
+      .toSeq
+    assigners
+  }
+
+  def getAssigners(symbols: Seq[Symbol]): Seq[Assigner] = {
+    val assigners = symbols.flatMap { symbol => toAssigner.get(symbol) }
     assigners
   }
 

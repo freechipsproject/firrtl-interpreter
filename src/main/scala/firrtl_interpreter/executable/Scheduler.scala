@@ -22,8 +22,10 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
     }
   }
 
-  def executeCombinational(): Unit = {
-    println(s"Executing assigns that depend on inputs")
+  /**
+    *  updates signals that depend on inputs
+    */
+  def executeInputSensitivities(): Unit = {
     inputDependentAssigns.foreach { assign =>
       assign.run()
     }
@@ -46,32 +48,35 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
     triggeredAssigns.keys
   }
 
-  def sortCombinationalAssigns(): Unit = {
-    inputDependentAssigns = inputDependentAssigns.sortBy { assigner: Assigner =>
+  /**
+    * de-duplicates and sorts assignments that depend on top level inputs.
+    */
+  def sortInputSensitiveAssigns(): Unit = {
+    val deduplicatedAssigns = inputDependentAssigns.distinct
+    inputDependentAssigns = deduplicatedAssigns.sortBy { assigner: Assigner =>
       symbolTable.sortKey(assigner.symbol.dataSize, assigner.symbol.index)
     }
   }
 
+  /**
+    * find the assigners downstream of the first order sensitivities of each
+    * trigger then deduplicate and sort all assignments that depend on that trigger
+    */
   def sortTriggeredAssigns(): Unit = {
     triggeredAssigns.foreach { case (trigger, assigners) =>
-      triggeredAssigns(trigger) = assigners.sortBy { assigner: Assigner =>
+      val sensitiveSymbols  = symbolTable.getChildren(assigners.map(_.symbol)).toSeq
+      val senstiveAssigners = (assigners ++ symbolTable.getAssigners(sensitiveSymbols)).distinct
+
+      triggeredAssigns(trigger) = senstiveAssigners.sortBy { assigner: Assigner =>
         symbolTable.sortKey(assigner.symbol.dataSize, assigner.symbol.index)
       }
     }
-
-//    triggeredAssigns.foreach { case (trigger, assigners) =>
-//      val assignedSymbols = assigners.map(dataStore.assignerToSymbol(_)).toList.distinct
-//      val dependentSymbols = assignedSymbols.flatMap { symbol =>
-//        symbolTable.parentsOf.reachableFrom(symbol)
-//      }
-//    }
   }
 
-  def makeFresh(): Unit = {
-    //TODO (chick) make sure dataStore is up to date
-
-  }
-
+  /**
+    * Render the assigners managed by this scheduler
+    * @return
+    */
   def render: String = {
     s"combinational assigns (${inputDependentAssigns.size})\n" +
     inputDependentAssigns.map { assigner =>

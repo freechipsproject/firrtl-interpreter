@@ -185,7 +185,6 @@ class SymbolTableSpec extends FreeSpec with Matchers {
          """
         .stripMargin
 
-    val optionsManager = new InterpreterOptionsManager
     val tester = new InterpretiveTester(simpleFirrtl)
     val simulator = tester.interpreter
 
@@ -221,6 +220,11 @@ class SymbolTableSpec extends FreeSpec with Matchers {
     tester.expect("io_out1", 11)
     tester.poke("io_in1", 42)
     tester.expect("io_out1", 46)
+    tester.poke("io_in2", 33)
+    tester.expect("io_out1", 46)
+    tester.step()
+    tester.expect("io_out1", 75)
+    tester.report()
   }
 
 }

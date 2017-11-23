@@ -214,7 +214,7 @@ class GCDTester extends FlatSpec with Matchers {
     sizableTest(68)
   }
 
-  it should "run a lot of values" in {
+  it should "run a lot of values" ignore {
     manyValuesTest(24)
   }
 }

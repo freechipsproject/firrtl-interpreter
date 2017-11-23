@@ -47,7 +47,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     SymbolTable(loweredAst, blackBoxFactories)
   }
 
-  val dataStore = DataStore(numberOfBuffers = 10)
+  val dataStore = DataStore(numberOfBuffers = 1, optimizationLevel = if(verbose) 0 else 1)
   symbolTable.allocateData(dataStore)
   println(s"Symbol table:\n${symbolTable.render}")
 
@@ -62,7 +62,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
   // println(s"Scheduler before sort ${scheduler.renderHeader}")
   scheduler.inputDependentAssigns ++= symbolTable.inputChildrenAssigners()
-  scheduler.sortCombinationalAssigns()
+  scheduler.sortInputSensitiveAssigns()
   scheduler.sortTriggeredAssigns()
 
   val clockOption: Option[Symbol] = {
@@ -98,25 +98,16 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     assert(symbolTable.contains(name),
       s"Error: getValue($name) is not an element of this circuit")
 
-    if(isStale) scheduler.makeFresh()
+    if(inputsChanged) {
+      if(verbose) {
+        println(s"Executing assigns that depend on inputs")
+      }
+      inputsChanged = false
+      scheduler.executeInputSensitivities()
+    }
 
     val symbol = symbolTable(name)
     dataStore(symbol)
-  }
-
-  /**
-    * This function used to show the calculation of all dependencies resolved to get value
-    * @param name signal to get and show computation
-    * @return
-    */
-  def getSpecifiedValue(name: String): BigInt = {
-    //TODO: (chick) Show this in some other way
-    assert(symbolTable.contains(name),
-      s"Error: getValue($name) is not an element of this circuit")
-
-    if(isStale) scheduler.makeFresh()
-
-    dataStore(symbolTable(name))
   }
 
   /**
@@ -173,12 +164,30 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
   def evaluateCircuit(specificDependencies: Seq[String] = Seq()): Unit = {
     program.dataStore.advanceBuffers()
-    program.scheduler.executeCombinational()
+
+    if(verbose) {
+      println("Inputs" + ("-" * 120))
+
+      symbolTable.inputPortsNames.map(symbolTable(_)).foreach { symbol =>
+        println(s"${symbol.name} is ${dataStore(symbol)} ")
+      }
+      println("-" * 120)
+    }
+
     program.scheduler.getTriggerExpressions.foreach { key =>
-      // println(s"Running triggered expressions for $key")
+      if(verbose) {
+        println(s"Running triggered expressions for $key")
+      }
       program.scheduler.executeTriggeredAssigns(key)
     }
-    program.scheduler.executeCombinational()
+
+    if(verbose) {
+      println(s"Executing assigns that depend on inputs")
+    }
+    if(inputsChanged) {
+      inputsChanged = false
+      program.scheduler.executeInputSensitivities()
+    }
     if (stopped) {
       lastStopResult match {
         case Some(0) =>
@@ -206,11 +215,9 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     //TODO: (chick) VCD stuff is missing from here
     if(checkStopped("cycle")) return
 
-    if(isStale) {
-
-//      evaluateCircuit()
-    }
-    else {
+    if(inputsChanged) {
+      inputsChanged = false
+      scheduler.executeInputSensitivities()
     }
 
     clockOption.foreach { clock => dataStore.AssignInt(clock, GetIntConstant(1).apply).run() }

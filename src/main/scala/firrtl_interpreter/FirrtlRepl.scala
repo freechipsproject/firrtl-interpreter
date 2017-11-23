@@ -474,8 +474,8 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
           getOneArg("peek componentName") match {
             case Some(componentName) =>
               try {
-                val value = interpreter.getSpecifiedValue(componentName)
-                console.println(s"peek $componentName ${value}")
+                val value = interpreter.getValue(componentName)
+                console.println(s"peek $componentName $value")
               }
               catch {
                 case e: Exception =>
@@ -513,8 +513,8 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
                   portRegex.findFirstIn(settableThing) match {
                     case Some(_) =>
                       try {
-                        val value = interpreter.getSpecifiedValue(settableThing)
-                        console.println(s"rpeek $settableThing ${value}")
+                        val value = interpreter.getValue(settableThing)
+                        console.println(s"rpeek $settableThing $value")
                         true
                       }
                       catch { case _: Exception => false}
