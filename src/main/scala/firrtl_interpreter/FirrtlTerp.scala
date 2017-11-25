@@ -65,6 +65,8 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   scheduler.sortInputSensitiveAssigns()
   scheduler.sortTriggeredAssigns()
 
+  println("")
+
   val clockOption: Option[Symbol] = {
     symbolTable.get("clock") match {
       case Some(clock) => Some(clock)
