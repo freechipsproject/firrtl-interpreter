@@ -133,8 +133,9 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
   behavior of "read-write memory"
 
   it should "work with a simple example" in {
+    val depth = 2
     val input =
-      """
+      s"""
         |circuit target_memory :
         |  module target_memory :
         |    input clock      : Clock
@@ -146,7 +147,7 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
         |
         |    mem ram :
         |      data-type => UInt<12>
-        |      depth => 16
+        |      depth => $depth
         |      read-latency => 1
         |      write-latency => 1
         |      readwriter => RW_0
@@ -166,18 +167,18 @@ class MemoryUsageSpec extends FlatSpec with Matchers {
       // setVerbose(true)
 
       poke("do_write", 1)
-      for(i <- 0 until 10) {
+      for(i <- 0 until depth) {
         poke("index", i)
-        poke("write_data", i * 3)
+        poke("write_data", i + 3)
         step()
       }
       poke("do_write", 0)
       step(2)
 
-      for(i <- 0 until 10) {
+      for(i <- 0 until depth) {
         poke("index", i)
         step()
-        expect("read_data", i * 3)
+        expect("read_data", i + 3)
       }
     }
     tester.report()

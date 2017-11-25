@@ -81,6 +81,9 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     println(s"Executing static assignments")
   }
   scheduler.executeAssigners(orphanAssigners)
+  if(verbose) {
+    println(s"Finished executing static assignments")
+  }
 
   /**
     * Once a stop has occured, the interpreter will not allow pokes until

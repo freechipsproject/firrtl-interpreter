@@ -20,12 +20,12 @@ class SymbolTableSpec extends FreeSpec with Matchers {
          |    output io_out1 : UInt<16>
          |    output io_out2 : UInt<16>
          |
-       |    node a1 = io_in1
+         |    node a1 = io_in1
          |    node a2 = a1
          |    node a3 = a2
          |    io_out1 <= a3
          |
-       |    node b1 = io_in2
+         |    node b1 = io_in2
          |    node b2 = b1
          |    reg b3 : UInt<16>, clock with :
          |      reset => (UInt<1>("h0"), b3)
@@ -44,7 +44,7 @@ class SymbolTableSpec extends FreeSpec with Matchers {
     val keyToDependent = symbolTable.childrenOf
     val DependentToKey = symbolTable.parentsOf
 
-    keyToDependent.reachableFrom(symbolTable("clock")).size should be (0)
+    keyToDependent.reachableFrom(symbolTable("clock")).size should be (3)
 
     scheduler.triggeredAssigns.size should be (1)
 
@@ -138,7 +138,7 @@ class SymbolTableSpec extends FreeSpec with Matchers {
     val childrenOf = symbolTable.childrenOf
     val parentsOf  = symbolTable.parentsOf
 
-    childrenOf.reachableFrom(symbolTable("clock")).size should be (0)
+    childrenOf.reachableFrom(symbolTable("clock")).size should be (3)
 
     scheduler.triggeredAssigns.size should be (1)
     childrenOf.reachableFrom(symbolTable("io_in1")) should not contain symbolTable("io_out1")
@@ -194,7 +194,7 @@ class SymbolTableSpec extends FreeSpec with Matchers {
     val childrenOf = symbolTable.childrenOf
     val parentsOf  = symbolTable.parentsOf
 
-    childrenOf.reachableFrom(symbolTable("clock")).size should be (0)
+    childrenOf.reachableFrom(symbolTable("clock")).size should be (3)
 
     scheduler.triggeredAssigns.size should be (1)
     childrenOf.reachableFrom(symbolTable("io_in1")) should contain (symbolTable("io_out1"))
