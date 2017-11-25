@@ -14,17 +14,15 @@ object Memory {
     * Pipelines are constructed as registers with a regular name and
     * a /in name.  Data travels up-index through a pipeline for both
     * read and write pipelines.
-    * @param memory              the specified memory
-    * @param expandedName        the full name of the memory
-    * @param childrenOf external graph of dependencies
-    * @param parentsOf external graph of dependencies
+    * @param memory                  the specified memory
+    * @param expandedName            the full name of the memory
+    * @param sensitivityGraphBuilder external graph of dependencies
     * @return
     */
   def buildSymbols(
                     memory: DefMemory,
                     expandedName: String,
-                    childrenOf: MutableDiGraph[Symbol],
-                    parentsOf: MutableDiGraph[Symbol]
+                    sensitivityGraphBuilder: SensitivityGraphBuilder
   ): Seq[Symbol] = {
     val memorySymbol = Symbol(expandedName, memory.dataType, MemKind, memory.depth)
     val addrWidth = IntWidth(requiredBitsForUInt(memory.depth - 1))
@@ -41,8 +39,7 @@ object Memory {
         pipelineSymbols.grouped(2).foreach { x =>
           x.toList match {
             case _ :: register :: Nil =>
-              childrenOf.addPairWithEdge(clock, register)
-              parentsOf.addPairWithEdge(register, clock)
+              sensitivityGraphBuilder.addSensitivity(clock, register)
             case _ =>
           }
         }
@@ -50,8 +47,7 @@ object Memory {
 
       chain.grouped(2).withFilter(_.length == 2).foreach {
         case source :: target :: Nil =>
-          childrenOf.addPairWithEdge(source, target)
-          parentsOf.addPairWithEdge(target, source)
+          sensitivityGraphBuilder.addSensitivity(source, target)
         case _ =>
       }
     }
@@ -129,8 +125,7 @@ object Memory {
 
       val memoryInterfaceSymbols = Seq(en, clk, addr, rdata, mode, mask, wdata, valid)
       for(symbol <- memoryInterfaceSymbols if symbol != clk) {
-        childrenOf.addPairWithEdge(clk, symbol)
-        parentsOf.addPairWithEdge(symbol, clk)
+        sensitivityGraphBuilder.addSensitivity(clk, symbol)
       }
 
       val pipelineReadDataSymbols = (0 until memory.readLatency).flatMap { n =>

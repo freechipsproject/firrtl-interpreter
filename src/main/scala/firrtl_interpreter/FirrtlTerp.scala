@@ -13,7 +13,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
-  var verbose: Boolean = true
+  var verbose: Boolean = false
 
   var inputsChanged: Boolean = false
 

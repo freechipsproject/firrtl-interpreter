@@ -102,23 +102,15 @@ object SymbolTable extends LazyLogging {
 
     val nameToSymbol = new mutable.HashMap[String, Symbol]()
 
-//    val dependencies: mutable.HashMap[Symbol, SymbolSet] = new mutable.HashMap[Symbol, SymbolSet]
-
-    val childrenOf: MutableDiGraph[Symbol] = new MutableDiGraph[Symbol]
-    val parentsOf: MutableDiGraph[Symbol] = new MutableDiGraph[Symbol]
+    val sensitivityGraphBuilder: SensitivityGraphBuilder = new SensitivityGraphBuilder
 
     val registerNames: mutable.HashSet[String] = new mutable.HashSet[String]()
     val inputPorts = new mutable.HashSet[String]
     val outputPorts = new mutable.HashSet[String]
 
     def recordDependency(symbolA: Symbol, symbolB: Symbol): Unit = {
-      if(!childrenOf.contains(symbolA)) childrenOf.addVertex(symbolA)
-      if(!childrenOf.contains(symbolB)) childrenOf.addVertex(symbolB)
-      if(!parentsOf.contains(symbolA)) parentsOf.addVertex(symbolA)
-      if(!parentsOf.contains(symbolB)) parentsOf.addVertex(symbolB)
-
-      childrenOf.addEdge(symbolB, symbolA)
-      parentsOf.addEdge(symbolA, symbolB)    }
+      sensitivityGraphBuilder.addSensitivity(symbolB, symbolA)
+    }
 
     // scalastyle:off
     def processDependencyStatements(modulePrefix: String, s: Statement): Unit = {
@@ -207,7 +199,7 @@ object SymbolTable extends LazyLogging {
           val expandedName = expand(defMemory.name)
           logger.debug(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")
 
-          Memory.buildSymbols(defMemory, expandedName, childrenOf, parentsOf).foreach { symbol =>
+          Memory.buildSymbols(defMemory, expandedName, sensitivityGraphBuilder).foreach { symbol =>
             nameToSymbol(symbol.name) = symbol
           }
 
@@ -296,30 +288,23 @@ object SymbolTable extends LazyLogging {
 
     processModule("", module)
 
-    val childrenOfDiGraph = DiGraph(childrenOf)
-    val parentsOfDiGraph = DiGraph(parentsOf)
-
-    val sorted: Seq[Symbol] = childrenOfDiGraph.linearize
-
-    sorted.zipWithIndex.foreach { case (symbol, index) => symbol.cardinalNumber = index }
-
-    logger.debug(s"Sorted elements\n${sorted.map(_.name).mkString("\n")}")
-    logger.info(s"End of dependency graph")
     // scalastyle:on cyclomatic.complexity
 
     val symbolTable = SymbolTable(nameToSymbol)
     symbolTable.registerNames    ++= registerNames
     symbolTable.inputPortsNames  ++= inputPorts
     symbolTable.outputPortsNames ++= outputPorts
-    symbolTable.parentsOf        = parentsOfDiGraph
-    symbolTable.childrenOf       = childrenOfDiGraph
+    symbolTable.parentsOf        = sensitivityGraphBuilder.getParentsOfDiGraph
+    symbolTable.childrenOf       = sensitivityGraphBuilder.getChildrenOfDiGraph
 
-    val orphans = {
-      parentsOf.getVertices.filter { symbol =>
-        parentsOf.reachableFrom(symbol).isEmpty && ! symbolTable.isTopLevelInput(symbol.name)
-      }
-    }
-    symbolTable.orphans = orphans.toSeq
+    val sorted: Seq[Symbol] = symbolTable.childrenOf.linearize
+
+    sorted.zipWithIndex.foreach { case (symbol, index) => symbol.cardinalNumber = index }
+
+    logger.debug(s"Sorted elements\n${sorted.map(_.name).mkString("\n")}")
+    logger.info(s"End of dependency graph")
+
+    symbolTable.orphans = sensitivityGraphBuilder.orphans(symbolTable)
 
     symbolTable
   }
