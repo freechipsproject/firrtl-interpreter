@@ -13,7 +13,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
-  var verbose: Boolean = false
+  var verbose: Boolean = true
 
   var inputsChanged: Boolean = false
 
@@ -43,7 +43,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
   val timer = new Timer
 
-  val symbolTable: SymbolTable = timer("build symbol table") {
+  val symbolTable: SymbolTable = timer("build memorySymbol table") {
     SymbolTable(loweredAst, blackBoxFactories)
   }
 

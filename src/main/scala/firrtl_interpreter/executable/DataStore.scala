@@ -191,11 +191,12 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 
   case class AssignIntIndirect(
                                symbol: Symbol,
+                               memorySymbol: Symbol,
                                getMemoryIndex: FuncInt,
                                enable: FuncInt,
                                expression: FuncInt
                               ) extends Assigner {
-    val index: Int = symbol.index
+    val index: Int = memorySymbol.index
 
     def runQuiet(): Unit = {
       if(enable() > 0) {
@@ -218,11 +219,12 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 
   case class AssignLongIndirect(
                                symbol: Symbol,
+                               memorySymbol: Symbol,
                                getMemoryIndex: FuncInt,
                                enable: FuncInt,
                                expression: FuncLong
                               ) extends Assigner {
-    val index: Int = symbol.index
+    val index: Int = memorySymbol.index
 
     def runQuiet(): Unit = {
       if(enable() > 0) {
@@ -245,11 +247,12 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 
   case class AssignBigIndirect(
                                  symbol: Symbol,
+                                 memorySymbol: Symbol,
                                  getMemoryIndex: FuncInt,
                                  enable: FuncInt,
                                  expression: FuncBig
                                ) extends Assigner {
-    val index: Int = symbol.index
+    val index: Int = memorySymbol.index
 
     def runQuiet(): Unit = {
       if(enable() > 0) {
@@ -289,12 +292,14 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 
   def getSizeAndIndex(assigner: Assigner): (DataSize, Int) = {
     assigner match {
-      case assign: AssignInt => (IntSize, assign.index)
+      case assign: AssignInt  => (IntSize, assign.index)
       case assign: AssignLong => (LongSize, assign.index)
-      case assign: AssignBig => (BigSize, assign.index)
+      case assign: AssignBig  => (BigSize, assign.index)
+
       case assign: AssignIntIndirect  => (IntSize, assign.index)
       case assign: AssignLongIndirect => (LongSize, assign.index)
       case assign: AssignBigIndirect  => (BigSize, assign.index)
+
       case assign =>
         throw InterpreterException(s"unknown assigner found $assign")
     }

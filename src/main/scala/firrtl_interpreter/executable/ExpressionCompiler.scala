@@ -115,7 +115,8 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
   }
 
   def makeIndirectAssigner(
-                            symbol: Symbol,
+                            portSymbol: Symbol,
+                            memorySymbol: Symbol,
                             indexSymbol: Symbol,
                             enableSymbol: Symbol,
                             expressionResult: ExpressionResult
@@ -124,19 +125,19 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
     val getIndex  = dataStore.GetInt(indexSymbol.index).apply _
     val getEnable = dataStore.GetInt(enableSymbol.index).apply _
 
-    val assigner = (symbol.dataSize, expressionResult) match {
+    val assigner = (memorySymbol.dataSize, expressionResult) match {
       case (IntSize,  result: IntExpressionResult)  =>
-        dataStore.AssignIntIndirect(symbol, getIndex, getEnable, result.apply)
+        dataStore.AssignIntIndirect(portSymbol, memorySymbol, getIndex, getEnable, result.apply)
       case (LongSize, result: IntExpressionResult)  =>
-        dataStore.AssignLongIndirect(symbol, getIndex, getEnable, ToLong(result.apply).apply)
+        dataStore.AssignLongIndirect(portSymbol, memorySymbol, getIndex, getEnable, ToLong(result.apply).apply)
       case (LongSize, result: LongExpressionResult) =>
-        dataStore.AssignLongIndirect(symbol, getIndex, getEnable, result.apply)
+        dataStore.AssignLongIndirect(portSymbol, memorySymbol, getIndex, getEnable, result.apply)
       case (BigSize,  result: IntExpressionResult)  =>
-        dataStore.AssignBigIndirect(symbol, getIndex, getEnable, ToBig(result.apply).apply)
+        dataStore.AssignBigIndirect(portSymbol, memorySymbol, getIndex, getEnable, ToBig(result.apply).apply)
       case (BigSize,  result: LongExpressionResult) =>
-        dataStore.AssignBigIndirect(symbol, getIndex, getEnable, LongToBig(result.apply).apply)
+        dataStore.AssignBigIndirect(portSymbol, memorySymbol, getIndex, getEnable, LongToBig(result.apply).apply)
       case (BigSize,  result: BigExpressionResult)  =>
-        dataStore.AssignBigIndirect(symbol, getIndex, getEnable, result.apply)
+        dataStore.AssignBigIndirect(portSymbol, memorySymbol, getIndex, getEnable, result.apply)
       case (size, result) =>
         val expressionSize = result match {
           case _: IntExpressionResult  => "Int"
@@ -145,9 +146,9 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         }
 
         throw InterpreterException(
-          s"Error:assignment size mismatch ($size)${symbol.name} <= ($expressionSize)$expressionResult")
+          s"Error:assignment size mismatch ($size)${memorySymbol.name} <= ($expressionSize)$expressionResult")
     }
-    symbolTable.addAssigner(symbol, assigner)
+    symbolTable.addAssigner(portSymbol, assigner)
     assigner
   }
 
@@ -611,7 +612,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
         case DefRegister(info, name, tpe, clockExpression, resetExpression, initValueExpression) =>
 
-          //TODO (chick) There should only be once assignment per symbol so we have to  mux the reset and clock here
+          //TODO (chick) There should only be once assignment per memorySymbol so we have to  mux the reset and clock here
 
           logger.debug(s"declaration:DefRegister:$name")
 
