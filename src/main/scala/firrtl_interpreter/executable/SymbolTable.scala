@@ -37,6 +37,7 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
   def keys:Iterable[String] = nameToSymbol.keys
   def symbols:Iterable[Symbol] = nameToSymbol.values
 
+  val instanceNames:    mutable.HashSet[String] = new mutable.HashSet[String]
   val registerNames:    mutable.HashSet[String] = new mutable.HashSet[String]
   val inputPortsNames:  mutable.HashSet[String] = new mutable.HashSet[String]
   val outputPortsNames: mutable.HashSet[String] = new mutable.HashSet[String]
@@ -104,9 +105,10 @@ object SymbolTable extends LazyLogging {
 
     val sensitivityGraphBuilder: SensitivityGraphBuilder = new SensitivityGraphBuilder
 
-    val registerNames: mutable.HashSet[String] = new mutable.HashSet[String]()
-    val inputPorts = new mutable.HashSet[String]
-    val outputPorts = new mutable.HashSet[String]
+    val instanceNames = new mutable.HashSet[String]
+    val registerNames = new mutable.HashSet[String]
+    val inputPorts    = new mutable.HashSet[String]
+    val outputPorts   = new mutable.HashSet[String]
 
     def recordDependency(symbolA: Symbol, symbolB: Symbol): Unit = {
       sensitivityGraphBuilder.addSensitivity(symbolB, symbolA)
@@ -165,6 +167,8 @@ object SymbolTable extends LazyLogging {
           }
 
         case WDefInstance(_, instanceName, moduleName, _) =>
+          instanceNames += expand(instanceName)
+
           val subModule = FindModule(moduleName, circuit)
           val newPrefix = if (modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
           logger.debug(s"declaration:WDefInstance:$instanceName:$moduleName prefix now $newPrefix")
@@ -291,6 +295,7 @@ object SymbolTable extends LazyLogging {
     // scalastyle:on cyclomatic.complexity
 
     val symbolTable = SymbolTable(nameToSymbol)
+    symbolTable.instanceNames    ++= instanceNames
     symbolTable.registerNames    ++= registerNames
     symbolTable.inputPortsNames  ++= inputPorts
     symbolTable.outputPortsNames ++= outputPorts

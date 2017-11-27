@@ -93,7 +93,7 @@ case class ShlBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
 }
 
 case class ShrBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
-  def apply(): Big = f1() << f2().toInt
+  def apply(): Big = f1() >> f2().toInt
 }
 
 case class DshlBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {

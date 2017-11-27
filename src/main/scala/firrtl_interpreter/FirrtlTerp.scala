@@ -6,6 +6,7 @@ import firrtl.PortKind
 import firrtl.ir.Circuit
 import firrtl_interpreter.executable._
 import firrtl_interpreter.real.DspRealFactory
+import firrtl_interpreter.vcd.VCD
 
 //scalastyle:off magic.number
 class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
@@ -13,6 +14,10 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
+
+  var vcdOption: Option[VCD] = None
+  var vcdFileName: String    = ""
+
   var verbose: Boolean = true
 
   var inputsChanged: Boolean = false
@@ -47,7 +52,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     SymbolTable(loweredAst, blackBoxFactories)
   }
 
-  val dataStore = DataStore(numberOfBuffers = 1, optimizationLevel = if(verbose) 0 else 1)
+  val dataStore = DataStore(numberOfBuffers = 10, optimizationLevel = if(verbose) 0 else 1)
   symbolTable.allocateData(dataStore)
   println(s"Symbol table:\n${symbolTable.render}")
 
@@ -94,20 +99,36 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   def clearStop(): Unit = {lastStopResult = None}
 
   def makeVCDLogger(fileName: String, showUnderscored: Boolean): Unit = {
-    //TODO: (chick) circuitState.makeVCDLogger(dependencyGraph, circuitState, fileName, showUnderscored)
+    val vcd = VCD(ast.main)
+
+    symbolTable.instanceNames.foreach { name =>
+      vcd.scopeRoot.addScope(name)
+    }
+    vcd.timeStamp = -1
+    symbolTable.symbols.foreach { symbol =>
+      vcd.wireChanged(symbol.name, dataStore(symbol), symbol.bitWidth)
+    }
+    vcd.timeStamp = 0
+
+    vcdOption = Some(vcd)
+    vcdFileName = fileName
+
+    dataStore.vcdOption = vcdOption
   }
   def disableVCD(): Unit = {
-    //TODO: (chick) circuitState.disableVCD()
+    writeVCD()
+    vcdOption = None
+    vcdFileName = ""
   }
   def writeVCD(): Unit = {
-    //TODO: (chick) circuitState.writeVCD()
+    vcdOption.foreach(_.write(vcdFileName))
   }
 
   setVerbose(interpreterOptions.setVerbose)
 
   var isStale: Boolean = false
 
-  def getValue(name: String): BigInt = {
+  def getValue(name: String, offset: Int = 0): BigInt = {
     assert(symbolTable.contains(name),
       s"Error: getValue($name) is not an element of this circuit")
 
@@ -120,7 +141,15 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     }
 
     val symbol = symbolTable(name)
-    dataStore(symbol)
+    if(offset == 0) {
+      dataStore(symbol)
+    }
+    else {
+      if(offset - 1 > symbol.slots) {
+        throw InterpreterException(s"get value from ${symbol.name} offset $offset > than size ${symbol.slots}")
+      }
+      dataStore.getValueAtIndex(symbol.dataSize, index = symbol.index + offset)
+    }
   }
 
   /**
@@ -133,7 +162,13 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     * @param registerPoke changes which side of a register is poked
     * @return the concrete value that was derived from type and value
     */
-  def setValue(name: String, value: BigInt, force: Boolean = true, registerPoke: Boolean = false): BigInt = {
+  def setValue(
+                name:         String,
+                value:        BigInt,
+                force:        Boolean = true,
+                registerPoke: Boolean = false,
+                offset:        Int = 0
+              ): BigInt = {
     assert(symbolTable.contains(name))
     val symbol = symbolTable(name)
 
@@ -146,7 +181,15 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     }
 
     val adjustedValue = symbol.valueFrom(value)
-    dataStore(symbol) = adjustedValue
+    if(offset == 0) {
+      dataStore(symbol) = adjustedValue
+    }
+    else {
+      if(offset - 1 > symbol.slots) {
+        throw InterpreterException(s"get value from ${symbol.name} offset $offset > than size ${symbol.slots}")
+      }
+      dataStore.setValueAtIndex(symbol.dataSize, symbol.index + offset, value)
+    }
 
     if(! symbolTable.isTopLevelInput(name)) {
       val sensitiveSignals = symbolTable.childrenOf.reachableFrom(symbolTable(name)).toSeq
@@ -234,7 +277,6 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   }
 
   def cycle(showState: Boolean = false): Unit = {
-    //TODO: (chick) VCD stuff is missing from here
     if(checkStopped("cycle")) return
 
     if(inputsChanged) {
@@ -242,9 +284,15 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
       scheduler.executeInputSensitivities()
     }
 
-    clockOption.foreach { clock => dataStore.AssignInt(clock, GetIntConstant(1).apply).run() }
+    clockOption.foreach { clock =>
+      vcdOption.foreach(_.raiseClock())
+      dataStore.AssignInt(clock, GetIntConstant(1).apply).run()
+    }
     evaluateCircuit()
-    clockOption.foreach { clock => dataStore.AssignInt(clock, GetIntConstant(0).apply).run() }
+    clockOption.foreach { clock =>
+      vcdOption.foreach(_.lowerClock())
+      dataStore.AssignInt(clock, GetIntConstant(0).apply).run()
+    }
 
     for (elem <- blackBoxFactories) {
       elem.cycle()

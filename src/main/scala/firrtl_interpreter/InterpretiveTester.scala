@@ -23,9 +23,6 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
   val commonOptions: firrtl.CommonOptions    = optionsManager.commonOptions
 
-//  interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
-//  interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
-//  interpreter.evaluator.evaluationStack.maxExecutionDepth = interpreterOptions.maxExecutionDepth
   interpreter.setVerbose(interpreterOptions.setVerbose)
 
   setVerbose(interpreterOptions.setVerbose)
@@ -139,6 +136,34 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
       interpreter.cycle()
     }
   }
+
+  /**
+    * Pokes value to the named memory at offset
+    *
+    * @param name  the name of a memory
+    * @param index the offset in the memory
+    * @param value a value to put on that port
+    */
+  def pokeMemory(name: String, index: Int, value: BigInt): Unit = {
+    if (interpreter.checkStopped(s"pokeMemory($name, $value)")) return
+
+    interpreter.symbolTable.get(name) match {
+      case Some(memory) =>
+        interpreter.setValue(name, value = value, offset = index)
+      case _ =>
+        throw InterpreterException(s"Error: memory $name.forceWrite($index, $value). memory not found")
+    }
+  }
+
+  def peekMemory(name: String, index: Int): BigInt = {
+    interpreter.symbolTable.get(name) match {
+      case Some(memory) =>
+        interpreter.getValue(name, offset = index)
+      case _ =>
+        throw InterpreterException(s"Error: get memory $name.forceWrite($index). memory not found")
+    }
+  }
+
 
   def reportString: String = {
     val endTime = System.nanoTime()

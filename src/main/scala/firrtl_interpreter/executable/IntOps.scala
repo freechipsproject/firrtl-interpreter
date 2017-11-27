@@ -118,7 +118,7 @@ case class ShlInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
 }
 
 case class ShrInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
-  def apply(): Int = f1() << f2()
+  def apply(): Int = f1() >> f2()
 }
 
 case class DshlInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {

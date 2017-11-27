@@ -363,6 +363,8 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         tpe: firrtl.ir.Type
       ): ExpressionResult = {
         val arg1 = processExpression(expressions.head)
+        val isSigned = getSigned(expressions.head)
+
         val width = tpe match {
           case UIntType(IntWidth(n)) => n.toInt
           case SIntType(IntWidth(n)) => n.toInt
@@ -374,7 +376,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             op match {
               case Pad     => e1
               case AsUInt  => e1
-              case AsSInt  => e1
+              case AsSInt  => AsSIntInts(e1.apply, isSigned, width)
               case AsClock => e1
 
               case Cvt     => e1

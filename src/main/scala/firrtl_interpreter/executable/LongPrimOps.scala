@@ -93,7 +93,7 @@ case class ShlLongs(f1: FuncLong, f2: FuncLong) extends LongExpressionResult {
 }
 
 case class ShrLongs(f1: FuncLong, f2: FuncLong) extends LongExpressionResult {
-  def apply(): Long = f1() << f2().toInt
+  def apply(): Long = f1() >> f2().toInt
 }
 
 case class DshlLongs(f1: FuncLong, f2: FuncLong) extends LongExpressionResult {

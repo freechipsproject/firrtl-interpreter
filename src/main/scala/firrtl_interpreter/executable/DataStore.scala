@@ -2,6 +2,7 @@
 
 package firrtl_interpreter.executable
 
+import firrtl_interpreter.vcd.VCD
 import firrtl_interpreter.{BlackBoxImplementation, InterpreterException}
 
 import scala.collection.mutable
@@ -28,6 +29,13 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 
   val symbolToAssigner: mutable.HashMap[Symbol, Assigner] = new mutable.HashMap()
 
+  var vcdOption: Option[VCD] = None
+
+  def vcdUpdate(symbol: Symbol, value: BigInt): Unit = {
+    if(vcdOption.isDefined) {
+      vcdOption.get.wireChanged(symbol.name, value, width = symbol.bitWidth)
+    }
+  }
   def getSizes: (Int, Int, Int) = {
     (nextIndexFor(IntSize), nextIndexFor(LongSize), nextIndexFor(BigSize))
   }
@@ -114,8 +122,10 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     def runQuiet(): Unit = {currentIntArray(index) = expression() }
 
     def runVerbose(): Unit = {
-      println(s"${symbol.name}:${symbol.index} <= ${expression()}")
-      currentIntArray(index) = expression()
+      val value = expression()
+      println(s"${symbol.name}:${symbol.index} <= $value")
+      currentIntArray(index) = value
+      vcdUpdate(symbol, value)
     }
     val run: FuncUnit = if(optimizationLevel == 0) runVerbose _ else runQuiet _
   }
@@ -132,8 +142,10 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     }
 
     def runVerbose(): Unit = {
-      println(s"${symbol.name}:${symbol.index} <= ${expression()}")
-      currentLongArray(index) = expression()
+      val value = expression()
+      println(s"${symbol.name}:${symbol.index} <= $value")
+      currentLongArray(index) = value
+      vcdUpdate(symbol, value)
     }
     val run: FuncUnit = if(optimizationLevel == 0) runVerbose _ else runQuiet _
   }
@@ -149,8 +161,10 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
       currentBigArray(index) = expression()
     }
     def runVerbose(): Unit = {
-      println(s"${symbol.name}:${symbol.index} <= ${expression()}")
-      currentBigArray(index) = expression()
+      val value = expression()
+      println(s"${symbol.name}:${symbol.index} <= $value")
+      currentBigArray(index) = value
+      vcdUpdate(symbol, value)
     }
     val run: FuncUnit = if(optimizationLevel == 0) runVerbose _ else runQuiet _
   }
@@ -206,8 +220,10 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 
     def runVerbose(): Unit = {
       if(enable() > 0) {
-        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= ${expression()}")
-        currentIntArray(index + getMemoryIndex.apply()) = expression()
+        val value = expression()
+        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= $value")
+        currentIntArray(index + getMemoryIndex.apply()) = value
+        vcdUpdate(symbol, value)
       }
       else {
         println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
@@ -234,8 +250,10 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 
     def runVerbose(): Unit = {
       if(enable() > 0) {
-        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= ${expression()}")
-        currentLongArray(index + getMemoryIndex.apply()) = expression()
+        val value = expression()
+        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= $value")
+        currentLongArray(index + getMemoryIndex.apply()) = value
+        vcdUpdate(symbol, value)
       }
       else {
         println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
@@ -262,8 +280,10 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 
     def runVerbose(): Unit = {
       if(enable() > 0) {
-        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= ${expression()}")
-        currentBigArray(index + getMemoryIndex.apply()) = expression()
+        val value = expression()
+        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= $value")
+        currentBigArray(index + getMemoryIndex.apply()) = value
+        vcdUpdate(symbol, value)
       }
       else {
         println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
@@ -290,28 +310,6 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     }
   }
 
-  def getSizeAndIndex(assigner: Assigner): (DataSize, Int) = {
-    assigner match {
-      case assign: AssignInt  => (IntSize, assign.index)
-      case assign: AssignLong => (LongSize, assign.index)
-      case assign: AssignBig  => (BigSize, assign.index)
-
-      case assign: AssignIntIndirect  => (IntSize, assign.index)
-      case assign: AssignLongIndirect => (LongSize, assign.index)
-      case assign: AssignBigIndirect  => (BigSize, assign.index)
-
-      case assign =>
-        throw InterpreterException(s"unknown assigner found $assign")
-    }
-  }
-
-  def getIntRow(index: Int): Seq[Int] = {
-    intData.indices.map { historyIndex =>
-      val adjustedHistoryIndex = (historyIndex + currentBufferIndex) % numberOfBuffers
-      intData(adjustedHistoryIndex)(index)
-    }
-  }
-
   def apply(symbol: Symbol): Big = {
     symbol.dataSize match {
       case IntSize  => currentIntArray(symbol.index)
@@ -325,6 +323,22 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
       case IntSize  => currentIntArray(symbol.index) = value.toInt
       case LongSize => currentLongArray(symbol.index) = value.toLong
       case BigSize  => currentBigArray(symbol.index) = value
+    }
+  }
+
+  def setValueAtIndex(dataSize: DataSize, index: Int, value: Big): Unit = {
+    dataSize match {
+      case IntSize  => currentIntArray(index)  = value.toInt
+      case LongSize => currentLongArray(index) = value.toLong
+      case BigSize  => currentBigArray(index)  = value
+    }
+  }
+
+  def getValueAtIndex(dataSize: DataSize, index: Int): BigInt = {
+    dataSize match {
+      case IntSize  => currentIntArray(index)
+      case LongSize => currentLongArray(index)
+      case BigSize  => currentBigArray(index)
     }
   }
 }
