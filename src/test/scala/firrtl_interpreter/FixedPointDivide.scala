@@ -34,28 +34,47 @@ class FixedPointDivide extends FreeSpec with Matchers {
 
 // scalastyle:off magic.number
 class SignedAdder extends FreeSpec with Matchers {
-  "FixedPointDivide should pass a basic test" in {
-    val input =
-      """
-        |circuit SignedAdder : @[:@2.0]
-        |  module SignedAdder : @[:@3.2]
-        |    input clock : Clock @[:@4.4]
-        |    input reset : UInt<1> @[:@5.4]
-        |    input io_in0 : SInt<16> @[:@6.4]
-        |    input io_in1 : SInt<16> @[:@6.4]
-        |    output io_out : SInt<16> @[:@6.4]
-        |
-        |    node _T_5 = add(io_in0, io_in1) @[Adder.scala 89:20:@8.4]
-        |    node _T_6 = tail(_T_5, 1) @[Adder.scala 89:20:@9.4]
-        |    node _T_7 = asSInt(_T_6) @[Adder.scala 89:20:@10.4]
-        |    io_out <= _T_7
-      """.stripMargin
+  "Check adding numbers on DataSize transition boundaries" - {
+    for(bitWidth <- Seq(16, 31, 32, 33, 63, 64, 65)) {
+//    for(bitWidth <- Seq(3)) {
+//    for(bitWidth <- Seq(32)) {
+      s"Testing with width $bitWidth" in {
 
-    val tester = new InterpretiveTester(input)
+        val input =s"""
+          |circuit SignedAdder : @[:@2.0]
+          |  module SignedAdder : @[:@3.2]
+          |    input clock : Clock @[:@4.4]
+          |    input reset : UInt<1> @[:@5.4]
+          |    input io_in0 : SInt<$bitWidth>
+          |    input io_in1 : SInt<$bitWidth>
+          |    output io_out : SInt<$bitWidth>
+          |
+          |    node _T_5 = add(io_in0, io_in1)
+          |    node _T_6 = tail(_T_5, 1)
+          |    node _T_7 = asSInt(_T_6)
+          |    io_out <= _T_7
+        """.stripMargin
 
-    tester.poke("io_in0", -10)
-    tester.poke("io_in1", -10)
-    tester.expect("io_out", -20)
-    tester.report()
+        val tester = new
+
+        InterpretiveTester(input)
+
+        val mask = BigInt("1" * bitWidth, 2)
+
+        for {
+          i <- BigIntTestValuesGenerator(extremaOfSIntOfWidth(bitWidth))
+          j <- BigIntTestValuesGenerator(extremaOfSIntOfWidth(bitWidth))
+//          j <- -10 to 10 by 10
+//          i <- Seq(BigInt(-8)) ++ BigIntTestValuesGenerator(extremaOfSIntOfWidth(bitWidth))
+//          j <- Seq(-6) ++ (-10 to 10 by 10)
+//          i <- Seq(-4)
+//          j <- Seq(0)
+        } {
+          tester.poke("io_in0", i)
+          tester.poke("io_in1", j)
+          tester.expect("io_out", (i + j) & mask)
+        }
+      }
+    }
   }
 }

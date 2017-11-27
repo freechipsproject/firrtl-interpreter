@@ -67,19 +67,17 @@ case class AsUIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExp
 case class AsSIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
   def apply(): Big = if (isSigned) applySigned() else applyUnsigned()
 
-  val nextPowerOfTwo: Big = BigInt(1) << (width - 1)
+  private val mask = (Big(1) << width) - Big(1)
 
   def applySigned(): Big = f1()
 
   def applyUnsigned(): Big = {
-    val uInt = f1()
-    if (width == 1 && uInt == BigInt(1)) {
+    val value = f1()
+    if (width == 1 && value == BigInt(1)) {
       BigInt(-1)
     }
-    else if ((uInt & nextPowerOfTwo) > 0) {
-      nextPowerOfTwo - uInt
-    } else {
-      uInt
+    else {
+      value & mask
     }
   }
 }

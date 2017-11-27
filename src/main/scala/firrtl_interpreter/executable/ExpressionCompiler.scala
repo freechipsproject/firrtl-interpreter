@@ -375,7 +375,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           case e1: IntExpressionResult =>
             op match {
               case Pad     => e1
-              case AsUInt  => e1
+              case AsUInt  => AsUIntInts(e1.apply, isSigned, width)
               case AsSInt  => AsSIntInts(e1.apply, isSigned, width)
               case AsClock => e1
 
@@ -390,8 +390,8 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           case e1: LongExpressionResult =>
             op match {
               case Pad     => e1
-              case AsUInt  => e1
-              case AsSInt  => e1
+              case AsUInt  => AsUIntLongs(e1.apply, isSigned, width)
+              case AsSInt  => AsSIntLongs(e1.apply, isSigned, width)
               case AsClock => e1
 
               case Cvt     => e1
@@ -405,8 +405,8 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           case e1: BigExpressionResult =>
             op match {
               case Pad     => e1
-              case AsUInt  => e1
-              case AsSInt  => e1
+              case AsUInt  => AsUIntBigs(e1.apply, isSigned, width)
+              case AsSInt  => AsSIntBigs(e1.apply, isSigned, width)
               case AsClock => e1
 
               case Cvt     => e1

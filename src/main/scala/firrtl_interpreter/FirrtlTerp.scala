@@ -18,7 +18,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   var vcdOption: Option[VCD] = None
   var vcdFileName: String    = ""
 
-  var verbose: Boolean = true
+  var verbose: Boolean = false
 
   var inputsChanged: Boolean = false
 
@@ -182,11 +182,17 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
     val adjustedValue = symbol.valueFrom(value)
     if(offset == 0) {
+      if(verbose) {
+        println(s"${symbol.name} <= $value")
+      }
       dataStore(symbol) = adjustedValue
     }
     else {
       if(offset - 1 > symbol.slots) {
         throw InterpreterException(s"get value from ${symbol.name} offset $offset > than size ${symbol.slots}")
+      }
+      if(verbose) {
+        println(s"${symbol.name}($offset) <= $value")
       }
       dataStore.setValueAtIndex(symbol.dataSize, symbol.index + offset, value)
     }

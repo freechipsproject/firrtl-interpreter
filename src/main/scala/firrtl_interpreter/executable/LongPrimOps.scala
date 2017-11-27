@@ -67,19 +67,17 @@ case class AsUIntLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends Long
 case class AsSIntLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends LongExpressionResult {
   def apply(): Long = if (isSigned) applySigned() else applyUnsigned()
 
-  val nextPowerOfTwo: Long = 1L << (width - 1)
+  private val mask = (1L << width) - 1
 
   def applySigned(): Long = f1()
 
   def applyUnsigned(): Long = {
-    val uInt = f1()
-    if (width == 1 && uInt == 1L) {
+    val value = f1()
+    if (width == 1 && value == 1L) {
       -1L
     }
-    else if ((uInt & nextPowerOfTwo) > 0) {
-      nextPowerOfTwo - uInt
-    } else {
-      uInt
+    else {
+      value & mask
     }
   }
 }
