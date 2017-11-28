@@ -58,16 +58,29 @@ case class GeqLongs(f1: FuncLong, f2: FuncLong) extends IntExpressionResult {
 }
 
 case class AsUIntLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends LongExpressionResult {
-  private val mask = LongUtils.makeMask(width)
+  private val nextPowerOfTwo : Long  = 1L << width
 
-  //  def apply(): Int = if (isSigned) applySigned() else applyUnsigned()
-  def apply(): Long = f1() & mask
+  def apply(): Long = {
+    if(! isSigned) {
+      f1()
+    }
+    else {
+      val value = f1()
+      if(value < 0L) {
+        value + nextPowerOfTwo
+      }
+      else {
+        value
+      }
+    }
+  }
 }
 
 case class AsSIntLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends LongExpressionResult {
   def apply(): Long = if (isSigned) applySigned() else applyUnsigned()
 
-  private val mask = (1L << width) - 1
+  private val nextPowerOfTwo = 1L << width
+  private val msbMask        = 1L << (width - 1)
 
   def applySigned(): Long = f1()
 
@@ -77,7 +90,13 @@ case class AsSIntLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends Long
       -1L
     }
     else {
-      value & mask
+      val result = if((value & msbMask) > 0) {
+        value - nextPowerOfTwo
+      }
+      else {
+        value
+      }
+      result
     }
   }
 }
@@ -99,7 +118,11 @@ case class DshlLongs(f1: FuncLong, f2: FuncLong) extends LongExpressionResult {
 }
 
 case class DshrLongs(f1: FuncLong, f2: FuncLong) extends LongExpressionResult {
-  def apply(): Long = f1() >> f2().toInt
+  def apply(): Long = {
+    val a: Long = f1()
+    val b: Long = f2()
+    a >> b.toInt
+  }
 }
 
 case class NegLongs(f1: FuncLong) extends LongExpressionResult {

@@ -18,7 +18,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   var vcdOption: Option[VCD] = None
   var vcdFileName: String    = ""
 
-  var verbose: Boolean = false
+  var verbose: Boolean = true
 
   var inputsChanged: Boolean = false
 
@@ -169,7 +169,9 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
                 registerPoke: Boolean = false,
                 offset:        Int = 0
               ): BigInt = {
-    assert(symbolTable.contains(name))
+    if(! symbolTable.contains(name)) {
+      throw InterpreterException(s"setValue: Cannot find $name in symbol table")
+    }
     val symbol = symbolTable(name)
 
     inputsChanged = true

@@ -58,26 +58,45 @@ case class GeqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
 }
 
 case class AsUIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
-  private val mask = Big.makeMask(width)
+  private val nextPowerOfTwo : Long  = 1L << width
 
-  //  def apply(): Int = if (isSigned) applySigned() else applyUnsigned()
-  def apply(): Big = f1() & mask
+  def apply(): BigInt = {
+    if(! isSigned) {
+      f1()
+    }
+    else {
+      val value = f1()
+      if(value < Big(0)) {
+        value + nextPowerOfTwo
+      }
+      else {
+        value
+      }
+    }
+  }
 }
 
 case class AsSIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
   def apply(): Big = if (isSigned) applySigned() else applyUnsigned()
 
-  private val mask = (Big(1) << width) - Big(1)
+  private val nextPowerOfTwo = Big(1) << width
+  private val msbMask        = Big(1) << (width - 1)
 
   def applySigned(): Big = f1()
 
   def applyUnsigned(): Big = {
     val value = f1()
-    if (width == 1 && value == BigInt(1)) {
-      BigInt(-1)
+    if (width == 1 && value == Big(1)) {
+      -1L
     }
     else {
-      value & mask
+      val result = if((value & msbMask) > 0) {
+        value - nextPowerOfTwo
+      }
+      else {
+        value
+      }
+      result
     }
   }
 }
