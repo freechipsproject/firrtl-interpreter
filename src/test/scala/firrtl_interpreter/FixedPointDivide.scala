@@ -59,8 +59,8 @@ class SignedAdder extends FreeSpec with Matchers {
 
         InterpretiveTester(input)
 
-        val mask = BigInt("1" * bitWidth, 2)
-
+//        val mask = BigInt("1" * bitWidth, 2)
+        val mask = BigInt(1) << bitWidth
         for {
           i <- BigIntTestValuesGenerator(extremaOfSIntOfWidth(bitWidth))
           j <- BigIntTestValuesGenerator(extremaOfSIntOfWidth(bitWidth))
@@ -72,7 +72,7 @@ class SignedAdder extends FreeSpec with Matchers {
         } {
           tester.poke("io_in0", i)
           tester.poke("io_in1", j)
-          tester.expect("io_out", (i + j) & mask)
+          tester.expect("io_out", (i + j) % mask, s"$i + $j got ${tester.peek(s"io_out")} expected ${(i + j) % mask}")
         }
       }
     }

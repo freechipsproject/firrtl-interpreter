@@ -22,7 +22,7 @@ class BigOpsSpec extends FreeSpec with Matchers {
   def val3(): Int = Integer.parseInt("0", 2)
 
   "BigOps should pass a basic test" - {
-    "AsUIntInts should work" in {
+    "AsUIntBigs should work" in {
       AsUIntBigs(fMinus6, isSigned = true, width = 4)() should be (10)
       AsUIntBigs(() => -22, isSigned = true, width = 128)() should be (
         BigInt("340282366920938463463374607431768211434", 10))
@@ -37,7 +37,7 @@ class BigOpsSpec extends FreeSpec with Matchers {
       AsUIntBigs(fMinus4, isSigned = true, width = 3)() should be (BigInt(4))
     }
 
-    "AsSIntInts should work" in {
+    "AsSIntBigs should work" in {
       AsSIntBigs(f0, isSigned = true, width = 1)() should be (BigInt(0))
       AsSIntBigs(fMinus1, isSigned = true, width = 1)() should be (BigInt(-1))
       AsSIntBigs(f0, isSigned = false, width = 1)() should be (BigInt(0))

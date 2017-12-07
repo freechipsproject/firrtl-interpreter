@@ -58,7 +58,7 @@ case class GeqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
 }
 
 case class AsUIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
-  private val nextPowerOfTwo : Long  = 1L << width
+  private val nextPowerOfTwo : Big  = Big(1) << width
 
   def apply(): BigInt = {
     if(! isSigned) {

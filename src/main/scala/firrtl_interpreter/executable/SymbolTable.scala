@@ -110,10 +110,6 @@ object SymbolTable extends LazyLogging {
     val inputPorts    = new mutable.HashSet[String]
     val outputPorts   = new mutable.HashSet[String]
 
-    def recordDependency(symbolA: Symbol, symbolB: Symbol): Unit = {
-      sensitivityGraphBuilder.addSensitivity(symbolB, symbolA)
-    }
-
     // scalastyle:off
     def processDependencyStatements(modulePrefix: String, s: Statement): Unit = {
       def expand(name: String): String = if (modulePrefix.isEmpty) name else modulePrefix + "." + name
@@ -140,9 +136,9 @@ object SymbolTable extends LazyLogging {
         result
       }
 
-      def addDependency(symbol: Symbol, dependentSymbols: Set[Symbol]): Unit = {
-        dependentSymbols.foreach { dependentSymbol =>
-          recordDependency(symbol, dependentSymbol)
+      def addDependency(sensitiveSymbol: Symbol, drivingSymbols: Set[Symbol]): Unit = {
+        drivingSymbols.foreach { drivingSymbol =>
+          sensitivityGraphBuilder.addSensitivity(drivingSymbol = drivingSymbol, sensitiveSymbol)
         }
       }
 
@@ -228,11 +224,12 @@ object SymbolTable extends LazyLogging {
                                 instance: BlackBoxImplementation): Unit = {
       def expand(name: String): String = modulePrefix + "." + name
 
-      for (port <- extModule.ports) {
-        if (port.direction == Output) {
-          instance.outputDependencies(port.name).foreach { inputPortName =>
-            recordDependency(nameToSymbol(expand(port.name)), nameToSymbol(expand(inputPortName)))
-          }
+      for (outputPort <- extModule.ports if outputPort.direction == Output) {
+        instance.outputDependencies(outputPort.name).foreach { inputPortName =>
+          sensitivityGraphBuilder.addSensitivity(
+            drivingSymbol = nameToSymbol(expand(inputPortName)),
+            nameToSymbol(expand(outputPort.name))
+          )
         }
       }
     }
