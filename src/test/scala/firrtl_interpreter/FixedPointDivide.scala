@@ -35,10 +35,11 @@ class FixedPointDivide extends FreeSpec with Matchers {
 // scalastyle:off magic.number
 class SignedAdder extends FreeSpec with Matchers {
   "Check adding numbers on DataSize transition boundaries" - {
-    for(bitWidth <- Seq(16, 31, 32, 33, 63, 64, 65)) {
+//    for(bitWidth <- Seq(16, 31, 32, 33, 63, 64, 65)) {
+    for(bitWidth <- Seq(16)) {
 //    for(bitWidth <- Seq(3)) {
 //    for(bitWidth <- Seq(32)) {
-      s"Testing with width $bitWidth" in {
+      s"Testing with width 16" in {
 
         val input =s"""
           |circuit SignedAdder : @[:@2.0]
@@ -70,9 +71,15 @@ class SignedAdder extends FreeSpec with Matchers {
 //          i <- Seq(-4)
 //          j <- Seq(0)
         } {
+          val expected = {
+            val a = BitTwiddlingUtils.plus(i, j)
+            val b = BitTwiddlingUtils.tail(a, dropBits = 1, originalBitWidth = bitWidth + 1)
+            val c = BitTwiddlingUtils.asSInt(a, bitWidth)
+            c
+          }
           tester.poke("io_in0", i)
           tester.poke("io_in1", j)
-          tester.expect("io_out", (i + j) % mask, s"$i + $j got ${tester.peek(s"io_out")} expected ${(i + j) % mask}")
+          tester.expect("io_out", expected, s"$i + $j got ${tester.peek(s"io_out")} expected $expected")
         }
       }
     }

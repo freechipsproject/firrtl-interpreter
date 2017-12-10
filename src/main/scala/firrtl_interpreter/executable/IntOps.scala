@@ -236,8 +236,14 @@ case class TailInts(f1: FuncInt, isSigned: Boolean, toDrop: Int, originalWidth: 
   private val mask: Int = (1 << (originalWidth - toDrop)) - 1
 
   def apply(): Int = {
+    val f1Value = f1()
     val uInt = AsUIntInts(f1, isSigned, originalWidth).apply()
-    uInt & mask
+    val result = uInt & mask
+    println(f"in tail: f1    $f1Value%10d ${f1Value.toBinaryString}")
+    println(f"in tail: uInt  $uInt%10d ${uInt.toBinaryString}")
+    println(f"in tail: mask  $mask%10d ${mask.toBinaryString}")
+    println(f"in tail: res   $result%10d ${result.toBinaryString}")
+    result
   }
 }
 
