@@ -108,7 +108,15 @@ case class AsSIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExp
   private val msbMask        = 1 << (width - 1)
 
 
-  def applySigned(): Int = f1()
+  def applySigned(): Int = {
+    val value = f1()
+    if(width == 1 && value == 1) {
+      -1
+    }
+    else {
+      value
+    }
+  }
 
   def applyUnsigned(): Int = {
     val value = f1()
