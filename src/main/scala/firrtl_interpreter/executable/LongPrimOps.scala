@@ -148,39 +148,46 @@ case class XorLongs(f1: FuncLong, f2: FuncLong) extends LongExpressionResult {
 /**
   * are all bits set
   * @param f1 value to be `and` reduced
+  * @param isSigned is input an SInt
   * @param width result bit size
   */
-case class AndrLongs(f1: FuncLong, width: Int) extends IntExpressionResult {
+case class AndrLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = {
-    var uInt = f1() << 1
-    if((0 until width).exists { _ =>
-      uInt >>= 1
-      (uInt & 1) == 0
-    }) { 0 } else { 1 }
+    val uInt = AsUIntLongs(f1, isSigned, width).apply()
+    var mask = Big(1)
+    var bitPosition = 0
+    while(bitPosition < width) {
+      if((mask & uInt) == 0L) return 0
+      mask <<= 1
+      bitPosition += 1
+    }
+    1
   }
 }
 
 /**
   * are any bits set
   * @param f1 value to be `or` reduced
+  * @param isSigned is input an SInt
   * @param width result bit size
   */
-case class OrrLongs(f1: FuncLong, width: Int) extends IntExpressionResult {
+case class OrrLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = {
-    if(f1() != 0) { 0 } else { 1 }
+    val uInt = AsUIntLongs(f1, isSigned, width).apply()
+    if(uInt > 0) { 1 } else { 0 }
   }
 }
 
 /**
   * are all bits set
   * @param f1 value to be `xor` reduced
+  * @param isSigned is input an SInt
   * @param width result bit size
   */
-case class XorrLongs(f1: FuncLong, width: Int) extends IntExpressionResult {
+case class XorrLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = {
-    val uInt = f1()
-    (0 until width).map(n => ((uInt >> n) & 1L).toInt).reduce(_ ^ _)
-  }
+    val uInt = AsUIntLongs(f1, isSigned, width).apply()
+    (0 until width).map(n => ((uInt >> n) & BigInt(1)).toInt).reduce(_ ^ _)  }
 }
 
 case class CatLongs(

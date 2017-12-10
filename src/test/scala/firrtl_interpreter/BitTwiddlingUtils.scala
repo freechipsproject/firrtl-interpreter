@@ -24,6 +24,32 @@ object BitTwiddlingUtils {
   def mod(a: BigInt, b: BigInt, bitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): BigInt = {
     a % b
   }
+
+  def andr(a: BigInt, bitWidth: Int, aIsSInt: Boolean): BigInt = {
+    val uInt = asUInt(a, bitWidth, aIsSInt)
+    boolToBigInt((0 until bitWidth).map(i => uInt.testBit(i)).reduce(_&&_))
+  }
+
+  def orr(a: BigInt, bitWidth: Int, aIsSInt: Boolean): BigInt = {
+
+  import firrtl_interpreter.BitTwiddlingUtils.asUInt
+
+  if(aIsSInt) {
+      if(a < 0) { Big1 }
+      else if(a != 0) { Big1 }
+      else { Big0 }
+    }
+    else {
+      val bits = (0 until bitWidth).map(i => a.testBit(i))
+      boolToBigInt(bits.reduce(_||_))
+    }
+  }
+
+  def xorr(a: BigInt, bitWidth: Int, aIsSInt: Boolean): BigInt = {
+    val uInt = asUInt(a, bitWidth, aIsSInt)
+    boolToBigInt((0 until bitWidth).map(i => a.testBit(i)).reduce(_^_))
+  }
+
   def tail(a: BigInt, dropBits: Int, originalBitWidth: Int): BigInt = {
     var x = Big0
     val bitsWanted = originalBitWidth - dropBits
