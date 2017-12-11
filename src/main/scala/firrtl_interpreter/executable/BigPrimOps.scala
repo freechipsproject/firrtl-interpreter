@@ -178,9 +178,10 @@ case class CatBigs(
   }
 }
 
+//TODO -- chick -- consider optimizing
 case class BitsBigs(f1: FuncBig, isSigned: Boolean, high: Int, low: Int, originalWidth: Int)
   extends BigExpressionResult {
-  private val mask = Big.makeMask((high - low) + 1)
+  private val mask = BitMasks.getBitMasksBigs((high - low) + 1).allBitsMask
 
   def apply(): Big = {
     val uInt = AsUIntBigs(f1, originalWidth).apply()
@@ -189,7 +190,7 @@ case class BitsBigs(f1: FuncBig, isSigned: Boolean, high: Int, low: Int, origina
 }
 
 case class HeadBigs(f1: FuncBig, isSigned: Boolean, takeBits: Int, originalWidth: Int) extends BigExpressionResult {
-  private val mask = Big.makeMask(takeBits)
+  private val mask = BitMasks.getBitMasksBigs(takeBits).allBitsMask
   private val shift = originalWidth - takeBits
 
   def apply(): Big = {
@@ -198,12 +199,11 @@ case class HeadBigs(f1: FuncBig, isSigned: Boolean, takeBits: Int, originalWidth
   }
 }
 
-case class TailBigs(f1: FuncBig, isSigned: Boolean, toDrop: Int, originalWidth: Int) extends BigExpressionResult {
-  private val mask: Big = Big.makeMask(originalWidth - toDrop)
+case class TailBigs(f1: FuncBig, toDrop: Int, originalWidth: Int) extends BigExpressionResult {
+  private val mask: Big = BitMasks.getBitMasksBigs(originalWidth - toDrop).allBitsMask
 
   def apply(): Big = {
-    val uInt = AsUIntBigs(f1, originalWidth).apply()
-    uInt & mask
+    f1() & mask
   }
 }
 

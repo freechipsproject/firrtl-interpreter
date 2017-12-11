@@ -72,14 +72,15 @@ object BitTwiddlingUtils {
   }
 
   def makeUInt(a: BigInt, bitWidth: Int): BigInt = {
-    val b = a & Big.makeMask(bitWidth)
+    val b = a & BitMasks.getBitMasksBigs(bitWidth).allBitsMask
     b
   }
 
   def makeSInt(a: BigInt, bitWidth: Int): BigInt = {
-    val b = a & Big.makeMask(bitWidth)
-    if((b & Big.makeMsbMask(bitWidth)) > 0) {
-      b - (Big.makeMsbMask(bitWidth) << 1)
+    val masks = BitMasks.getBitMasksBigs(bitWidth)
+    val b = a & masks.allBitsMask
+    if(masks.isMsbSet(b)) {
+      b - masks.nextPowerOfTwo
     }
     else {
       b

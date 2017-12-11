@@ -5,7 +5,7 @@ package firrtl_interpreter.executable
 import firrtl.{Kind, WireKind}
 import firrtl.ir.{Info, IntWidth, NoInfo}
 import firrtl_interpreter._
-import firrtl_interpreter.utils.BitUtils
+import firrtl_interpreter.utils.{BitMasks, BitMasksBigs, BitUtils}
 
 case class Symbol(
     name: String,
@@ -19,17 +19,18 @@ case class Symbol(
 ) {
   var index:          Int = -1
   var cardinalNumber: Int = -1
-  val mask:           Big = BitUtils.makeMaskBig(bitWidth)
+
+  val masks:          BitMasksBigs = BitMasks.getBitMasksBigs(bitWidth)
 
   def makeUInt(a: BigInt, bitWidth: Int): BigInt = {
-    val b = a & mask
+    val b = a & masks.allBitsMask
     b
   }
 
   def makeSInt(a: BigInt, bitWidth: Int): BigInt = {
-    val b = a & mask
-    if((b & BitUtils.makeMsbMaskBig(bitWidth)) > Big(0)) {
-      b - BitUtils.makeNextPowerOfTwoBig(bitWidth)
+    val b = a & masks.allBitsMask
+    if((b & masks.msbMask) > Big(0)) {
+      b - masks.nextPowerOfTwo
     }
     else {
       b
@@ -50,11 +51,11 @@ case class Symbol(
       case SignedInt =>
         val (lo, hi) = extremaOfSIntOfWidth(bitWidth)
         if(bigInt > hi) {
-          val result = ((bigInt - lo) & mask) + lo
+          val result = ((bigInt - lo) & masks.allBitsMask) + lo
           result
         }
         else if(bigInt < lo) {
-          val result = hi - ((bigInt.abs - (lo.abs + 1)) % mask)
+          val result = hi - ((bigInt.abs - (lo.abs + 1)) % masks.allBitsMask)
           result
         }
         else {
@@ -63,10 +64,10 @@ case class Symbol(
       case UnsignedInt =>
         if(bigInt < 0) {
           val (lo, hi) = extremaOfUIntOfWidth(bitWidth)
-          (hi + 1) - (bigInt.abs & mask) & mask
+          (hi + 1) - (bigInt.abs & masks.allBitsMask) & masks.allBitsMask
         }
         else {
-          bigInt & mask
+          bigInt & masks.allBitsMask
         }
     }
   }

@@ -82,14 +82,14 @@ class BigOpsSpec extends FreeSpec with Matchers {
     }
 
     "tail ops should drop leading bits from expression" in {
-      TailBigs(f1, isSigned = true,  toDrop = 1, originalWidth = 2)() should be (BigInt(1))
-      TailBigs(f2, isSigned = false, toDrop = 1, originalWidth = 3)() should be (BigInt(2))
-      TailBigs(f3, isSigned = true,  toDrop = 1, originalWidth = 3)() should be (BigInt(3))
-      TailBigs(f3, isSigned = true,  toDrop = 1, originalWidth = 2)() should be (BigInt(1))
-      TailBigs(fMinus3, isSigned = true, toDrop = 1, originalWidth = 4)() should be (BigInt(5))
-      TailBigs(fMinus4, isSigned = true, toDrop = 1, originalWidth = 4)() should be (BigInt(4))
+      TailBigs(f1, toDrop = 1, originalWidth = 2)() should be (BigInt(1))
+      TailBigs(f2, toDrop = 1, originalWidth = 3)() should be (BigInt(2))
+      TailBigs(f3, toDrop = 1, originalWidth = 3)() should be (BigInt(3))
+      TailBigs(f3, toDrop = 1, originalWidth = 2)() should be (BigInt(1))
+      TailBigs(fMinus3, toDrop = 1, originalWidth = 4)() should be (BigInt(5))
+      TailBigs(fMinus4, toDrop = 1, originalWidth = 4)() should be (BigInt(4))
 
-      val tailOps = TailBigs(val1, isSigned = true, toDrop = 9, originalWidth = 17)
+      val tailOps = TailBigs(val1, toDrop = 9, originalWidth = 17)
       println(f"TailInts(${val1()}%x, toDrop = 8) -> ${tailOps()}%x")
       tailOps() should be (BigInt(Integer.parseInt("cd", 16)))
     }

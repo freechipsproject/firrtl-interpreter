@@ -59,7 +59,7 @@ case class GeqLongs(f1: FuncLong, f2: FuncLong) extends IntExpressionResult {
   def apply(): Int = if(f1() >= f2()) 1 else 0
 }
 
-case class AsUIntLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends LongExpressionResult {
+case class AsUIntLongs(f1: FuncLong, width: Int) extends LongExpressionResult {
   private val bitMasks = BitMasks.getBitMasksLongs(width)
 
   def apply(): Long = f1() & bitMasks.allBitsMask
@@ -136,7 +136,7 @@ case class XorLongs(f1: FuncLong, f2: FuncLong) extends LongExpressionResult {
   */
 case class AndrLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = {
-    val uInt = AsUIntLongs(f1, isSigned, width).apply()
+    val uInt = AsUIntLongs(f1, width).apply()
     var mask = Big(1)
     var bitPosition = 0
     while(bitPosition < width) {
@@ -156,7 +156,7 @@ case class AndrLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends IntExp
   */
 case class OrrLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = {
-    val uInt = AsUIntLongs(f1, isSigned, width).apply()
+    val uInt = AsUIntLongs(f1, width).apply()
     if(uInt > 0) { 1 } else { 0 }
   }
 }
@@ -169,7 +169,7 @@ case class OrrLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends IntExpr
   */
 case class XorrLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = {
-    val uInt = AsUIntLongs(f1, isSigned, width).apply()
+    val uInt = AsUIntLongs(f1, width).apply()
     (0 until width).map(n => ((uInt >> n) & BigInt(1)).toInt).reduce(_ ^ _)  }
 }
 
@@ -178,7 +178,7 @@ case class CatLongs(
                     f2: FuncLong, f2IsSigned: Boolean, f2Width: Int
                   ) extends LongExpressionResult {
   def apply(): Long = {
-    (AsUIntLongs(f1, f1IsSigned, f1Width)() << f2Width) | AsUIntLongs(f2, f2IsSigned, f2Width)()
+    (AsUIntLongs(f1, f1Width)() << f2Width) | AsUIntLongs(f2, f2Width)()
   }
 }
 
@@ -187,7 +187,7 @@ case class BitsLongs(f1: FuncLong, isSigned: Boolean, high: Int, low: Int, origi
   private val mask = LongUtils.makeMask((high - low) + 1)
 
   def apply(): Long = {
-    val uInt = AsUIntLongs(f1, isSigned, originalWidth).apply()
+    val uInt = AsUIntLongs(f1, originalWidth).apply()
     (uInt >> low) & mask
   }
 }
@@ -197,16 +197,16 @@ case class HeadLongs(f1: FuncLong, isSigned: Boolean, takeBits: Int, originalWid
   private val shift = originalWidth - takeBits
 
   def apply(): Long = {
-    val uBig = AsUIntLongs(f1, isSigned, originalWidth).apply()
+    val uBig = AsUIntLongs(f1, originalWidth).apply()
     (uBig >> shift) & mask
   }
 }
 
-case class TailLongs(f1: FuncLong, isSigned: Boolean, toDrop: Int, originalWidth: Int) extends LongExpressionResult {
+case class TailLongs(f1: FuncLong, toDrop: Int, originalWidth: Int) extends LongExpressionResult {
   private val mask: Long = LongUtils.makeMask(originalWidth - toDrop)
 
   def apply(): Long = {
-    val uInt = AsUIntLongs(f1, isSigned, originalWidth).apply()
+    val uInt = AsUIntLongs(f1, originalWidth).apply()
     uInt & mask
   }
 }
