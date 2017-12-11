@@ -188,7 +188,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             case Xor => XorInts(e1.apply, e2.apply)
 
             case Cat =>
-              CatInts(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
+              CatInts(e1.apply, arg1Width, e2.apply, arg2Width)
 
             case _ =>
               throw InterpreterException(s"Error:BinaryOp:$opCode)(${args.head}, ${args.tail.head})")
@@ -218,7 +218,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             case Xor  => XorLongs(e1.apply, e2.apply)
 
             case Cat =>
-              CatLongs(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
+              CatLongs(e1.apply, arg1Width, e2.apply, arg2Width)
 
             case _ =>
               throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")
@@ -248,7 +248,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             case Xor  => XorBigs(e1.apply, e2.apply)
 
             case Cat =>
-              CatBigs(e1.apply, arg1IsSigned, arg1Width, e2.apply, arg2IsSigned, arg2Width)
+              CatBigs(e1.apply, arg1Width, e2.apply, arg2Width)
 
             case _ =>
               throw InterpreterException(s"Error:BinaryOp:$opCode(${args.head}, ${args.tail.head})")

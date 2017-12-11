@@ -169,12 +169,11 @@ case class XorrBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends IntExpre
   }
 }
 
-case class CatBigs(
-                    f1: FuncBig, f1IsSigned: Boolean, f1Width: Int,
-                    f2: FuncBig, f2IsSigned: Boolean, f2Width: Int
-                  ) extends BigExpressionResult {
+case class CatBigs(f1: FuncBig, f1Width: Int, f2: FuncBig, f2Width: Int) extends BigExpressionResult {
+  private val mask1 = BitMasks.getBitMasksBigs(f1Width).allBitsMask
+  private val mask2 = BitMasks.getBitMasksBigs(f2Width).allBitsMask
   def apply(): Big = {
-    (AsUIntBigs(f1, f1Width)() << f2Width) | AsUIntBigs(f2, f2Width)()
+    ((f1() & mask1) << f2Width) | f2()
   }
 }
 

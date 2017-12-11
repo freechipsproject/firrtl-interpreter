@@ -25,6 +25,41 @@ class CatBitsHeadTail extends FreeSpec with Matchers {
   def val3(): Int = Integer.parseInt("0", 2)
 
   "Cat Bits Head and Tail should pass basic tests" - {
+    "Cat should pass the following tests" - {
+      def doCatCheck(num1: Big, width1: Int, num2: Big, width2: Int): Unit = {
+        val got = (
+          CatInts(()  => num1.toInt,  width1, () => num2.toInt,  width2).apply(),
+          CatLongs(() => num1.toLong, width1, () => num2.toLong, width2).apply(),
+          CatBigs(()  => num1,        width1, () => num2,        width2).apply()
+        )
+        val expected = (
+          BitTwiddlingUtils.cat(num1, width1, num2, width2),
+          BitTwiddlingUtils.cat(num1, width1, num2, width2),
+          BitTwiddlingUtils.cat(num1, width1, num2, width2)
+        )
+
+        // println(s"i $i got $got expected $expected")
+        got should be(expected)
+      }
+
+      "bits should work on known range of sints" in {
+        for {
+          bitWidth1 <- 1 to 4
+          bitWidth2 <- 1 to 4
+        } {
+          val (lo1, hi1) = extremaOfSIntOfWidth(bitWidth1)
+          val (lo2, hi2) = extremaOfSIntOfWidth(bitWidth2)
+          for {
+            num1 <- lo1 to hi1
+            num2 <- lo2 to hi2
+          } {
+            doCatCheck(num1, bitWidth1, num2, bitWidth2)
+          }
+        }
+      }
+
+    }
+
     "Bits should bass the following tests" - {
       def doBitsCheck(i: Big, hi: Int, lo: Int, bitWidth: Int): Unit = {
         val got = (

@@ -198,12 +198,11 @@ case class XorrInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpre
   }
 }
 
-case class CatInts(
-                    f1: FuncInt, f1IsSigned: Boolean, f1Width: Int,
-                    f2: FuncInt, f2IsSigned: Boolean, f2Width: Int
-                  ) extends IntExpressionResult {
+case class CatInts(f1: FuncInt, f1Width: Int, f2: FuncInt, f2Width: Int) extends IntExpressionResult {
+  private val mask1 = BitMasks.getBitMasksInts(f1Width).allBitsMask
+  private val mask2 = BitMasks.getBitMasksInts(f2Width).allBitsMask
   def apply(): Int = {
-    (AsUIntInts(f1, f1Width)() << f2Width) | AsUIntInts(f2, f2Width)()
+    ((f1() & mask1) << f2Width) | f2()
   }
 }
 

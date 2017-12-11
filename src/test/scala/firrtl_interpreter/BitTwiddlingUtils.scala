@@ -12,34 +12,34 @@ import firrtl_interpreter.utils.BitMasks
   * rather than fast.
   */
 object BitTwiddlingUtils {
-  def plus(a: BigInt, b: BigInt, bitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): BigInt = {
+  def plus(a: Big, b: Big, bitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): Big = {
     a + b
   }
-  def minus(a: BigInt, b: BigInt, bitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): BigInt = {
+  def minus(a: Big, b: Big, bitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): Big = {
     a - b
   }
-  def times(a: BigInt, b: BigInt, bitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): BigInt = {
+  def times(a: Big, b: Big, bitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): Big = {
     a * b
   }
-  def divide(a: BigInt, b: BigInt, bitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): BigInt = {
+  def divide(a: Big, b: Big, bitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): Big = {
     a / b
   }
-  def mod(a: BigInt, b: BigInt, bitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): BigInt = {
+  def mod(a: Big, b: Big, bitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): Big = {
     a % b
   }
 
-  def and(a: BigInt, b: BigInt, outputBitWidth: Int = -1): BigInt = {
+  def and(a: Big, b: Big, outputBitWidth: Int = -1): Big = {
     val uIntA = asUInt(a, outputBitWidth)
     val uIntB = asUInt(b, outputBitWidth)
     uIntA & uIntB
   }
 
-  def andr(a: BigInt, bitWidth: Int, aIsSInt: Boolean): BigInt = {
+  def andr(a: Big, bitWidth: Int, aIsSInt: Boolean): Big = {
     val uInt = asUInt(a, bitWidth)
     boolToBigInt((0 until bitWidth).map(i => uInt.testBit(i)).reduce(_&&_))
   }
 
-  def orr(a: BigInt, bitWidth: Int, aIsSInt: Boolean): BigInt = {
+  def orr(a: Big, bitWidth: Int, aIsSInt: Boolean): Big = {
     if(aIsSInt) {
       if(a < 0) { Big1 }
       else if(a != 0) { Big1 }
@@ -51,12 +51,19 @@ object BitTwiddlingUtils {
     }
   }
 
-  def xorr(a: BigInt, bitWidth: Int, aIsSInt: Boolean): BigInt = {
-    val uInt = asUInt(a, bitWidth)
+  def xorr(a: Big, bitWidth: Int, aIsSInt: Boolean): Big = {
     boolToBigInt((0 until bitWidth).map(i => a.testBit(i)).reduce(_^_))
   }
 
-  def bits(a: BigInt, high: Int, low: Int, originalBitWidth: Int): BigInt = {
+  def cat(a: Big, aWidth: Int, b: Big, bWidth: Int): Big = {
+    var x = b
+    for(i <- 0 until aWidth) {
+      if(a.testBit(i)) x = x.setBit(i + bWidth)
+    }
+    x
+  }
+
+  def bits(a: Big, high: Int, low: Int, originalBitWidth: Int): Big = {
     var x = Big0
     for(i <- 0 until (high - low) + 1) {
       if(a.testBit(i + low)) x = x.setBit(i)
@@ -64,7 +71,7 @@ object BitTwiddlingUtils {
     x
   }
 
-  def head(a: BigInt, takeBits: Int, originalBitWidth: Int): BigInt = {
+  def head(a: Big, takeBits: Int, originalBitWidth: Int): Big = {
     var x = Big0
     val bitOffset = originalBitWidth - takeBits
     for(i <- 0 until takeBits) {
@@ -73,7 +80,7 @@ object BitTwiddlingUtils {
     x
   }
 
-  def tail(a: BigInt, dropBits: Int, originalBitWidth: Int): BigInt = {
+  def tail(a: Big, dropBits: Int, originalBitWidth: Int): Big = {
     var x = Big0
     val bitsWanted = originalBitWidth - dropBits
     for(i <- 0 until bitsWanted) {
@@ -82,18 +89,18 @@ object BitTwiddlingUtils {
     x
   }
 
-  def asUInt(a: BigInt, bitWidth: Int): BigInt = {
+  def asUInt(a: Big, bitWidth: Int): Big = {
     val bitMasks = BitMasks.getBitMasksBigs(bitWidth)
 
     a & bitMasks.allBitsMask
   }
 
-  def makeUInt(a: BigInt, bitWidth: Int): BigInt = {
+  def makeUInt(a: Big, bitWidth: Int): Big = {
     val b = a & BitMasks.getBitMasksBigs(bitWidth).allBitsMask
     b
   }
 
-  def makeSInt(a: BigInt, bitWidth: Int): BigInt = {
+  def makeSInt(a: Big, bitWidth: Int): Big = {
     val masks = BitMasks.getBitMasksBigs(bitWidth)
     val b = a & masks.allBitsMask
     if(masks.isMsbSet(b)) {
@@ -104,14 +111,14 @@ object BitTwiddlingUtils {
     }
   }
 
-  def asSInt(a: BigInt, bitWidth: Int, inputIsSInt: Boolean = false): BigInt = {
+  def asSInt(a: Big, bitWidth: Int, inputIsSInt: Boolean = false): Big = {
 
     val newValue = {
       if(a == Big1 && bitWidth == 1) {
-        BigInt(-1)
+        Big(-1)
       }
       else {
-        var signCrossover = BigInt(1) << (bitWidth - 1)
+        var signCrossover = Big(1) << (bitWidth - 1)
         if(a >= signCrossover) {
           signCrossover <<= 1
           a - signCrossover
@@ -123,5 +130,4 @@ object BitTwiddlingUtils {
     }
     newValue
   }
-
 }

@@ -173,12 +173,11 @@ case class XorrLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends IntExp
     (0 until width).map(n => ((uInt >> n) & BigInt(1)).toInt).reduce(_ ^ _)  }
 }
 
-case class CatLongs(
-                    f1: FuncLong, f1IsSigned: Boolean, f1Width: Int,
-                    f2: FuncLong, f2IsSigned: Boolean, f2Width: Int
-                  ) extends LongExpressionResult {
+case class CatLongs(f1: FuncLong, f1Width: Int, f2: FuncLong, f2Width: Int) extends LongExpressionResult {
+  private val mask1 = BitMasks.getBitMasksLongs(f1Width).allBitsMask
+  private val mask2 = BitMasks.getBitMasksLongs(f2Width).allBitsMask
   def apply(): Long = {
-    (AsUIntLongs(f1, f1Width)() << f2Width) | AsUIntLongs(f2, f2Width)()
+    ((f1() & mask1) << f2Width) | f2()
   }
 }
 
