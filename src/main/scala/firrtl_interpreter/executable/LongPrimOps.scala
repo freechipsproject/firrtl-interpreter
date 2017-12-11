@@ -2,6 +2,8 @@
 
 package firrtl_interpreter.executable
 
+import firrtl_interpreter.utils.BitMasks
+
 trait LongExpressionResult extends ExpressionResult {
   def apply(): Long
 }
@@ -58,45 +60,26 @@ case class GeqLongs(f1: FuncLong, f2: FuncLong) extends IntExpressionResult {
 }
 
 case class AsUIntLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends LongExpressionResult {
-  private val nextPowerOfTwo : Long  = 1L << width
+  private val bitMasks = BitMasks.getBitMasksLongs(width)
 
-  def apply(): Long = {
-    if(! isSigned) {
-      f1()
-    }
-    else {
-      val value = f1()
-      if(value < 0L) {
-        value + nextPowerOfTwo
-      }
-      else {
-        value
-      }
-    }
-  }
+  def apply(): Long = f1() & bitMasks.allBitsMask
 }
 
 case class AsSIntLongs(f1: FuncLong, isSigned: Boolean, width: Int) extends LongExpressionResult {
-  def apply(): Long = if (isSigned) applySigned() else applyUnsigned()
+  private val bitMasks = BitMasks.getBitMasksLongs(width)
 
-  private val nextPowerOfTwo = 1L << width
-  private val msbMask        = 1L << (width - 1)
-
-  def applySigned(): Long = f1()
-
-  def applyUnsigned(): Long = {
+  def apply(): Long = {
     val value = f1()
-    if (width == 1 && value == 1L) {
-      -1L
+    if(value < 0) {
+      value
     }
     else {
-      val result = if((value & msbMask) > 0) {
-        value - nextPowerOfTwo
+      if(bitMasks.isMsbSet(value)) {
+        (value & bitMasks.allBitsMask) - bitMasks.nextPowerOfTwo
       }
       else {
-        value
+        value & bitMasks.allBitsMask
       }
-      result
     }
   }
 }

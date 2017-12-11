@@ -23,27 +23,27 @@ class IntOpsSpec extends FreeSpec with Matchers {
 
   "IntOps should pass a basic test" - {
     "AsUIntInts should work" in {
-      AsUIntInts(fMinus6, isSigned = true, width = 4)() should be (10)
-      AsUIntInts(() => -22, isSigned = true, width = 16)() should be (65514)
-      AsUIntInts(fMinus4, isSigned = true, width = 4)() should be (12)
+      AsUIntInts(fMinus6, width = 4)() should be (10)
+      AsUIntInts(() => -22, width = 16)() should be (65514)
+      AsUIntInts(fMinus4, width = 4)() should be (12)
 
-      AsUIntInts(f0, isSigned = true, width = 1)() should be (0)
-      AsUIntInts(fMinus1, isSigned = true, width = 1)() should be (1)
-      AsUIntInts(f0, isSigned = false, width = 1)() should be (0)
-      AsUIntInts(f1, isSigned = false, width = 1)() should be (1)
+      AsUIntInts(f0, width = 1)() should be (0)
+      AsUIntInts(fMinus1, width = 1)() should be (1)
+      AsUIntInts(f0, width = 1)() should be (0)
+      AsUIntInts(f1, width = 1)() should be (1)
 
-      AsUIntInts(f3, isSigned = true, width = 3)() should be (3)
-      AsUIntInts(fMinus4, isSigned = true, width = 3)() should be (4)
+      AsUIntInts(f3, width = 3)() should be (3)
+      AsUIntInts(fMinus4, width = 3)() should be (4)
     }
 
     "AsSIntInts should work" in {
-      AsSIntInts(f0, isSigned = true, width = 1)() should be (0)
-      AsSIntInts(fMinus1, isSigned = true, width = 1)() should be (-1)
-      AsSIntInts(f0, isSigned = false, width = 1)() should be (0)
-      AsSIntInts(f1, isSigned = false, width = 1)() should be (-1)
+      AsSIntInts(f0, width = 1)() should be (0)
+      AsSIntInts(fMinus1, width = 1)() should be (-1)
+      AsSIntInts(f0, width = 1)() should be (0)
+      AsSIntInts(f1, width = 1)() should be (-1)
 
-      AsSIntInts(f3, isSigned = false, width = 2)() should be (-1)
-      AsSIntInts(f3, isSigned = false, width = 3)() should be (3)
+      AsSIntInts(f3, width = 2)() should be (-1)
+      AsSIntInts(f3, width = 3)() should be (3)
     }
 
     "cat ops should combine bits from two numbers" in {

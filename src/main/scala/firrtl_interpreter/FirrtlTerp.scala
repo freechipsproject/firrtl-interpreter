@@ -142,13 +142,13 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
     val symbol = symbolTable(name)
     if(offset == 0) {
-      dataStore(symbol)
+      symbol.normalize(dataStore(symbol))
     }
     else {
       if(offset - 1 > symbol.slots) {
         throw InterpreterException(s"get value from ${symbol.name} offset $offset > than size ${symbol.slots}")
       }
-      dataStore.getValueAtIndex(symbol.dataSize, index = symbol.index + offset)
+      symbol.normalize(dataStore.getValueAtIndex(symbol.dataSize, index = symbol.index + offset))
     }
   }
 

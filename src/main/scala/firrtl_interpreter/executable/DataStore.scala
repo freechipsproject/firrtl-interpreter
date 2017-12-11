@@ -123,7 +123,8 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 
     def runVerbose(): Unit = {
       val value = expression()
-      println(s"${symbol.name}:${symbol.index} <= $value")
+      val showValue = symbol.normalize(value)
+      println(s"${symbol.name}:${symbol.index} <= $showValue")
       currentIntArray(index) = value
       vcdUpdate(symbol, value)
     }
@@ -143,6 +144,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 
     def runVerbose(): Unit = {
       val value = expression()
+      val showValue = symbol.normalize(value)
       println(s"${symbol.name}:${symbol.index} <= $value")
       currentLongArray(index) = value
       vcdUpdate(symbol, value)
@@ -301,7 +303,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
   )
   extends BigExpressionResult {
 
-    val dataStore = DataStore.this
+    val dataStore: DataStore = DataStore.this
 
     def apply(): Big = {
       val inputValues = inputs.map { input => dataStore(input) }

@@ -5,6 +5,7 @@ package firrtl_interpreter
 import firrtl_interpreter.executable._
 import firrtl.ir.IntWidth
 import firrtl_interpreter.executable.Big
+import firrtl_interpreter.utils.BitUtils
 import org.scalatest.{FreeSpec, Matchers}
 
 
@@ -49,5 +50,11 @@ class BitStuffSpec extends FreeSpec with Matchers {
     symbol.valueFrom(-3) should be (Big(1))
     symbol.valueFrom(-4) should be (Big(0))
 
+  }
+
+  "masks should be generated, tests with known values" in {
+    BitUtils.makeMaskBig(4) should be (0xf)
+    BitUtils.makeMsbMaskBig(4) should be (0x8)
+    BitUtils.makeNextPowerOfTwoBig(4) should be (0x10)
   }
 }

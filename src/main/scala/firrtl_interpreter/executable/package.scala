@@ -11,6 +11,10 @@ package object executable {
     def makeMask(width: Int): Big = {
       BigInt("1" * width, 2)
     }
+
+    def makeMsbMask(width: Int): Big = {
+      BigInt("1" + "0" * (width - 1), 2)
+    }
   }
 
   trait ExpressionResult

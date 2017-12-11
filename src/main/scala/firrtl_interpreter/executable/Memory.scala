@@ -317,7 +317,7 @@ object Memory {
       val valid  = symbolTable(s"$writerName.valid")
 
       // compute a valid so we only have to carry a single boolean up the write queue
-      compiler.makeAssigner(valid, AndInts(dataStore.GetInt(enable.index).apply, dataStore.GetInt(mask.index).apply))
+      compiler.makeAssigner(valid, AndInts(dataStore.GetInt(enable.index).apply, dataStore.GetInt(mask.index).apply, 1))
 
       val endOfValidPipeline = buildWritePipelineAssigners(clock, valid, writerName, "valid")
       val endOfAddrPipeline  = buildWritePipelineAssigners(clock, addr, writerName, "addr")
@@ -354,8 +354,9 @@ object Memory {
       compiler.makeAssigner(
         valid,
         AndInts(
-          AndInts(dataStore.GetInt(enable.index).apply, dataStore.GetInt(mask.index).apply).apply,
-          dataStore.GetInt(mode.index).apply
+          AndInts(dataStore.GetInt(enable.index).apply, dataStore.GetInt(mask.index).apply, 1).apply,
+          dataStore.GetInt(mode.index).apply,
+          1
         )
       )
 

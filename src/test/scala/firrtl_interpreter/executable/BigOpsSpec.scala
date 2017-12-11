@@ -23,28 +23,28 @@ class BigOpsSpec extends FreeSpec with Matchers {
 
   "BigOps should pass a basic test" - {
     "AsUIntBigs should work" in {
-      AsUIntBigs(fMinus6, isSigned = true, width = 4)() should be (10)
-      AsUIntBigs(() => -22, isSigned = true, width = 128)() should be (
+      AsUIntBigs(fMinus6, width = 4)() should be (10)
+      AsUIntBigs(() => -22, width = 128)() should be (
         BigInt("340282366920938463463374607431768211434", 10))
-      AsUIntBigs(fMinus4, isSigned = true, width = 4)() should be (12)
+      AsUIntBigs(fMinus4, width = 4)() should be (12)
 
-      AsUIntBigs(f0, isSigned = true, width = 1)() should be (BigInt(0))
-      AsUIntBigs(fMinus1, isSigned = true, width = 1)() should be (BigInt(1))
-      AsUIntBigs(f0, isSigned = false, width = 1)() should be (BigInt(0))
-      AsUIntBigs(f1, isSigned = false, width = 1)() should be (BigInt(1))
+      AsUIntBigs(f0, width = 1)() should be (BigInt(0))
+      AsUIntBigs(fMinus1, width = 1)() should be (BigInt(1))
+      AsUIntBigs(f0, width = 1)() should be (BigInt(0))
+      AsUIntBigs(f1, width = 1)() should be (BigInt(1))
 
-      AsUIntBigs(f3, isSigned = true, width = 3)() should be (BigInt(3))
-      AsUIntBigs(fMinus4, isSigned = true, width = 3)() should be (BigInt(4))
+      AsUIntBigs(f3, width = 3)() should be (BigInt(3))
+      AsUIntBigs(fMinus4, width = 3)() should be (BigInt(4))
     }
 
     "AsSIntBigs should work" in {
-      AsSIntBigs(f0, isSigned = true, width = 1)() should be (BigInt(0))
-      AsSIntBigs(fMinus1, isSigned = true, width = 1)() should be (BigInt(-1))
-      AsSIntBigs(f0, isSigned = false, width = 1)() should be (BigInt(0))
-      AsSIntBigs(f1, isSigned = false, width = 1)() should be (BigInt(-1))
+      AsSIntBigs(f0, width = 1)() should be (BigInt(0))
+      AsSIntBigs(fMinus1, width = 1)() should be (BigInt(-1))
+      AsSIntBigs(f0, width = 1)() should be (BigInt(0))
+      AsSIntBigs(f1, width = 1)() should be (BigInt(-1))
 
-      AsSIntBigs(f3, isSigned = false, width = 2)() should be (BigInt(-1))
-      AsSIntBigs(f3, isSigned = false, width = 3)() should be (BigInt(3))
+      AsSIntBigs(f3, width = 2)() should be (BigInt(-1))
+      AsSIntBigs(f3, width = 3)() should be (BigInt(3))
     }
 
     "cat ops should combiapne bits from two numbers" in {

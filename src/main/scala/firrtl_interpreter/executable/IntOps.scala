@@ -2,6 +2,8 @@
 
 package firrtl_interpreter.executable
 
+import firrtl_interpreter.utils.{BitMasks, BitUtils}
+
 trait IntExpressionResult extends ExpressionResult {
   def apply(): Int
 }
@@ -82,55 +84,27 @@ case class GeqInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
   def apply(): Int = if(f1() >= f2()) 1 else 0
 }
 
-case class AsUIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
-  private val nextPowerOfTwo : Int  = 1 << width
+case class AsUIntInts(f1: FuncInt, width: Int) extends IntExpressionResult {
+  private val bitMasks = BitMasks.getBitMasksInts(width)
 
-  def apply(): Int = {
-    if(! isSigned) {
-      f1()
-    }
-    else {
-      val value = f1()
-      if(value < 0) {
-        value + nextPowerOfTwo
-      }
-      else {
-        value
-      }
-    }
-  }
+  def apply(): Int = f1() & bitMasks.allBitsMask
 }
 
-case class AsSIntInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
-  def apply(): Int = if (isSigned) applySigned() else applyUnsigned()
+case class AsSIntInts(f1: FuncInt, width: Int) extends IntExpressionResult {
+  private val bitMasks = BitMasks.getBitMasksInts(width)
 
-  private val nextPowerOfTwo = 1 << width
-  private val msbMask        = 1 << (width - 1)
-
-
-  def applySigned(): Int = {
+  def apply(): Int = {
     val value = f1()
-    if(width == 1 && value == 1) {
-      -1
-    }
-    else {
+    if(value < 0) {
       value
     }
-  }
-
-  def applyUnsigned(): Int = {
-    val value = f1()
-    if (width == 1 && value == 1L) {
-      -1
-    }
     else {
-      val result = if((value & msbMask) > 0) {
-        value - nextPowerOfTwo
+      if(bitMasks.isMsbSet(value)) {
+        (value & bitMasks.allBitsMask) - bitMasks.nextPowerOfTwo
       }
       else {
-        value
+        value & bitMasks.allBitsMask
       }
-      result
     }
   }
 }
@@ -163,8 +137,11 @@ case class NotInts(f1: FuncInt) extends IntExpressionResult {
   def apply(): Int = ~ f1()
 }
 
-case class AndInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
-  def apply(): Int = f1() & f2()
+case class AndInts(f1: FuncInt, f2: FuncInt, resultWidth: Int) extends IntExpressionResult {
+  private val mask = BitUtils.makeMaskInt(resultWidth)
+  def apply(): Int = {
+    (f1() & f2()) & mask
+  }
 }
 
 case class OrInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
@@ -183,7 +160,7 @@ case class XorInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
   */
 case class AndrInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = {
-    val uInt = AsUIntInts(f1, isSigned, width).apply()
+    val uInt = AsUIntInts(f1, width).apply()
     var mask = 1
     var bitPosition = 0
     while(bitPosition < width) {
@@ -203,7 +180,7 @@ case class AndrInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpre
   */
 case class OrrInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = {
-    val uInt = AsUIntInts(f1, isSigned, width).apply()
+    val uInt = AsUIntInts(f1, width).apply()
     if(uInt > 0) { 1 } else { 0 }
   }
 }
@@ -216,7 +193,7 @@ case class OrrInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpres
   */
 case class XorrInts(f1: FuncInt, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = {
-    val uInt = AsUIntInts(f1, isSigned, width).apply()
+    val uInt = AsUIntInts(f1, width).apply()
     (0 until width).map(n => (uInt >> n) & 1).reduce(_ ^ _)
   }
 }
@@ -226,7 +203,7 @@ case class CatInts(
                     f2: FuncInt, f2IsSigned: Boolean, f2Width: Int
                   ) extends IntExpressionResult {
   def apply(): Int = {
-    (AsUIntInts(f1, f1IsSigned, f1Width)() << f2Width) | AsUIntInts(f2, f2IsSigned, f2Width)()
+    (AsUIntInts(f1, f1Width)() << f2Width) | AsUIntInts(f2, f2Width)()
   }
 }
 
@@ -235,7 +212,7 @@ case class BitsInts(f1: FuncInt, isSigned: Boolean, high: Int, low: Int, origina
   private val mask = (1 << ((high - low) + 1)) - 1
 
   def apply(): Int = {
-    val uInt = AsUIntInts(f1, isSigned, originalWidth).apply()
+    val uInt = AsUIntInts(f1, originalWidth).apply()
     (uInt >> low) & mask
   }
 }
@@ -245,7 +222,7 @@ case class HeadInts(f1: FuncInt, isSigned: Boolean, takeBits: Int, originalWidth
   private val shift = originalWidth - takeBits
 
   def apply(): Int = {
-    val uInt = AsUIntInts(f1, isSigned, originalWidth).apply()
+    val uInt = AsUIntInts(f1, originalWidth).apply()
     (uInt >> shift) & mask
   }
 }
@@ -255,7 +232,7 @@ case class TailInts(f1: FuncInt, isSigned: Boolean, toDrop: Int, originalWidth: 
 
   def apply(): Int = {
     val f1Value = f1()
-    val uInt = AsUIntInts(f1, isSigned, originalWidth).apply()
+    val uInt = AsUIntInts(f1, originalWidth).apply()
     val result = uInt & mask
     println(f"in tail: f1    $f1Value%10d ${f1Value.toBinaryString}")
     println(f"in tail: uInt  $uInt%10d ${uInt.toBinaryString}")

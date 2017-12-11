@@ -2,6 +2,8 @@
 
 package firrtl_interpreter
 
+import firrtl_interpreter.executable.Big
+
 /**
   * This object has an alternate way of computing the various primitive operations.
   * This creates a double check that the primitive operations are correct.
@@ -25,16 +27,19 @@ object BitTwiddlingUtils {
     a % b
   }
 
+  def and(a: BigInt, b: BigInt, outputBitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): BigInt = {
+    val uIntA = asUInt(a, outputBitWidth, aIsSInt)
+    val uIntB = asUInt(b, outputBitWidth, bIsSInt)
+    uIntA & uIntB
+  }
+
   def andr(a: BigInt, bitWidth: Int, aIsSInt: Boolean): BigInt = {
     val uInt = asUInt(a, bitWidth, aIsSInt)
     boolToBigInt((0 until bitWidth).map(i => uInt.testBit(i)).reduce(_&&_))
   }
 
   def orr(a: BigInt, bitWidth: Int, aIsSInt: Boolean): BigInt = {
-
-  import firrtl_interpreter.BitTwiddlingUtils.asUInt
-
-  if(aIsSInt) {
+    if(aIsSInt) {
       if(a < 0) { Big1 }
       else if(a != 0) { Big1 }
       else { Big0 }
@@ -68,28 +73,39 @@ object BitTwiddlingUtils {
     }
   }
 
-  def asSInt(a: BigInt, bitWidth: Int, inputIsSInt: Boolean = false): BigInt = {
-    if(inputIsSInt) {
-      a
+  def makeUInt(a: BigInt, bitWidth: Int): BigInt = {
+    val b = a & Big.makeMask(bitWidth)
+    b
+  }
+
+  def makeSInt(a: BigInt, bitWidth: Int): BigInt = {
+    val b = a & Big.makeMask(bitWidth)
+    if((b & Big.makeMsbMask(bitWidth)) > 0) {
+      b - (Big.makeMsbMask(bitWidth) << 1)
     }
     else {
-      val newValue = {
-        if(a == Big1 && bitWidth == 1) {
-          BigInt(-1)
+      b
+    }
+  }
+
+  def asSInt(a: BigInt, bitWidth: Int, inputIsSInt: Boolean = false): BigInt = {
+
+    val newValue = {
+      if(a == Big1 && bitWidth == 1) {
+        BigInt(-1)
+      }
+      else {
+        var signCrossover = BigInt(1) << (bitWidth - 1)
+        if(a >= signCrossover) {
+          signCrossover <<= 1
+          a - signCrossover
         }
         else {
-          var signCrossover = BigInt(1) << (bitWidth - 1)
-          if(a >= signCrossover) {
-            signCrossover <<= 1
-            a - signCrossover
-          }
-          else {
-            a
-          }
+          a
         }
       }
-      newValue
     }
+    newValue
   }
 
 }

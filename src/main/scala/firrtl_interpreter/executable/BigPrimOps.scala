@@ -2,6 +2,8 @@
 
 package firrtl_interpreter.executable
 
+import firrtl_interpreter.utils.BitMasks
+
 trait BigExpressionResult extends ExpressionResult {
   def apply(): Big
 }
@@ -57,46 +59,27 @@ case class GeqBigs(f1: FuncBig, f2: FuncBig) extends IntExpressionResult {
   def apply(): Int = if(f1() >= f2()) 1 else 0
 }
 
-case class AsUIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
-  private val nextPowerOfTwo : Big  = Big(1) << width
+case class AsUIntBigs(f1: FuncBig, width: Int) extends BigExpressionResult {
+  private val bitMasks = BitMasks.getBitMasksBigs(width)
 
-  def apply(): BigInt = {
-    if(! isSigned) {
-      f1()
-    }
-    else {
-      val value = f1()
-      if(value < Big(0)) {
-        value + nextPowerOfTwo
-      }
-      else {
-        value
-      }
-    }
-  }
+  def apply(): Big = f1() & bitMasks.allBitsMask
 }
 
-case class AsSIntBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends BigExpressionResult {
-  def apply(): Big = if (isSigned) applySigned() else applyUnsigned()
+case class AsSIntBigs(f1: FuncBig, width: Int) extends BigExpressionResult {
+  private val bitMasks = BitMasks.getBitMasksBigs(width)
 
-  private val nextPowerOfTwo = Big(1) << width
-  private val msbMask        = Big(1) << (width - 1)
-
-  def applySigned(): Big = f1()
-
-  def applyUnsigned(): Big = {
+  def apply(): Big = {
     val value = f1()
-    if (width == 1 && value == Big(1)) {
-      -1L
+    if(value < 0) {
+      value
     }
     else {
-      val result = if((value & msbMask) > 0) {
-        value - nextPowerOfTwo
+      if(bitMasks.isMsbSet(value)) {
+        (value & bitMasks.allBitsMask) - bitMasks.nextPowerOfTwo
       }
       else {
-        value
+        value & bitMasks.allBitsMask
       }
-      result
     }
   }
 }
@@ -149,7 +132,7 @@ case class XorBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
   */
 case class AndrBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = {
-    val uInt = AsUIntBigs(f1, isSigned, width).apply()
+    val uInt = AsUIntBigs(f1, width).apply()
     val lastMask = Big(1) << width
     var mask = Big(1)
     while(mask < lastMask) {
@@ -168,7 +151,7 @@ case class AndrBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends IntExpre
   */
 case class OrrBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = {
-    val uInt = AsUIntBigs(f1, isSigned, width).apply()
+    val uInt = AsUIntBigs(f1, width).apply()
     if(uInt > 0) { 1 } else { 0 }
   }
 }
@@ -181,7 +164,7 @@ case class OrrBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends IntExpres
   */
 case class XorrBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends IntExpressionResult {
   def apply(): Int = {
-    val uInt = AsUIntBigs(f1, isSigned, width).apply()
+    val uInt = AsUIntBigs(f1, width).apply()
     (0 until width).map(n => ((uInt >> n) & BigInt(1)).toInt).reduce(_ ^ _)
   }
 }
@@ -191,7 +174,7 @@ case class CatBigs(
                     f2: FuncBig, f2IsSigned: Boolean, f2Width: Int
                   ) extends BigExpressionResult {
   def apply(): Big = {
-    (AsUIntBigs(f1, f1IsSigned, f1Width)() << f2Width) | AsUIntBigs(f2, f2IsSigned, f2Width)()
+    (AsUIntBigs(f1, f1Width)() << f2Width) | AsUIntBigs(f2, f2Width)()
   }
 }
 
@@ -200,7 +183,7 @@ case class BitsBigs(f1: FuncBig, isSigned: Boolean, high: Int, low: Int, origina
   private val mask = Big.makeMask((high - low) + 1)
 
   def apply(): Big = {
-    val uInt = AsUIntBigs(f1, isSigned, originalWidth).apply()
+    val uInt = AsUIntBigs(f1, originalWidth).apply()
     (uInt >> low) & mask
   }
 }
@@ -210,7 +193,7 @@ case class HeadBigs(f1: FuncBig, isSigned: Boolean, takeBits: Int, originalWidth
   private val shift = originalWidth - takeBits
 
   def apply(): Big = {
-    val uBig = AsUIntBigs(f1, isSigned, originalWidth).apply()
+    val uBig = AsUIntBigs(f1, originalWidth).apply()
     (uBig >> shift) & mask
   }
 }
@@ -219,7 +202,7 @@ case class TailBigs(f1: FuncBig, isSigned: Boolean, toDrop: Int, originalWidth: 
   private val mask: Big = Big.makeMask(originalWidth - toDrop)
 
   def apply(): Big = {
-    val uInt = AsUIntBigs(f1, isSigned, originalWidth).apply()
+    val uInt = AsUIntBigs(f1, originalWidth).apply()
     uInt & mask
   }
 }
