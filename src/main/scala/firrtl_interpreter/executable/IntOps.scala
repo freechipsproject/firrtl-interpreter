@@ -207,13 +207,11 @@ case class CatInts(
   }
 }
 
-case class BitsInts(f1: FuncInt, isSigned: Boolean, high: Int, low: Int, originalWidth: Int)
-  extends IntExpressionResult {
+case class BitsInts(f1: FuncInt, high: Int, low: Int, originalWidth: Int) extends IntExpressionResult {
   private val mask = (1 << ((high - low) + 1)) - 1
 
   def apply(): Int = {
-    val uInt = AsUIntInts(f1, originalWidth).apply()
-    (uInt >> low) & mask
+    (f1() >> low) & mask
   }
 }
 
@@ -222,8 +220,7 @@ case class HeadInts(f1: FuncInt, takeBits: Int, originalWidth: Int) extends IntE
   private val shift = originalWidth - takeBits
 
   def apply(): Int = {
-    val uInt = AsUIntInts(f1, originalWidth).apply()
-    (uInt >> shift) & mask
+    (f1() >> shift) & mask
   }
 }
 

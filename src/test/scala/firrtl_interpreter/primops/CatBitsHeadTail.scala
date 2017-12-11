@@ -25,6 +25,48 @@ class CatBitsHeadTail extends FreeSpec with Matchers {
   def val3(): Int = Integer.parseInt("0", 2)
 
   "Cat Bits Head and Tail should pass basic tests" - {
+    "Bits should bass the following tests" - {
+      def doBitsCheck(i: Big, hi: Int, lo: Int, bitWidth: Int): Unit = {
+        val got = (
+          BitsInts(() => i.toInt,   hi, lo, originalWidth = bitWidth).apply(),
+          BitsLongs(() => i.toLong, hi, lo, originalWidth = bitWidth).apply(),
+          BitsBigs(() => i,         hi, lo, originalWidth = bitWidth).apply()
+        )
+        val expected = (
+          BitTwiddlingUtils.bits(i, hi, lo, bitWidth),
+          BitTwiddlingUtils.bits(i, hi, lo, bitWidth),
+          BitTwiddlingUtils.bits(i, hi, lo, bitWidth)
+        )
+
+        // println(s"i $i got $got expected $expected")
+        got should be(expected)
+      }
+
+      "bits should work on known range of sints" in {
+        val bitWidth = 4
+        val (lo, hi) = extremaOfSIntOfWidth(bitWidth)
+
+        for {
+          i     <- lo to hi
+          loBit <- 0 until bitWidth
+          hiBit <- loBit until bitWidth
+        } {
+          doBitsCheck(i, hiBit, loBit, bitWidth)
+        }
+      }
+      "bits should work on known range of uint" in {
+        val bitWidth = 4
+        val (lo, hi) = extremaOfUIntOfWidth(bitWidth)
+        for {
+          i     <- lo to hi
+          loBit <- 0 until bitWidth
+          hiBit <- loBit until bitWidth
+        } {
+          doBitsCheck(i, hiBit, loBit, bitWidth)
+        }
+      }
+    }
+
     "Head should bass the following tests" - {
       def doHeadCheck(i: Big, takeBits: Int, bitWidth: Int): Unit = {
         val got = (

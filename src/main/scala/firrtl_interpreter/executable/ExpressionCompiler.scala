@@ -344,15 +344,15 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         arg1 match {
           case e1: IntExpressionResult =>
             op match {
-              case Bits => BitsInts(e1.apply, isSigned, arg2.toInt, arg3.toInt, width)
+              case Bits => BitsInts(e1.apply, arg2.toInt, arg3.toInt, width)
             }
           case e1: LongExpressionResult =>
             op match {
-              case Bits => BitsLongs(e1.apply, isSigned, arg2.toInt, arg3.toInt, width)
+              case Bits => BitsLongs(e1.apply, arg2.toInt, arg3.toInt, width)
             }
           case e1: BigExpressionResult =>
             op match {
-              case Bits => BitsBigs(e1.apply, isSigned, arg2.toInt, arg3.toInt, width)
+              case Bits => BitsBigs(e1.apply, arg2.toInt, arg3.toInt, width)
             }
         }
       }

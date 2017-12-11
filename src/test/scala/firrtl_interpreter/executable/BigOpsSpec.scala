@@ -59,12 +59,12 @@ class BigOpsSpec extends FreeSpec with Matchers {
     }
 
     "bit ops should take arbitrary bits from a value" in {
-      BitsBigs(val2, isSigned = false, high = 1, low = 0, originalWidth = 8)() should be (BigInt(2))
-      BitsBigs(val2, isSigned = false, high = 2, low = 0, originalWidth = 8)() should be (BigInt(2))
-      BitsBigs(val2, isSigned = false, high = 3, low = 0, originalWidth = 8)() should be (BigInt(10))
-      BitsBigs(val2, isSigned = false, high = 3, low = 1, originalWidth = 8)() should be (BigInt(5))
-      BitsBigs(val2, isSigned = false, high = 3, low = 2, originalWidth = 8)() should be (BigInt(2))
-      BitsBigs(val2, isSigned = false, high = 3, low = 3, originalWidth = 8)() should be (BigInt(1))
+      BitsBigs(val2, high = 1, low = 0, originalWidth = 8)() should be (BigInt(2))
+      BitsBigs(val2, high = 2, low = 0, originalWidth = 8)() should be (BigInt(2))
+      BitsBigs(val2, high = 3, low = 0, originalWidth = 8)() should be (BigInt(10))
+      BitsBigs(val2, high = 3, low = 1, originalWidth = 8)() should be (BigInt(5))
+      BitsBigs(val2, high = 3, low = 2, originalWidth = 8)() should be (BigInt(2))
+      BitsBigs(val2, high = 3, low = 3, originalWidth = 8)() should be (BigInt(1))
     }
 
     "head ops should take bits from front of number" in {

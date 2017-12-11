@@ -182,13 +182,12 @@ case class CatLongs(
   }
 }
 
-case class BitsLongs(f1: FuncLong, isSigned: Boolean, high: Int, low: Int, originalWidth: Int)
+case class BitsLongs(f1: FuncLong, high: Int, low: Int, originalWidth: Int)
   extends LongExpressionResult {
   private val mask = LongUtils.makeMask((high - low) + 1)
 
   def apply(): Long = {
-    val uInt = AsUIntLongs(f1, originalWidth).apply()
-    (uInt >> low) & mask
+    (f1() >> low) & mask
   }
 }
 
@@ -197,8 +196,7 @@ case class HeadLongs(f1: FuncLong, takeBits: Int, originalWidth: Int) extends Lo
   private val shift = originalWidth - takeBits
 
   def apply(): Long = {
-    val uBig = AsUIntLongs(f1, originalWidth).apply()
-    (uBig >> shift) & mask
+    (f1() >> shift) & mask
   }
 }
 
@@ -206,8 +204,7 @@ case class TailLongs(f1: FuncLong, toDrop: Int, originalWidth: Int) extends Long
   private val mask: Long = LongUtils.makeMask(originalWidth - toDrop)
 
   def apply(): Long = {
-    val uInt = AsUIntLongs(f1, originalWidth).apply()
-    uInt & mask
+    f1() & mask
   }
 }
 

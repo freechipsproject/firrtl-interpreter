@@ -56,27 +56,12 @@ class IntOpsSpec extends FreeSpec with Matchers {
     }
 
     "bit ops should take arbitrary bits from a value" in {
-      BitsInts(val2, isSigned = false, high = 1, low = 0, originalWidth = 8)() should be (2)
-      BitsInts(val2, isSigned = false, high = 2, low = 0, originalWidth = 8)() should be (2)
-      BitsInts(val2, isSigned = false, high = 3, low = 0, originalWidth = 8)() should be (10)
-      BitsInts(val2, isSigned = false, high = 3, low = 1, originalWidth = 8)() should be (5)
-      BitsInts(val2, isSigned = false, high = 3, low = 2, originalWidth = 8)() should be (2)
-      BitsInts(val2, isSigned = false, high = 3, low = 3, originalWidth = 8)() should be (1)
+      BitsInts(val2, high = 1, low = 0, originalWidth = 8)() should be (2)
+      BitsInts(val2, high = 2, low = 0, originalWidth = 8)() should be (2)
+      BitsInts(val2, high = 3, low = 0, originalWidth = 8)() should be (10)
+      BitsInts(val2, high = 3, low = 1, originalWidth = 8)() should be (5)
+      BitsInts(val2, high = 3, low = 2, originalWidth = 8)() should be (2)
+      BitsInts(val2, high = 3, low = 3, originalWidth = 8)() should be (1)
     }
-
-    "head ops should take bits from front of number" in {
-      HeadInts(f1, takeBits = 1, originalWidth = 1)() should be (1)
-      HeadInts(f1, takeBits = 1, originalWidth = 2)() should be (0)
-
-      HeadInts(fMinus1, takeBits = 1, originalWidth = 1)() should be (1)
-      HeadInts(fMinus1, takeBits = 1, originalWidth = 2)() should be (1)
-      HeadInts(f1, takeBits = 1, originalWidth = 2)() should be (0)
-      HeadInts(f2, takeBits = 1, originalWidth = 3)() should be (0)
-
-      HeadInts(val1, takeBits = 9, originalWidth = 17)() should be (Integer.parseInt("ab", 16))
-      HeadInts(val1, takeBits = 8, originalWidth = 16)() should be (Integer.parseInt("ab", 16))
-
-    }
-
   }
 }
