@@ -56,6 +56,15 @@ object BitTwiddlingUtils {
     boolToBigInt((0 until bitWidth).map(i => a.testBit(i)).reduce(_^_))
   }
 
+  def head(a: BigInt, takeBits: Int, originalBitWidth: Int): BigInt = {
+    var x = Big0
+    val bitOffset = originalBitWidth - takeBits
+    for(i <- 0 until takeBits) {
+      if(a.testBit(i + bitOffset)) x = x.setBit(i)
+    }
+    x
+  }
+
   def tail(a: BigInt, dropBits: Int, originalBitWidth: Int): BigInt = {
     var x = Big0
     val bitsWanted = originalBitWidth - dropBits

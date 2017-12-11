@@ -65,32 +65,17 @@ class IntOpsSpec extends FreeSpec with Matchers {
     }
 
     "head ops should take bits from front of number" in {
-      HeadInts(f1, isSigned = false, takeBits = 1, originalWidth = 1)() should be (1)
-      HeadInts(f1, isSigned = false, takeBits = 1, originalWidth = 2)() should be (0)
+      HeadInts(f1, takeBits = 1, originalWidth = 1)() should be (1)
+      HeadInts(f1, takeBits = 1, originalWidth = 2)() should be (0)
 
-      HeadInts(fMinus1, isSigned = true, takeBits = 1, originalWidth = 1)() should be (1)
-      HeadInts(fMinus1, isSigned = true, takeBits = 1, originalWidth = 2)() should be (1)
-      HeadInts(f1, isSigned = true, takeBits = 1, originalWidth = 2)() should be (0)
-      HeadInts(f2, isSigned = true, takeBits = 1, originalWidth = 3)() should be (0)
+      HeadInts(fMinus1, takeBits = 1, originalWidth = 1)() should be (1)
+      HeadInts(fMinus1, takeBits = 1, originalWidth = 2)() should be (1)
+      HeadInts(f1, takeBits = 1, originalWidth = 2)() should be (0)
+      HeadInts(f2, takeBits = 1, originalWidth = 3)() should be (0)
 
-      HeadInts(val1, isSigned = true, takeBits = 9, originalWidth = 17)() should be (Integer.parseInt("ab", 16))
-      HeadInts(val1, isSigned = false, takeBits = 8, originalWidth = 16)() should be (Integer.parseInt("ab", 16))
+      HeadInts(val1, takeBits = 9, originalWidth = 17)() should be (Integer.parseInt("ab", 16))
+      HeadInts(val1, takeBits = 8, originalWidth = 16)() should be (Integer.parseInt("ab", 16))
 
-    }
-
-    "tail ops should drop leading bits from expression" in {
-      TailInts(() => -22, toDrop = 1, originalWidth = 16)() should be (32746)
-
-      TailInts(f1, toDrop = 1, originalWidth = 2)() should be (1)
-      TailInts(f2, toDrop = 1, originalWidth = 3)() should be (2)
-      TailInts(f3, toDrop = 1, originalWidth = 3)() should be (3)
-      TailInts(f3, toDrop = 1, originalWidth = 2)() should be (1)
-      TailInts(fMinus3, toDrop = 1, originalWidth = 4)() should be (5)
-      TailInts(fMinus4, toDrop = 1, originalWidth = 4)() should be (4)
-
-      val tailOps = TailInts(val1, toDrop = 9, originalWidth = 17)
-      println(f"TailInts(${val1()}%x, toDrop = 8) -> ${tailOps()}%x")
-      tailOps() should be (Integer.parseInt("cd", 16))
     }
 
   }

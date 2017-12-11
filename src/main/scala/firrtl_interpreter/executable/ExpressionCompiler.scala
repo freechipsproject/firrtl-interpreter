@@ -305,21 +305,21 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         arg1 match {
           case e1: IntExpressionResult =>
             op match {
-              case Head => HeadInts(e1.apply, isSigned, takeBits = param1, arg1Width)
+              case Head => HeadInts(e1.apply, takeBits = param1, arg1Width)
               case Tail => TailInts(e1.apply, toDrop = param1, arg1Width)
               case Shl  => ShlInts(e1.apply, GetIntConstant(param1).apply)
               case Shr  => ShrInts(e1.apply, GetIntConstant(param1).apply)
             }
           case e1: LongExpressionResult =>
             op match {
-              case Head => HeadLongs(e1.apply, isSigned, takeBits = param1, arg1Width)
+              case Head => HeadLongs(e1.apply, takeBits = param1, arg1Width)
               case Tail => TailLongs(e1.apply, toDrop = param1, arg1Width)
               case Shl  => ShlLongs(e1.apply, GetLongConstant(param1).apply)
               case Shr  => ShrLongs(e1.apply, GetLongConstant(param1).apply)
             }
           case e1: BigExpressionResult =>
             op match {
-              case Head => HeadBigs(e1.apply, isSigned, takeBits = param1, arg1Width)
+              case Head => HeadBigs(e1.apply, takeBits = param1, arg1Width)
               case Tail => TailBigs(e1.apply, toDrop = param1, arg1Width)
               case Shl  => ShlBigs(e1.apply, GetBigConstant(param1).apply)
               case Shr  => ShrBigs(e1.apply, GetBigConstant(param1).apply)

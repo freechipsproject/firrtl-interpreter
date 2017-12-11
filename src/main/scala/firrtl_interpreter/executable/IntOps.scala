@@ -217,7 +217,7 @@ case class BitsInts(f1: FuncInt, isSigned: Boolean, high: Int, low: Int, origina
   }
 }
 
-case class HeadInts(f1: FuncInt, isSigned: Boolean, takeBits: Int, originalWidth: Int) extends IntExpressionResult {
+case class HeadInts(f1: FuncInt, takeBits: Int, originalWidth: Int) extends IntExpressionResult {
   private val mask = (1 << takeBits) - 1
   private val shift = originalWidth - takeBits
 

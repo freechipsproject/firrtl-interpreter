@@ -68,16 +68,16 @@ class BigOpsSpec extends FreeSpec with Matchers {
     }
 
     "head ops should take bits from front of number" in {
-      HeadBigs(f1, isSigned = false, takeBits = 1, originalWidth = 1)() should be (BigInt(1))
-      HeadBigs(f1, isSigned = false, takeBits = 1, originalWidth = 2)() should be (BigInt(0))
+      HeadBigs(f1, takeBits = 1, originalWidth = 1)() should be (BigInt(1))
+      HeadBigs(f1, takeBits = 1, originalWidth = 2)() should be (BigInt(0))
 
-      HeadBigs(fMinus1, isSigned = true, takeBits = 1, originalWidth = 1)() should be (BigInt(1))
-      HeadBigs(fMinus1, isSigned = true, takeBits = 1, originalWidth = 2)() should be (BigInt(1))
-      HeadBigs(f1, isSigned = true, takeBits = 1, originalWidth = 2)() should be (BigInt(0))
-      HeadBigs(f2, isSigned = true, takeBits = 1, originalWidth = 3)() should be (BigInt(0))
+      HeadBigs(fMinus1, takeBits = 1, originalWidth = 1)() should be (BigInt(1))
+      HeadBigs(fMinus1, takeBits = 1, originalWidth = 2)() should be (BigInt(1))
+      HeadBigs(f1, takeBits = 1, originalWidth = 2)() should be (BigInt(0))
+      HeadBigs(f2, takeBits = 1, originalWidth = 3)() should be (BigInt(0))
 
-      HeadBigs(val1, isSigned = true, takeBits = 9, originalWidth = 17)() should be (BigInt(Integer.parseInt("ab", 16)))
-      HeadBigs(val1, isSigned = false, takeBits = 8, originalWidth = 16)() should be (BigInt(Integer.parseInt("ab", 16)))
+      HeadBigs(val1, takeBits = 9, originalWidth = 17)() should be (BigInt(Integer.parseInt("ab", 16)))
+      HeadBigs(val1, takeBits = 8, originalWidth = 16)() should be (BigInt(Integer.parseInt("ab", 16)))
 
     }
 

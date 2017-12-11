@@ -189,7 +189,7 @@ case class BitsBigs(f1: FuncBig, isSigned: Boolean, high: Int, low: Int, origina
   }
 }
 
-case class HeadBigs(f1: FuncBig, isSigned: Boolean, takeBits: Int, originalWidth: Int) extends BigExpressionResult {
+case class HeadBigs(f1: FuncBig, takeBits: Int, originalWidth: Int) extends BigExpressionResult {
   private val mask = BitMasks.getBitMasksBigs(takeBits).allBitsMask
   private val shift = originalWidth - takeBits
 

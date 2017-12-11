@@ -192,7 +192,7 @@ case class BitsLongs(f1: FuncLong, isSigned: Boolean, high: Int, low: Int, origi
   }
 }
 
-case class HeadLongs(f1: FuncLong, isSigned: Boolean, takeBits: Int, originalWidth: Int) extends LongExpressionResult {
+case class HeadLongs(f1: FuncLong, takeBits: Int, originalWidth: Int) extends LongExpressionResult {
   private val mask = LongUtils.makeMask(takeBits)
   private val shift = originalWidth - takeBits
 
