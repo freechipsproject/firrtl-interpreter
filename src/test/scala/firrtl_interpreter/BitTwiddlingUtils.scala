@@ -3,6 +3,7 @@
 package firrtl_interpreter
 
 import firrtl_interpreter.executable.Big
+import firrtl_interpreter.utils.BitMasks
 
 /**
   * This object has an alternate way of computing the various primitive operations.
@@ -27,14 +28,14 @@ object BitTwiddlingUtils {
     a % b
   }
 
-  def and(a: BigInt, b: BigInt, outputBitWidth: Int = -1, aIsSInt: Boolean = true, bIsSInt: Boolean = true): BigInt = {
-    val uIntA = asUInt(a, outputBitWidth, aIsSInt)
-    val uIntB = asUInt(b, outputBitWidth, bIsSInt)
+  def and(a: BigInt, b: BigInt, outputBitWidth: Int = -1): BigInt = {
+    val uIntA = asUInt(a, outputBitWidth)
+    val uIntB = asUInt(b, outputBitWidth)
     uIntA & uIntB
   }
 
   def andr(a: BigInt, bitWidth: Int, aIsSInt: Boolean): BigInt = {
-    val uInt = asUInt(a, bitWidth, aIsSInt)
+    val uInt = asUInt(a, bitWidth)
     boolToBigInt((0 until bitWidth).map(i => uInt.testBit(i)).reduce(_&&_))
   }
 
@@ -51,7 +52,7 @@ object BitTwiddlingUtils {
   }
 
   def xorr(a: BigInt, bitWidth: Int, aIsSInt: Boolean): BigInt = {
-    val uInt = asUInt(a, bitWidth, aIsSInt)
+    val uInt = asUInt(a, bitWidth)
     boolToBigInt((0 until bitWidth).map(i => a.testBit(i)).reduce(_^_))
   }
 
@@ -64,13 +65,10 @@ object BitTwiddlingUtils {
     x
   }
 
-  def asUInt(a: BigInt, bitWidth: Int, inputIsSInt: Boolean = false): BigInt = {
-    if(inputIsSInt) {
-      tail(a, dropBits = 0, originalBitWidth = bitWidth)
-    }
-    else {
-      a
-    }
+  def asUInt(a: BigInt, bitWidth: Int): BigInt = {
+    val bitMasks = BitMasks.getBitMasksBigs(bitWidth)
+
+    a & bitMasks.allBitsMask
   }
 
   def makeUInt(a: BigInt, bitWidth: Int): BigInt = {

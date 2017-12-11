@@ -112,7 +112,7 @@ class AsSIntAsUInt extends FreeSpec with Matchers {
         val (lo, hi) = extremaOfSIntOfWidth(bitWidth)
         for (i <- lo to hi) {
           val input = i.toInt
-          val expected = BitTwiddlingUtils.asUInt(i, bitWidth, inputIsSInt = true).toInt
+          val expected = BitTwiddlingUtils.asUInt(i, bitWidth).toInt
           AsUIntInts(() => input, width = bitWidth).apply() should be(expected)
         }
       }
@@ -122,7 +122,7 @@ class AsSIntAsUInt extends FreeSpec with Matchers {
           val bitWidth = size.toInt
           for (i <- BigIntTestValuesGenerator(extremaOfUIntOfWidth(bitWidth))) {
             val input = i.toInt
-            val expected = BitTwiddlingUtils.asUInt(i, bitWidth, inputIsSInt = false).toInt
+            val expected = BitTwiddlingUtils.asUInt(i, bitWidth).toInt
             AsUIntInts(() => input, width = bitWidth).apply() should be(expected)
           }
         }
@@ -132,7 +132,7 @@ class AsSIntAsUInt extends FreeSpec with Matchers {
           val bitWidth = size.toInt
           for (i <- BigIntTestValuesGenerator(extremaOfSIntOfWidth(bitWidth))) {
             val input = i.toInt
-            val expected = BitTwiddlingUtils.asUInt(i, bitWidth, inputIsSInt = true).toInt
+            val expected = BitTwiddlingUtils.asUInt(i, bitWidth).toInt
             AsUIntInts(() => input, width = bitWidth).apply() should be(expected)
           }
         }
@@ -144,7 +144,7 @@ class AsSIntAsUInt extends FreeSpec with Matchers {
           val bitWidth = size.toInt
           for (i <- BigIntTestValuesGenerator(extremaOfUIntOfWidth(bitWidth))) {
             val input = i.toLong
-            val expected = BitTwiddlingUtils.asUInt(i, bitWidth, inputIsSInt = false).toLong
+            val expected = BitTwiddlingUtils.asUInt(i, bitWidth).toLong
             AsUIntLongs(() => input, isSigned = true, width = bitWidth).apply() should be(expected)
           }
         }
@@ -154,7 +154,7 @@ class AsSIntAsUInt extends FreeSpec with Matchers {
           val bitWidth = size.toInt
           for (i <- BigIntTestValuesGenerator(extremaOfSIntOfWidth(bitWidth))) {
             val input = i.toLong
-            val expected = BitTwiddlingUtils.asUInt(i, bitWidth, inputIsSInt = true).toLong
+            val expected = BitTwiddlingUtils.asUInt(i, bitWidth).toLong
             AsUIntLongs(() => input, isSigned = true, width = bitWidth).apply() should be(expected)
           }
         }
@@ -167,7 +167,7 @@ class AsSIntAsUInt extends FreeSpec with Matchers {
           val bitWidth = size.toInt
           for (i <- BigIntTestValuesGenerator(extremaOfUIntOfWidth(bitWidth))) {
             val input = i
-            val expected = BitTwiddlingUtils.asUInt(i, bitWidth, inputIsSInt = false)
+            val expected = BitTwiddlingUtils.asUInt(i, bitWidth)
             AsUIntBigs(() => input, width = bitWidth).apply() should be(expected)
           }
         }
@@ -177,7 +177,7 @@ class AsSIntAsUInt extends FreeSpec with Matchers {
           val bitWidth = size.toInt
           for (i <- BigIntTestValuesGenerator(extremaOfSIntOfWidth(bitWidth))) {
             val input = i
-            val expected = BitTwiddlingUtils.asUInt(i, bitWidth, inputIsSInt = true)
+            val expected = BitTwiddlingUtils.asUInt(i, bitWidth)
             AsUIntBigs(() => input, width = bitWidth).apply() should be(expected)
           }
         }
