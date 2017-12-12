@@ -112,8 +112,9 @@ case class NegLongs(f1: FuncLong) extends LongExpressionResult {
   def apply(): Long = - f1()
 }
 
-case class NotLongs(f1: FuncLong) extends LongExpressionResult {
-  def apply(): Long = ~ f1()
+case class NotLongs(f1: FuncLong, width: Int) extends LongExpressionResult {
+  private val mask = BitMasks.getBitMasksLongs(width).allBitsMask
+  def apply(): Long = (~ f1()) & mask
 }
 
 case class AndLongs(f1: FuncLong, f2: FuncLong) extends LongExpressionResult {

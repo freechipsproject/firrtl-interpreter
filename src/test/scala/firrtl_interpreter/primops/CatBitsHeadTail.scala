@@ -58,6 +58,22 @@ class CatBitsHeadTail extends FreeSpec with Matchers {
         }
       }
 
+      "bits should work on known range of UInts" in {
+        for {
+          bitWidth1 <- 1 to 4
+          bitWidth2 <- 1 to 4
+        } {
+          val (lo1, hi1) = extremaOfUIntOfWidth(bitWidth1)
+          val (lo2, hi2) = extremaOfUIntOfWidth(bitWidth2)
+          for {
+            num1 <- lo1 to hi1
+            num2 <- lo2 to hi2
+          } {
+            doCatCheck(num1, bitWidth1, num2, bitWidth2)
+          }
+        }
+      }
+
     }
 
     "Bits should bass the following tests" - {

@@ -381,7 +381,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
               case Cvt     => e1
               case Neg     => NegInts(e1.apply)
-              case Not     => NotInts(e1.apply)
+              case Not     => NotInts(e1.apply, width)
 
               case Andr    => AndrInts(e1.apply, width)
               case Orr     => OrrInts(e1.apply,  width)
@@ -396,7 +396,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
               case Cvt     => e1
               case Neg     => NegLongs(e1.apply)
-              case Not     => NotLongs(e1.apply)
+              case Not     => NotLongs(e1.apply, width)
 
               case Andr    => AndrLongs(e1.apply, width)
               case Orr     => OrrLongs(e1.apply,  width)
@@ -411,7 +411,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
               case Cvt     => e1
               case Neg     => NegBigs(e1.apply)
-              case Not     => NotBigs(e1.apply)
+              case Not     => NotBigs(e1.apply, width)
 
               case Andr    => AndrBigs(e1.apply, width)
               case Orr     => OrrBigs(e1.apply,  width)

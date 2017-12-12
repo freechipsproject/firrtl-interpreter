@@ -108,8 +108,9 @@ case class NegBigs(f1: FuncBig) extends BigExpressionResult {
   def apply(): Big = - f1()
 }
 
-case class NotBigs(f1: FuncBig) extends BigExpressionResult {
-  def apply(): Big = ~ f1()
+case class NotBigs(f1: FuncBig, width: Int) extends BigExpressionResult {
+  private val mask = BitMasks.getBitMasksBigs(width).allBitsMask
+  def apply(): Big = (~ f1()) & mask
 }
 
 case class AndBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {

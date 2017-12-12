@@ -133,8 +133,9 @@ case class NegInts(f1: FuncInt) extends IntExpressionResult {
   def apply(): Int = - f1()
 }
 
-case class NotInts(f1: FuncInt) extends IntExpressionResult {
-  def apply(): Int = ~ f1()
+case class NotInts(f1: FuncInt, width: Int) extends IntExpressionResult {
+  private val mask = BitMasks.getBitMasksInts(width).allBitsMask
+  def apply(): Int = (~ f1()) & mask
 }
 
 case class AndInts(f1: FuncInt, f2: FuncInt, resultWidth: Int) extends IntExpressionResult {

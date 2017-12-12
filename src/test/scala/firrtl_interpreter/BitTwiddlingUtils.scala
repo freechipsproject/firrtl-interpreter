@@ -28,6 +28,18 @@ object BitTwiddlingUtils {
     a % b
   }
 
+  def neg(a: Big): Big = {
+    -a
+  }
+
+  def not(a: Big, width: Int): Big = {
+    var x = Big(0)
+    for(i <- 0 until width) {
+      if(! a.testBit(i)) x = x.setBit(i)
+    }
+    x
+  }
+
   def and(a: Big, b: Big, outputBitWidth: Int = -1): Big = {
     val uIntA = asUInt(a, outputBitWidth)
     val uIntB = asUInt(b, outputBitWidth)
