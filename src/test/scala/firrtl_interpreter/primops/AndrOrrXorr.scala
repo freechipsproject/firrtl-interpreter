@@ -8,7 +8,7 @@ import org.scalatest.{FreeSpec, Matchers}
 
 
 // scalastyle:off magic.number
-class BitReductions extends FreeSpec with Matchers {
+class AndrOrrXorr extends FreeSpec with Matchers {
   "BitReductions should pass a basic test" - {
     "And reduction (Andr) should work for uints with known examples" in {
       val bitWidth = 4
@@ -16,7 +16,7 @@ class BitReductions extends FreeSpec with Matchers {
       for (i <- lo to hi) {
         val input = i.toInt
         val expected = BitTwiddlingUtils.andr(i, bitWidth, aIsSInt = false).toInt
-        AndrInts(() => input, isSigned = false, bitWidth).apply() should be(expected)
+        AndrInts(() => input, bitWidth).apply() should be(expected)
       }
     }
 
@@ -26,7 +26,7 @@ class BitReductions extends FreeSpec with Matchers {
       for (i <- lo to hi) {
         val input = i.toInt
         val expected = BitTwiddlingUtils.andr(i, bitWidth, aIsSInt = true).toInt
-        AndrInts(() => input, isSigned = true, bitWidth).apply() should be(expected)
+        AndrInts(() => input, bitWidth).apply() should be(expected)
       }
     }
 
@@ -37,7 +37,7 @@ class BitReductions extends FreeSpec with Matchers {
         val input = i.toInt
         val expected = BitTwiddlingUtils.orr(i, bitWidth, aIsSInt = false).toInt
         // println(s"input $input ${(input + 32).toBinaryString.takeRight(4)} expected $expected")
-        OrrInts(() => input, isSigned = false, bitWidth).apply() should be(expected)
+        OrrInts(() => input, bitWidth).apply() should be(expected)
       }
     }
 
@@ -48,7 +48,7 @@ class BitReductions extends FreeSpec with Matchers {
         val input = i.toInt
         val expected = BitTwiddlingUtils.orr(i, bitWidth, aIsSInt = true).toInt
         // println(s"input $input ${(input + 32).toBinaryString.takeRight(4)} expected $expected")
-        OrrInts(() => input, isSigned = true, bitWidth).apply() should be(expected)
+        OrrInts(() => input, bitWidth).apply() should be(expected)
       }
     }
 
@@ -59,7 +59,7 @@ class BitReductions extends FreeSpec with Matchers {
         val input = i.toInt
         val expected = BitTwiddlingUtils.xorr(i, bitWidth, aIsSInt = false).toInt
         // println(s"input $input ${(input + 32).toBinaryString.takeRight(4)} expected $expected")
-        XorrInts(() => input, isSigned = false, bitWidth).apply() should be(expected)
+        XorrInts(() => input, bitWidth).apply() should be(expected)
       }
     }
 
@@ -70,7 +70,7 @@ class BitReductions extends FreeSpec with Matchers {
         val input = i.toInt
         val expected = BitTwiddlingUtils.xorr(i, bitWidth, aIsSInt = true).toInt
         // println(s"input $input ${(input + 1024).toBinaryString.takeRight(4)} expected $expected")
-        XorrInts(() => input, isSigned = true, bitWidth).apply() should be(expected)
+        XorrInts(() => input, bitWidth).apply() should be(expected)
       }
     }
 
@@ -82,21 +82,21 @@ class BitReductions extends FreeSpec with Matchers {
           val (andrResult, orrResult, xorrResult) = DataSize(bitWidth) match {
             case IntSize =>
               (
-                Big(AndrInts(() => i.toInt, isSigned = false, bitWidth).apply()),
-                Big(OrrInts(()  => i.toInt, isSigned = false, bitWidth).apply()),
-                Big(XorrInts(() => i.toInt, isSigned = false, bitWidth).apply())
+                Big(AndrInts(() => i.toInt, bitWidth).apply()),
+                Big(OrrInts(()  => i.toInt, bitWidth).apply()),
+                Big(XorrInts(() => i.toInt, bitWidth).apply())
               )
             case LongSize =>
               (
-                Big(AndrLongs(() => i.toLong, isSigned = false, bitWidth).apply()),
-                Big(OrrLongs(()  => i.toLong, isSigned = false, bitWidth).apply()),
-                Big(XorrLongs(() => i.toLong, isSigned = false, bitWidth).apply())
+                Big(AndrLongs(() => i.toLong, bitWidth).apply()),
+                Big(OrrLongs(()  => i.toLong, bitWidth).apply()),
+                Big(XorrLongs(() => i.toLong, bitWidth).apply())
               )
             case BigSize =>
               (
-                AndrBigs(() => i, isSigned = false, bitWidth).apply(),
-                OrrBigs(() => i,  isSigned = false, bitWidth).apply(),
-                XorrBigs(() => i, isSigned = false, bitWidth).apply()
+                AndrBigs(() => i, bitWidth).apply(),
+                OrrBigs(() => i,  bitWidth).apply(),
+                XorrBigs(() => i, bitWidth).apply()
               )
           }
           val (andrExpected, orrExpected, xorrExpected) = (
@@ -122,21 +122,21 @@ class BitReductions extends FreeSpec with Matchers {
           val (andrResult, orrResult, xorrResult) = DataSize(bitWidth) match {
             case IntSize =>
               (
-                Big(AndrInts(() => i.toInt, isSigned = true, bitWidth).apply()),
-                Big(OrrInts(()  => i.toInt, isSigned = true, bitWidth).apply()),
-                Big(XorrInts(() => i.toInt, isSigned = true, bitWidth).apply())
+                Big(AndrInts(() => i.toInt, bitWidth).apply()),
+                Big(OrrInts(()  => i.toInt, bitWidth).apply()),
+                Big(XorrInts(() => i.toInt, bitWidth).apply())
               )
             case LongSize =>
               (
-                Big(AndrLongs(() => i.toLong, isSigned = true, bitWidth).apply()),
-                Big(OrrLongs(()  => i.toLong, isSigned = true, bitWidth).apply()),
-                Big(XorrLongs(() => i.toLong, isSigned = true, bitWidth).apply())
+                Big(AndrLongs(() => i.toLong, bitWidth).apply()),
+                Big(OrrLongs(()  => i.toLong, bitWidth).apply()),
+                Big(XorrLongs(() => i.toLong, bitWidth).apply())
               )
             case BigSize =>
               (
-                AndrBigs(() => i, isSigned = true, bitWidth).apply(),
-                OrrBigs(() => i,  isSigned = true, bitWidth).apply(),
-                XorrBigs(() => i, isSigned = true, bitWidth).apply()
+                AndrBigs(() => i, bitWidth).apply(),
+                OrrBigs(() => i,  bitWidth).apply(),
+                XorrBigs(() => i, bitWidth).apply()
               )
           }
           val (andrExpected, orrExpected, xorrExpected) = (

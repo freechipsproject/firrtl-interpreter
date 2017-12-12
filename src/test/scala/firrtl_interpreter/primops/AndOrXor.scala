@@ -32,7 +32,7 @@ class AndOrXor extends FreeSpec with Matchers {
       tester.poke("a", a)
       tester.poke("b", b)
       val expected = BitTwiddlingUtils.and(a, b, bitWidth)
-      println(s"and test $a & $b => ${tester.peek("c")}")
+      // println(s"and test $a & $b => ${tester.peek("c")}")
       tester.expect("c", expected)
     }
     tester.report()
@@ -48,9 +48,9 @@ class AndOrXor extends FreeSpec with Matchers {
       val a = i.toInt
       val b = j.toInt
       val expected = BitTwiddlingUtils.and(a, b, bitWidth).toInt
-      println(f"inputs $a%5d (${(a + 32).toBinaryString.takeRight(4)})" +
-        f" $b%5d (${(b + 32).toBinaryString.takeRight(4)})" +
-        f" $expected%5d (${(expected + 32).toBinaryString.takeRight(4)})")
+      // println(f"inputs $a%5d (${(a + 32).toBinaryString.takeRight(4)})" +
+      //  f" $b%5d (${(b + 32).toBinaryString.takeRight(4)})" +
+      //  f" $expected%5d (${(expected + 32).toBinaryString.takeRight(4)})")
 
       AndInts(() => a, () => b, bitWidth).apply() should be(expected)
     }
@@ -68,10 +68,10 @@ class AndOrXor extends FreeSpec with Matchers {
       val result = AsUIntInts(primpOp, bitWidth)
       val expected = BitTwiddlingUtils.and(a, b, bitWidth).toInt
       val naive = AsUIntInts(() => a & b, bitWidth).apply()
-      println(f"inputs $a%5d (${(a + 32).toBinaryString.takeRight(4)})" +
-        f" $b%5d (${(b + 32).toBinaryString.takeRight(4)})" +
-        f" $naive%5d (${(naive + 32).toBinaryString.takeRight(4)})" +
-        f" $expected%5d (${(expected + 32).toBinaryString.takeRight(4)})")
+      // println(f"inputs $a%5d (${(a + 32).toBinaryString.takeRight(4)})" +
+      //  f" $b%5d (${(b + 32).toBinaryString.takeRight(4)})" +
+      //  f" $naive%5d (${(naive + 32).toBinaryString.takeRight(4)})" +
+      //  f" $expected%5d (${(expected + 32).toBinaryString.takeRight(4)})")
 
       naive should be (expected)
 

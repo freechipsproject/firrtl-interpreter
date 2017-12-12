@@ -383,24 +383,24 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
               case Neg     => NegInts(e1.apply)
               case Not     => NotInts(e1.apply)
 
-              case Andr    => AndrInts(e1.apply, isSigned, width)
-              case Orr     => OrrInts(e1.apply,  isSigned, width)
-              case Xorr    => XorrInts(e1.apply, isSigned, width)
+              case Andr    => AndrInts(e1.apply, width)
+              case Orr     => OrrInts(e1.apply,  width)
+              case Xorr    => XorrInts(e1.apply, width)
             }
           case e1: LongExpressionResult =>
             op match {
               case Pad     => e1
               case AsUInt  => AsUIntLongs(e1.apply, width)
-              case AsSInt  => AsSIntLongs(e1.apply, isSigned, width)
+              case AsSInt  => AsSIntLongs(e1.apply, width)
               case AsClock => e1
 
               case Cvt     => e1
               case Neg     => NegLongs(e1.apply)
               case Not     => NotLongs(e1.apply)
 
-              case Andr    => AndrLongs(e1.apply, isSigned, width)
-              case Orr     => OrrLongs(e1.apply,  isSigned, width)
-              case Xorr    => XorrLongs(e1.apply, isSigned, width)
+              case Andr    => AndrLongs(e1.apply, width)
+              case Orr     => OrrLongs(e1.apply,  width)
+              case Xorr    => XorrLongs(e1.apply, width)
             }
           case e1: BigExpressionResult =>
             op match {
@@ -413,9 +413,9 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
               case Neg     => NegBigs(e1.apply)
               case Not     => NotBigs(e1.apply)
 
-              case Andr    => AndrBigs(e1.apply, isSigned, width)
-              case Orr     => OrrBigs(e1.apply,  isSigned, width)
-              case Xorr    => XorrBigs(e1.apply, isSigned, width)
+              case Andr    => AndrBigs(e1.apply, width)
+              case Orr     => OrrBigs(e1.apply,  width)
+              case Xorr    => XorrBigs(e1.apply, width)
             }
         }
       }

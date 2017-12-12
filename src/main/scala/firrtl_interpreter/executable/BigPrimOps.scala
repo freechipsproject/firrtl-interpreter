@@ -127,31 +127,26 @@ case class XorBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
 /**
   * are all bits set
   * @param f1 value to be `and` reduced
-  * @param isSigned is input an SInt
   * @param width result bit size
   */
-case class AndrBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends IntExpressionResult {
+case class AndrBigs(f1: FuncBig, width: Int) extends IntExpressionResult {
+  private val bitMask = BitMasks.getBitMasksBigs(width).allBitsMask
+
   def apply(): Int = {
-    val uInt = AsUIntBigs(f1, width).apply()
-    val lastMask = Big(1) << width
-    var mask = Big(1)
-    while(mask < lastMask) {
-      if((mask & uInt) == Big(0)) return 0
-      mask <<= 1
-    }
-    1
+    if((f1() & bitMask) == bitMask) 1 else 0
   }
 }
 
 /**
   * are any bits set
   * @param f1 value to be `or` reduced
-  * @param isSigned is input an SInt
   * @param width result bit size
   */
-case class OrrBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends IntExpressionResult {
+case class OrrBigs(f1: FuncBig, width: Int) extends IntExpressionResult {
+  private val bitMask = BitMasks.getBitMasksBigs(width).allBitsMask
+
   def apply(): Int = {
-    val uInt = AsUIntBigs(f1, width).apply()
+    val uInt = f1() & bitMask
     if(uInt > 0) { 1 } else { 0 }
   }
 }
@@ -159,12 +154,13 @@ case class OrrBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends IntExpres
 /**
   * are all bits set
   * @param f1 value to be `xor` reduced
-  * @param isSigned is input an SInt
   * @param width result bit size
   */
-case class XorrBigs(f1: FuncBig, isSigned: Boolean, width: Int) extends IntExpressionResult {
+case class XorrBigs(f1: FuncBig, width: Int) extends IntExpressionResult {
+  private val bitMask = BitMasks.getBitMasksBigs(width).allBitsMask
+
   def apply(): Int = {
-    val uInt = AsUIntBigs(f1, width).apply()
+    val uInt = f1() & bitMask
     (0 until width).map(n => ((uInt >> n) & BigInt(1)).toInt).reduce(_ ^ _)
   }
 }
