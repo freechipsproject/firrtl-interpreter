@@ -2,7 +2,7 @@
 
 package firrtl_interpreter.executable
 
-import firrtl_interpreter.utils.BitMasks
+import firrtl_interpreter.utils.{BitMasks, BitUtils}
 
 trait BigExpressionResult extends ExpressionResult {
   def apply(): Big
@@ -113,16 +113,21 @@ case class NotBigs(f1: FuncBig, width: Int) extends BigExpressionResult {
   def apply(): Big = (~ f1()) & mask
 }
 
-case class AndBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
-  def apply(): Big = f1() & f2()
+case class AndBigs(f1: FuncBig, f2: FuncBig, resultWidth: Int) extends BigExpressionResult {
+  private val mask = BitUtils.makeMaskBig(resultWidth)
+
+  def apply(): Big = (f1() & f2()) & mask}
+
+case class OrBigs(f1: FuncBig, f2: FuncBig, resultWidth: Int) extends BigExpressionResult {
+  private val mask = BitUtils.makeMaskBig(resultWidth)
+
+  def apply(): Big = (f1() | f2()) & mask
 }
 
-case class OrBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
-  def apply(): Big = f1() | f2()
-}
+case class XorBigs(f1: FuncBig, f2: FuncBig, resultWidth: Int) extends BigExpressionResult {
+  private val mask = BitUtils.makeMaskBig(resultWidth)
 
-case class XorBigs(f1: FuncBig, f2: FuncBig) extends BigExpressionResult {
-  def apply(): Big = f1() ^ f2()
+  def apply(): Big = (f1() ^ f2()) & mask
 }
 
 /**
@@ -168,7 +173,6 @@ case class XorrBigs(f1: FuncBig, width: Int) extends IntExpressionResult {
 
 case class CatBigs(f1: FuncBig, f1Width: Int, f2: FuncBig, f2Width: Int) extends BigExpressionResult {
   private val mask1 = BitMasks.getBitMasksBigs(f1Width).allBitsMask
-  private val mask2 = BitMasks.getBitMasksBigs(f2Width).allBitsMask
   def apply(): Big = {
     ((f1() & mask1) << f2Width) | f2()
   }

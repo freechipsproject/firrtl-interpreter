@@ -2,7 +2,7 @@
 
 package firrtl_interpreter.executable
 
-import firrtl_interpreter.utils.BitMasks
+import firrtl_interpreter.utils.{BitMasks, BitUtils}
 
 trait LongExpressionResult extends ExpressionResult {
   def apply(): Long
@@ -117,16 +117,22 @@ case class NotLongs(f1: FuncLong, width: Int) extends LongExpressionResult {
   def apply(): Long = (~ f1()) & mask
 }
 
-case class AndLongs(f1: FuncLong, f2: FuncLong) extends LongExpressionResult {
-  def apply(): Long = f1() & f2()
+case class AndLongs(f1: FuncLong, f2: FuncLong, resultWidth: Int) extends LongExpressionResult {
+  private val mask = BitUtils.makeMaskLong(resultWidth)
+
+  def apply(): Long = (f1() & f2()) & mask
 }
 
-case class OrLongs(f1: FuncLong, f2: FuncLong) extends LongExpressionResult {
-  def apply(): Long = f1() | f2()
+case class OrLongs(f1: FuncLong, f2: FuncLong, resultWidth: Int) extends LongExpressionResult {
+  private val mask = BitUtils.makeMaskLong(resultWidth)
+
+  def apply(): Long = (f1() | f2()) & mask
 }
 
-case class XorLongs(f1: FuncLong, f2: FuncLong) extends LongExpressionResult {
-  def apply(): Long = f1() ^ f2()
+case class XorLongs(f1: FuncLong, f2: FuncLong, resultWidth: Int) extends LongExpressionResult {
+  private val mask = BitUtils.makeMaskLong(resultWidth)
+
+  def apply(): Long = (f1() ^ f2()) & mask
 }
 
 /**
@@ -171,7 +177,6 @@ case class XorrLongs(f1: FuncLong, width: Int) extends IntExpressionResult {
 
 case class CatLongs(f1: FuncLong, f1Width: Int, f2: FuncLong, f2Width: Int) extends LongExpressionResult {
   private val mask1 = BitMasks.getBitMasksLongs(f1Width).allBitsMask
-  private val mask2 = BitMasks.getBitMasksLongs(f2Width).allBitsMask
   def apply(): Long = {
     ((f1() & mask1) << f2Width) | f2()
   }

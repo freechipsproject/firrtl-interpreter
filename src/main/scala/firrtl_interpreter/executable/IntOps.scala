@@ -140,17 +140,20 @@ case class NotInts(f1: FuncInt, width: Int) extends IntExpressionResult {
 
 case class AndInts(f1: FuncInt, f2: FuncInt, resultWidth: Int) extends IntExpressionResult {
   private val mask = BitUtils.makeMaskInt(resultWidth)
-  def apply(): Int = {
-    (f1() & f2()) & mask
-  }
+
+  def apply(): Int = (f1() & f2()) & mask
 }
 
-case class OrInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
-  def apply(): Int = f1() | f2()
+case class OrInts(f1: FuncInt, f2: FuncInt, resultWidth: Int) extends IntExpressionResult {
+  private val mask = BitUtils.makeMaskInt(resultWidth)
+
+  def apply(): Int = (f1() | f2()) & mask
 }
 
-case class XorInts(f1: FuncInt, f2: FuncInt) extends IntExpressionResult {
-  def apply(): Int = f1() ^ f2()
+case class XorInts(f1: FuncInt, f2: FuncInt, resultWidth: Int) extends IntExpressionResult {
+  private val mask = BitUtils.makeMaskInt(resultWidth)
+
+  def apply(): Int = (f1() ^ f2()) & mask
 }
 
 /**
@@ -196,7 +199,6 @@ case class XorrInts(f1: FuncInt, width: Int) extends IntExpressionResult {
 
 case class CatInts(f1: FuncInt, f1Width: Int, f2: FuncInt, f2Width: Int) extends IntExpressionResult {
   private val mask1 = BitMasks.getBitMasksInts(f1Width).allBitsMask
-  private val mask2 = BitMasks.getBitMasksInts(f2Width).allBitsMask
   def apply(): Int = {
     ((f1() & mask1) << f2Width) | f2()
   }

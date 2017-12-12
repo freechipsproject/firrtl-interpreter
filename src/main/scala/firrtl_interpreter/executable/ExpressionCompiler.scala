@@ -184,8 +184,8 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             case Dshr => DshrInts(e1.apply, e2.apply)
 
             case And => AndInts(e1.apply, e2.apply, arg1Width.max(arg2Width))
-            case Or => OrInts(e1.apply, e2.apply)
-            case Xor => XorInts(e1.apply, e2.apply)
+            case Or => OrInts(e1.apply, e2.apply, arg1Width.max(arg2Width))
+            case Xor => XorInts(e1.apply, e2.apply, arg1Width.max(arg2Width))
 
             case Cat =>
               CatInts(e1.apply, arg1Width, e2.apply, arg2Width)
@@ -213,9 +213,9 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             case Dshl => DshlLongs(e1.apply, e2.apply)
             case Dshr => DshrLongs(e1.apply, e2.apply)
 
-            case And  => AndLongs(e1.apply, e2.apply)
-            case Or   => OrLongs(e1.apply, e2.apply)
-            case Xor  => XorLongs(e1.apply, e2.apply)
+            case And  => AndLongs(e1.apply, e2.apply, arg1Width.max(arg2Width))
+            case Or   => OrLongs(e1.apply, e2.apply, arg1Width.max(arg2Width))
+            case Xor  => XorLongs(e1.apply, e2.apply, arg1Width.max(arg2Width))
 
             case Cat =>
               CatLongs(e1.apply, arg1Width, e2.apply, arg2Width)
@@ -243,9 +243,9 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             case Dshl => DshlBigs(e1.apply, e2.apply)
             case Dshr => DshrBigs(e1.apply, e2.apply)
 
-            case And  => AndBigs(e1.apply, e2.apply)
-            case Or   => OrBigs(e1.apply, e2.apply)
-            case Xor  => XorBigs(e1.apply, e2.apply)
+            case And  => AndBigs(e1.apply, e2.apply, arg1Width.max(arg2Width))
+            case Or   => OrBigs(e1.apply, e2.apply, arg1Width.max(arg2Width))
+            case Xor  => XorBigs(e1.apply, e2.apply, arg1Width.max(arg2Width))
 
             case Cat =>
               CatBigs(e1.apply, arg1Width, e2.apply, arg2Width)

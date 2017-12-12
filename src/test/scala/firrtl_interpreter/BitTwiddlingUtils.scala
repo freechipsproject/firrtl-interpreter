@@ -28,6 +28,14 @@ object BitTwiddlingUtils {
     a % b
   }
 
+  def shl(a: Big, b: Big): Big = {
+    a << b.toInt
+  }
+
+  def shr(a: Big, b: Big): Big = {
+    a >> b.toInt
+  }
+
   def neg(a: Big): Big = {
     -a
   }
@@ -44,6 +52,18 @@ object BitTwiddlingUtils {
     val uIntA = asUInt(a, outputBitWidth)
     val uIntB = asUInt(b, outputBitWidth)
     uIntA & uIntB
+  }
+
+  def or(a: Big, b: Big, outputBitWidth: Int = -1): Big = {
+    val uIntA = asUInt(a, outputBitWidth)
+    val uIntB = asUInt(b, outputBitWidth)
+    uIntA | uIntB
+  }
+
+  def xor(a: Big, b: Big, outputBitWidth: Int = -1): Big = {
+    val uIntA = asUInt(a, outputBitWidth)
+    val uIntB = asUInt(b, outputBitWidth)
+    uIntA ^ uIntB
   }
 
   def andr(a: Big, bitWidth: Int, aIsSInt: Boolean): Big = {
