@@ -2,7 +2,8 @@
 
 package firrtl_interpreter
 
-import firrtl.ir.{Type, Expression, Width}
+import firrtl.ir.{Expression, Type, Width}
+import firrtl_interpreter.executable.{Assigner, FuncUnit, Symbol}
 
 import scala.collection._
 
@@ -67,12 +68,12 @@ abstract class BlackBoxImplementation {
   * a BlackBoxImplementation. This factory provides it.
   * @example {{{
   *   class ExampleBBFactory extends BlackBoxFactory {
-  *     override def createInstatnce(instanceName: String, blackBoxName: String): Option[BlackBoxImplementation] = {
+  *     override def createInstance(instanceName: String, blackBoxName: String): Option[BlackBoxImplementation] = {
   *       instanceName match {
   *         case "bb1" => Some(add(new BB1Impl))
   *         case "bb2" => Some(add(new BB2Impl))
   *         case "bb3" => Some(add(new BB3Impl))
-  *         case _ => throw Exeception(s"ExampleBBBFactory does not know how to create $instanceName}")
+  *         case _ => throw Exception(s"ExampleBBBFactory does not know how to create $instanceName}")
   *       }
   *     }
   *   }
@@ -93,5 +94,12 @@ abstract class BlackBoxFactory {
     */
   def cycle(): Unit = {
     boxes.values.foreach { box => box.cycle() }
+  }
+}
+
+case class BlackBoxCycler(symbol: Symbol, blackBox: BlackBoxImplementation) extends Assigner {
+  override def run: FuncUnit = {
+    blackBox.cycle()
+    () => Unit
   }
 }

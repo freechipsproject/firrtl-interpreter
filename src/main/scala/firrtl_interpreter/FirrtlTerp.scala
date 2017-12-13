@@ -79,15 +79,16 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     }
   }
 
-  println(s"Scheduler after sort ${scheduler.render}")
+  println(s"Scheduler after sort:\n ${scheduler.render}")
 
   private val orphansAndSensitives = symbolTable.orphans ++ symbolTable.getChildren(symbolTable.orphans)
-  private val orphanAssigners = symbolTable.getAssigners(orphansAndSensitives)
+
+  scheduler.setOrphanedAssigners(symbolTable.getAssigners(orphansAndSensitives))
 
   if(verbose) {
     println(s"Executing static assignments")
   }
-  scheduler.executeAssigners(orphanAssigners)
+  scheduler.executeAssigners(scheduler.orphanedAssigns)
   if(verbose) {
     println(s"Finished executing static assignments")
   }
@@ -300,10 +301,6 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     clockOption.foreach { clock =>
       vcdOption.foreach(_.lowerClock())
       dataStore.AssignInt(clock, GetIntConstant(0).apply).run()
-    }
-
-    for (elem <- blackBoxFactories) {
-      elem.cycle()
     }
 
     if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${program.dataInColumns}")

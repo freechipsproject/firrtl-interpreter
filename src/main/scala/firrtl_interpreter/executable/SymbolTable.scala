@@ -3,7 +3,7 @@
 package firrtl_interpreter.executable
 
 import firrtl._
-import firrtl.graph.{DiGraph, MutableDiGraph}
+import firrtl.graph.DiGraph
 import firrtl.ir._
 import firrtl_interpreter.{BlackBoxFactory, BlackBoxImplementation, FindModule, InterpreterException}
 import logger.LazyLogging
@@ -14,7 +14,7 @@ import scala.collection.mutable
 class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
 
   var childrenOf: DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
-  var parentsOf: DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
+  var parentsOf:  DiGraph[Symbol] = DiGraph[Symbol](Map.empty[Symbol, Set[Symbol]])
 
   var orphans: Seq[Symbol] = Seq.empty
 
@@ -24,6 +24,14 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
       throw new InterpreterException(s"Assigner already exists for $symbol")
     }
     toAssigner(symbol) = assigner
+  }
+
+  private val toBlackBoxImplementation: mutable.HashMap[Symbol, BlackBoxImplementation] = new mutable.HashMap()
+  def addBlackBoxImplementation(symbol: Symbol, blackBoxImplementation: BlackBoxImplementation): Unit = {
+    if(toBlackBoxImplementation.contains(symbol)) {
+      throw new InterpreterException(s"Assigner already exists for $symbol")
+    }
+    toBlackBoxImplementation(symbol) = blackBoxImplementation
   }
 
   def allocateData(dataStore: DataStore): Unit = {
@@ -80,6 +88,10 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
     assigners
   }
 
+  def getBlackboxImplementation(symbol: Symbol): Option[BlackBoxImplementation] = {
+    toBlackBoxImplementation.get(symbol)
+  }
+
   def get(name: String): Option[Symbol] = nameToSymbol.get(name)
   def getOrElse(name: String, default: => Symbol): Symbol = nameToSymbol.getOrElse(name, default)
 
@@ -109,6 +121,8 @@ object SymbolTable extends LazyLogging {
     val registerNames = new mutable.HashSet[String]
     val inputPorts    = new mutable.HashSet[String]
     val outputPorts   = new mutable.HashSet[String]
+
+    val blackBoxImplementations = new mutable.HashMap[Symbol, BlackBoxImplementation]()
 
     // scalastyle:off
     def processDependencyStatements(modulePrefix: String, s: Statement): Unit = {
@@ -163,7 +177,10 @@ object SymbolTable extends LazyLogging {
           }
 
         case WDefInstance(_, instanceName, moduleName, _) =>
-          instanceNames += expand(instanceName)
+          val expandedName = expand(instanceName)
+          instanceNames += expandedName
+          nameToSymbol(expandedName) =
+            Symbol(expandedName, IntSize, UnsignedInt, WireKind, 1, 1, UIntType(IntWidth(1)), NoInfo)
 
           val subModule = FindModule(moduleName, circuit)
           val newPrefix = if (modulePrefix.isEmpty) instanceName else modulePrefix + "." + instanceName
@@ -223,6 +240,9 @@ object SymbolTable extends LazyLogging {
                                 modulePrefix: String,
                                 instance: BlackBoxImplementation): Unit = {
       def expand(name: String): String = modulePrefix + "." + name
+
+      val instanceSymbol = nameToSymbol(modulePrefix)
+      blackBoxImplementations(instanceSymbol) = instance
 
       for (outputPort <- extModule.ports if outputPort.direction == Output) {
         instance.outputDependencies(outputPort.name).foreach { inputPortName =>
@@ -298,6 +318,7 @@ object SymbolTable extends LazyLogging {
     symbolTable.outputPortsNames ++= outputPorts
     symbolTable.parentsOf        = sensitivityGraphBuilder.getParentsOfDiGraph
     symbolTable.childrenOf       = sensitivityGraphBuilder.getChildrenOfDiGraph
+    symbolTable.toBlackBoxImplementation ++= blackBoxImplementations
 
     val sorted: Seq[Symbol] = symbolTable.childrenOf.linearize
 

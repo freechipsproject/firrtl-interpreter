@@ -7,7 +7,8 @@ import logger.LazyLogging
 import scala.collection.mutable
 
 class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends LazyLogging {
-  var inputDependentAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer[Assigner]
+  var inputDependentAssigns: mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer
+  val orphanedAssigns:       mutable.ArrayBuffer[Assigner] = new mutable.ArrayBuffer
 
   /**
     * associates a Symbol with a bunch of assignments
@@ -103,6 +104,11 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
         assigner.symbol.cardinalNumber
       }
     }
+  }
+
+  def setOrphanedAssigners(assigners: Seq[Assigner]): Unit = {
+    orphanedAssigns.clear()
+    orphanedAssigns ++= assigners
   }
 
   /**

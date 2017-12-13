@@ -199,7 +199,7 @@ object Memory {
     val memorySymbol = symbolTable(expandedName)
     val dataStore    = compiler.dataStore
 
-    /**
+    /*
       * construct a pipeline of registers based on the latency
       * @param portString   reader or writer port name
       * @param pipelineName name of data being pipelined
@@ -215,7 +215,7 @@ object Memory {
       }
     }
 
-    /**
+    /*
       * Makes a read chain of pipeline registers.  These must be ordered reg0/in, reg0, reg1/in ... regN/in, regN
       * This will advance the registers on the specified clock,
       * and combinationally pass the register value to the next register's input down the chain
@@ -269,7 +269,7 @@ object Memory {
       buildReadPipelineAssigners(clock, readerName, "data", data, addr, enable)
     }
 
-    /**
+    /*
       * compile the necessary assignments to complete a latency chain
       * If latency is zero, this basically returns the root memorySymbol.
       * @param clockSymbol   used to create execution based on this trigger.

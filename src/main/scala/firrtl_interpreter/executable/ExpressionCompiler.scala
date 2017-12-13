@@ -420,7 +420,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         }
       }
 
-      /**
+      /*
         * Process loFirrtl expression and return an executable result
         *
         * @param expression a loFirrtlExpression
@@ -582,10 +582,16 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
           subModule match {
             case extModule: ExtModule =>
-              val implementationFound = blackBoxFactories.exists { factory =>
-                factory.createInstance(modulePrefix, extModule.defname) match {
-                  case Some(implementation) =>
-                    for(port <- extModule.ports if port.direction == Output) {
+              val instanceSymbol = symbolTable(expand(instanceName))
+
+              symbolTable.getBlackboxImplementation(instanceSymbol) match {
+                case Some(implementation) =>
+                  val instanceSymbol = symbolTable(expand(instanceName))
+                  val blackBoxCycler = BlackBoxCycler(instanceSymbol, implementation)
+                  symbolTable.addAssigner(instanceSymbol, blackBoxCycler)
+
+                  for (port <- extModule.ports) {
+                    if (port.direction == Output) {
                       val portSymbol = symbolTable(expand(instanceName + "." + port.name))
                       val inputSymbols = implementation.outputDependencies(port.name).map { inputName =>
                         symbolTable(expand(instanceName + "." + inputName))
@@ -593,16 +599,20 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
                       val shim = dataStore.BlackBoxShim(port.name, portSymbol, inputSymbols, implementation)
                       makeAssigner(portSymbol, shim)
                     }
-                    true
-                  case _ => false
-                }
-              }
-              if (!implementationFound) {
-                println(
-                  s"""WARNING: external module "${extModule.defname}"($modulePrefix:${extModule.name})""" +
-                    """was not matched with an implementation""")
+                    if (port.tpe == ClockType) {
+                      val portSymbol = symbolTable(expand(instanceName + "." + port.name))
+                      scheduler.triggeredAssigns(portSymbol) += blackBoxCycler
+                    }
+                  }
+
+                  true
+                case _ =>
+                  println(
+                    s"""WARNING: external module "${extModule.defname}"($modulePrefix:${extModule.name})""" +
+                      """was not matched with an implementation""")
               }
             case _ =>
+              // not external module, it was processed above
           }
 
         case DefNode(info, name, expression) =>
