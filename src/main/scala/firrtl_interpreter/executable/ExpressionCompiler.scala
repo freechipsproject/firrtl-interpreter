@@ -604,8 +604,6 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
                       scheduler.triggeredAssigns(portSymbol) += blackBoxCycler
                     }
                   }
-
-                  true
                 case _ =>
                   println(
                     s"""WARNING: external module "${extModule.defname}"($modulePrefix:${extModule.name})""" +
