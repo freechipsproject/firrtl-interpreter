@@ -22,7 +22,7 @@ class RegisterSpec extends FlatSpec with Matchers {
       """.stripMargin
 
     val optionsManager = new InterpreterOptionsManager {
-      val interpeterOptions = InterpreterOptions(setVerbose = true)
+      interpreterOptions = InterpreterOptions(setVerbose = true)
     }
     val interpreter = FirrtlTerp(input, optionsManager)
 
@@ -120,8 +120,54 @@ class RegisterSpec extends FlatSpec with Matchers {
 
   behavior of "reset support"
 
-  it should "load registers before any dependencies are evaluated" in {
-    // TODO: what should happen here
+  it should "reset takes precedence over next value" in {
+    val input =
+      """
+        |circuit RegInc :
+        |  module RegInc :
+        |    input clock : Clock
+        |    input reset1 : UInt<1>
+        |
+        |    reg reg1 : UInt<16>, clock with : (reset => (reset1, UInt(3)))  @[RegisterSpec.scala 131:20]
+        |
+        |    reg1 <= add(reg1, UInt(1))
+        |
+      """.stripMargin
+
+    val optionsManager = new InterpreterOptionsManager {
+      interpreterOptions = InterpreterOptions(setVerbose = true)
+    }
+    val interpreter = FirrtlTerp(input, optionsManager)
+
+    interpreter.setValue("reset1", 1)
+    interpreter.cycle()
+    interpreter.getValue("reg1") should be (3)
+    interpreter.cycle()
+    interpreter.getValue("reg1") should be (3)
+    interpreter.cycle()
+    interpreter.getValue("reg1") should be (3)
+
+    interpreter.setValue("reset1", 0)
+    interpreter.cycle()
+    interpreter.getValue("reg1") should be (4)
+
+    interpreter.getValue("reg1") should be (4)
+
+    interpreter.setValue("reset1", 0)
+    interpreter.cycle()
+    interpreter.getValue("reg1") should be (5)
+
+    interpreter.setValue("reset1", 1)
+    interpreter.getValue("reg1") should be (5)
+    interpreter.cycle()
+    interpreter.getValue("reg1") should be (3)
+    interpreter.cycle()
+    interpreter.getValue("reg1") should be (3)
+
+    interpreter.setValue("reset1", 0)
+    interpreter.getValue("reg1") should be (3)
+    interpreter.cycle()
+    interpreter.getValue("reg1") should be (4)
   }
 
   behavior of "poking registers"

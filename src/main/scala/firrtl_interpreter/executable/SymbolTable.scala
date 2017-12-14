@@ -109,7 +109,9 @@ object SymbolTable extends LazyLogging {
   def apply(nameToSymbol: mutable.HashMap[String, Symbol]): SymbolTable = new SymbolTable(nameToSymbol)
 
   //scalastyle:off cyclomatic.complexity method.length
-  def apply(circuit: Circuit, blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty): SymbolTable = {
+  def apply(
+             circuit: Circuit, blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty, allowCycles: Boolean = false
+           ): SymbolTable = {
 
     type SymbolSet = Set[Symbol]
 
@@ -320,7 +322,19 @@ object SymbolTable extends LazyLogging {
     symbolTable.childrenOf       = sensitivityGraphBuilder.getChildrenOfDiGraph
     symbolTable.toBlackBoxImplementation ++= blackBoxImplementations
 
-    val sorted: Seq[Symbol] = symbolTable.childrenOf.linearize
+    val sorted: Seq[Symbol] = try {
+      symbolTable.childrenOf.linearize
+    }
+    catch {
+      case e: firrtl.graph.CyclicException =>
+        if(allowCycles) {
+          symbolTable.symbols.toSeq
+        }
+        else {
+          throw e
+        }
+    }
+
 
     sorted.zipWithIndex.foreach { case (symbol, index) => symbol.cardinalNumber = index }
 

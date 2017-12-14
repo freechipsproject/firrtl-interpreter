@@ -420,6 +420,39 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         }
       }
 
+      def processMux(
+                      condition: ExpressionResult, trueExpression: ExpressionResult, falseExpression: ExpressionResult
+                    ): ExpressionResult = {
+        condition match {
+          case c: IntExpressionResult =>
+            (trueExpression, falseExpression) match {
+
+              case (t: IntExpressionResult, f: IntExpressionResult) =>
+                MuxInts(c.apply, t.apply, f.apply)
+              case (t: IntExpressionResult, f: LongExpressionResult) =>
+                MuxLongs(c.apply, ToLong(t.apply).apply, f.apply)
+              case (t: IntExpressionResult, f: BigExpressionResult) =>
+                MuxBigs(c.apply, ToBig(t.apply).apply, f.apply)
+
+              case (t: LongExpressionResult, f: IntExpressionResult) =>
+                MuxLongs(c.apply, t.apply, ToLong(f.apply).apply)
+              case (t: LongExpressionResult, f: LongExpressionResult) =>
+                MuxLongs(c.apply, t.apply, f.apply)
+              case (t: LongExpressionResult, f: BigExpressionResult) =>
+                MuxBigs(c.apply, LongToBig(t.apply).apply, f.apply)
+
+              case (t: BigExpressionResult, f: IntExpressionResult) =>
+                MuxBigs(c.apply, t.apply, ToBig(f.apply).apply)
+              case (t: BigExpressionResult, f: LongExpressionResult) =>
+                MuxBigs(c.apply, t.apply, LongToBig(f.apply).apply)
+              case (t: BigExpressionResult, f: BigExpressionResult) =>
+                MuxBigs(c.apply, t.apply, f.apply)
+            }
+          case c =>
+            throw InterpreterException(s"Mux condition is not 1 bit $condition parsed as $c")
+        }
+      }
+
       /*
         * Process loFirrtl expression and return an executable result
         *
@@ -438,35 +471,11 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
         val result: ExpressionResult = expression match {
           case Mux(condition, trueExpression, falseExpression, _) =>
-            processExpression(condition) match {
-              case c: IntExpressionResult =>
-                (processExpression(trueExpression), processExpression(falseExpression)) match {
-
-                  case (t: IntExpressionResult, f: IntExpressionResult) =>
-                    MuxInts(c.apply, t.apply, f.apply)
-                  case (t: IntExpressionResult, f: LongExpressionResult) =>
-                    MuxLongs(c.apply, ToLong(t.apply).apply, f.apply)
-                  case (t: IntExpressionResult, f: BigExpressionResult) =>
-                    MuxBigs(c.apply, ToBig(t.apply).apply, f.apply)
-
-                  case (t: LongExpressionResult, f: IntExpressionResult) =>
-                    MuxLongs(c.apply, t.apply, ToLong(f.apply).apply)
-                  case (t: LongExpressionResult, f: LongExpressionResult) =>
-                    MuxLongs(c.apply, t.apply, f.apply)
-                  case (t: LongExpressionResult, f: BigExpressionResult) =>
-                    MuxBigs(c.apply, LongToBig(t.apply).apply, f.apply)
-
-                  case (t: BigExpressionResult, f: IntExpressionResult) =>
-                    MuxBigs(c.apply, t.apply, ToBig(f.apply).apply)
-                  case (t: BigExpressionResult, f: LongExpressionResult) =>
-                    MuxBigs(c.apply, t.apply, LongToBig(f.apply).apply)
-                  case (t: BigExpressionResult, f: BigExpressionResult) =>
-                    MuxBigs(c.apply, t.apply, f.apply)
-                }
-              case c =>
-                throw InterpreterException(s"Mux condition is not 1 bit $condition parsed as $c")
-            }
-
+            processMux(
+              processExpression(condition),
+              processExpression(trueExpression),
+              processExpression(falseExpression)
+            )
           case WRef(name, _, _, _) =>
             createAccessor(expand(name))
           case subfield: WSubField =>
@@ -647,7 +656,8 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             case IntSize =>
               triggeredAssign(clockTrigger, registerOut, dataStore.GetInt(registerIn.index))
               if(addResetTrigger) resetValue match {
-                case rv: IntExpressionResult  => triggeredAssign(resetTrigger, registerOut, rv)
+                case rv: IntExpressionResult  =>
+                  triggeredAssign(resetTrigger, registerOut, rv)
                 case rv: LongExpressionResult => triggeredAssign(resetTrigger, registerOut, LongToInt(rv.apply))
                 case rv: BigExpressionResult  => triggeredAssign(resetTrigger, registerOut, ToInt(rv.apply))
               }
@@ -668,6 +678,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             case _ =>
               throw InterpreterException(s"bad register $statement")
           }
+
         case defMemory: DefMemory =>
           val expandedName = expand(defMemory.name)
           logger.debug(s"declaration:DefMemory:${defMemory.name} becomes $expandedName")

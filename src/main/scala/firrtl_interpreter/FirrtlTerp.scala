@@ -49,7 +49,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   val timer = new Timer
 
   val symbolTable: SymbolTable = timer("build memorySymbol table") {
-    SymbolTable(loweredAst, blackBoxFactories)
+    SymbolTable(loweredAst, blackBoxFactories, interpreterOptions.allowCycles)
   }
 
   val dataStore = DataStore(numberOfBuffers = 10, optimizationLevel = if(verbose) 0 else 1)
