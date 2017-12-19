@@ -124,7 +124,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     def runVerbose(): Unit = {
       val value = expression()
       val showValue = symbol.normalize(value)
-      println(s"${symbol.name}:${symbol.index} <= $showValue")
+      println(s"${symbol.name} <= $showValue")
       currentIntArray(index) = value
       vcdUpdate(symbol, value)
     }
@@ -145,7 +145,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     def runVerbose(): Unit = {
       val value = expression()
       val showValue = symbol.normalize(value)
-      println(s"${symbol.name}:${symbol.index} <= $value")
+      println(s"${symbol.name} <= $value")
       currentLongArray(index) = value
       vcdUpdate(symbol, value)
     }
@@ -164,7 +164,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     }
     def runVerbose(): Unit = {
       val value = expression()
-      println(s"${symbol.name}:${symbol.index} <= $value")
+      println(s"${symbol.name} <= $value")
       currentBigArray(index) = value
       vcdUpdate(symbol, value)
     }
@@ -179,7 +179,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
                            ) extends IntExpressionResult {
     val memoryLocation: Int = memorySymbol.index
     def apply(): Int = {
-      currentIntArray(memoryLocation + getMemoryIndex())
+      currentIntArray(memoryLocation + (getMemoryIndex() % memorySymbol.slots))
     }
   }
 
@@ -190,7 +190,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
                            ) extends LongExpressionResult {
     val memoryLocation: Int = memorySymbol.index
     def apply(): Long = {
-      currentLongArray(memoryLocation + getMemoryIndex())
+      currentLongArray(memoryLocation + (getMemoryIndex() % memorySymbol.slots))
     }
   }
 
@@ -201,7 +201,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
                            ) extends BigExpressionResult {
     val memoryLocation: Int = memorySymbol.index
     def apply(): Big = {
-      currentBigArray(memoryLocation + getMemoryIndex())
+      currentBigArray(memoryLocation + (getMemoryIndex() % memorySymbol.slots))
     }
   }
 
@@ -223,12 +223,12 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     def runVerbose(): Unit = {
       if(enable() > 0) {
         val value = expression()
-        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= $value")
-        currentIntArray(index + getMemoryIndex.apply()) = value
+        println(s"${symbol.name}(${getMemoryIndex.apply()}) <= $value")
+        currentIntArray(index + (getMemoryIndex.apply() % memorySymbol.slots)) = value
         vcdUpdate(symbol, value)
       }
       else {
-        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
+        println(s"${symbol.name}(${(getMemoryIndex.apply() % memorySymbol.slots)}) <= NOT ENABLED")
       }
     }
 
@@ -246,19 +246,19 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 
     def runQuiet(): Unit = {
       if(enable() > 0) {
-        currentLongArray(index + getMemoryIndex.apply()) = expression()
+        currentLongArray(index + (getMemoryIndex.apply() % memorySymbol.slots)) = expression()
       }
     }
 
     def runVerbose(): Unit = {
       if(enable() > 0) {
         val value = expression()
-        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= $value")
-        currentLongArray(index + getMemoryIndex.apply()) = value
+        println(s"${symbol.name}(${(getMemoryIndex.apply() % memorySymbol.slots)}) <= $value")
+        currentLongArray(index + (getMemoryIndex.apply() % memorySymbol.slots)) = value
         vcdUpdate(symbol, value)
       }
       else {
-        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
+        println(s"${symbol.name}(${(getMemoryIndex.apply() % memorySymbol.slots)}) <= NOT ENABLED")
       }
     }
 
@@ -276,19 +276,19 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
 
     def runQuiet(): Unit = {
       if(enable() > 0) {
-        currentBigArray(index + getMemoryIndex.apply()) = expression()
+        currentBigArray(index + (getMemoryIndex.apply() % memorySymbol.slots)) = expression()
       }
     }
 
     def runVerbose(): Unit = {
       if(enable() > 0) {
         val value = expression()
-        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= $value")
-        currentBigArray(index + getMemoryIndex.apply()) = value
+        println(s"${symbol.name}(${(getMemoryIndex.apply() % memorySymbol.slots)}) <= $value")
+        currentBigArray(index + (getMemoryIndex.apply() % memorySymbol.slots)) = value
         vcdUpdate(symbol, value)
       }
       else {
-        println(s"${symbol.name}:${symbol.index}(${getMemoryIndex.apply()}) <= NOT ENABLED")
+        println(s"${symbol.name}(${(getMemoryIndex.apply() % memorySymbol.slots)}) <= NOT ENABLED")
       }
     }
 

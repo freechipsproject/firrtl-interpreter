@@ -64,6 +64,24 @@ class SymbolTable(nameToSymbol: mutable.HashMap[String, Symbol]) {
     }
   }
 
+  /**
+    * Find all the sources of symbol that are not non-clock inputs.
+    * Sinks are used here because we are working with the parents of graph
+    * This was needed because clocks of memory or other submodules may have
+    * a non-trivial connection to parent clocks
+    * @param symbol sinks needed for this
+    * @return
+    */
+  def getSourcesOf(symbol: Symbol): Set[Symbol] = {
+    val parents = parentsOf.reachableFrom(symbol)
+    val sinks   = parentsOf.findSinks
+    val nonInputSinks = sinks.filterNot { sink =>
+      inputPortsNames.contains(sink.name) && sink.firrtlType != ClockType }
+    val possible = parents.intersect(nonInputSinks)
+
+    possible.toSet
+  }
+
   def getParents(symbols: Seq[Symbol]): Set[Symbol] = {
     symbols.flatMap { symbol =>
       parentsOf.reachableFrom(symbol)

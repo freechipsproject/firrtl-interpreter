@@ -514,6 +514,8 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
               case Gt  => binaryOps(op, args, tpe)
               case Geq => binaryOps(op, args, tpe)
 
+              case Pad     => unaryOps(op, args, tpe)
+
               case AsUInt  => unaryOps(op, args, tpe)
               case AsSInt  => unaryOps(op, args, tpe)
               case AsClock => unaryOps(op, args, tpe)

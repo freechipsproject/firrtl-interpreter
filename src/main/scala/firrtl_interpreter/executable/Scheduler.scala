@@ -77,7 +77,7 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
 
     triggeredAssigns.foreach { case (trigger, assigners) =>
       val rootTrigger = {
-        val parents = symbolTable.getParents(Seq(trigger))
+        val parents = symbolTable.getSourcesOf(trigger)
         if(parents.isEmpty) {
           trigger
         }

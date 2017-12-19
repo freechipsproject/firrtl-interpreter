@@ -87,26 +87,29 @@ class StackSpec extends FreeSpec with Matchers {
     tester.poke("reset", 0)
     tester.poke("io_en", 1)
     tester.poke("io_push", 1)
-    tester.poke("io_dataIn", 7)
+    tester.poke("io_dataIn", 11)
     tester.poke("io_pop", 0)
+
     tester.step()
-    tester.poke("io_dataIn", 66)
-    println(s"sp ${tester.peek("sp")}")
-    println(s"PEEKMEM: mem(0) ${tester.peekMemory("sp", 0)}")
-    println(s"PEEKMEM: mem(1) ${tester.peekMemory("sp", 1)}")
-    tester.expect("sp", 1)
-    tester.step()
-    println(s"sp ${tester.peek("sp")}")
-    tester.expect("sp", 2)
-    println(s"out ${tester.peek("io_dataOut")}")
+
+    println(s"sp              ${tester.peek("sp")}")
+    println(s"dataOut         ${tester.peekMemory("io_dataOut", 1)}")
     println(s"PEEKMEM: mem(0) ${tester.peekMemory("sp", 0)}")
     println(s"PEEKMEM: mem(1) ${tester.peekMemory("sp", 1)}")
 
-    tester.poke("io_push", 0)
-    tester.poke("io_dataIn", 42)
-    tester.poke("io_pop", 1)
-    println(s"out ${tester.peek("io_dataOut")}")
+    tester.poke("io_dataIn", 22)
     tester.step()
+
+    println(s"sp              ${tester.peek("sp")}")
+    println(s"dataOut         ${tester.peekMemory("io_dataOut", 1)}")
+    println(s"PEEKMEM: mem(0) ${tester.peekMemory("sp", 0)}")
+    println(s"PEEKMEM: mem(1) ${tester.peekMemory("sp", 1)}")
+
+    tester.poke("io_dataIn", 33)
+    tester.step()
+
+    println(s"sp              ${tester.peek("sp")}")
+    println(s"dataOut         ${tester.peekMemory("io_dataOut", 1)}")
     println(s"PEEKMEM: mem(0) ${tester.peekMemory("sp", 0)}")
     println(s"PEEKMEM: mem(1) ${tester.peekMemory("sp", 1)}")
 

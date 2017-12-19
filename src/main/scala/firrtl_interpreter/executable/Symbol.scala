@@ -98,7 +98,7 @@ object Symbol {
   }
 
   def renderHeader: String = {
-    f"""${"name"}%-40.40s ${"Bin"}%3.3s ${"Type"}%4.4s ${"Width"}%6s ${"Slots"}%6s ${"Index"}%6s ${"Depend"}%6s Info"""
+    f"""${"Name"}%-40.40s ${"Bin"}%3.3s ${"Type"}%4.4s ${"Width"}%6s ${"Slots"}%6s ${"Index"}%6s ${"Depend"}%6s Info"""
   }
 }
 
