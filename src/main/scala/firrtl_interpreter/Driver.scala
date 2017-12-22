@@ -12,9 +12,10 @@ case class InterpreterOptions(
     allowCycles:       Boolean              = false,
     randomSeed:        Long                 = System.currentTimeMillis(),
     blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty,
-    maxExecutionDepth: Long                 = -1,
     showFirrtlAtLoad:  Boolean              = false,
-    lowCompileAtLoad:  Boolean              = true)
+    lowCompileAtLoad:  Boolean              = true,
+    validIfIsRandom:   Boolean              = false
+  )
   extends firrtl.ComposableOptions {
 
   def vcdOutputFileName(optionsManager: ExecutionOptionsManager): String = {
@@ -77,14 +78,6 @@ trait HasInterpreterOptions {
     }
     .text("seed used for random numbers generated for tests and poison values, default is current time in ms")
 
-  parser.opt[Long]("fint-max-execution-depth")
-    .abbr("fimed")
-    .valueName("<long-value>")
-    .foreach { x =>
-      interpreterOptions = interpreterOptions.copy(maxExecutionDepth = x)
-    }
-    .text("depth of stack used to evaluate expressions")
-
   parser.opt[Unit]("show-firrtl-at-load")
     .abbr("fisfas")
     .foreach { _ =>
@@ -98,6 +91,13 @@ trait HasInterpreterOptions {
       interpreterOptions = interpreterOptions.copy(lowCompileAtLoad = false)
     }
     .text("run lowering compuler when firrtl file is loaded")
+
+  parser.opt[Unit]("validif-random")
+    .abbr("fivir")
+    .foreach { _ =>
+      interpreterOptions = interpreterOptions.copy(validIfIsRandom = true)
+    }
+    .text("validIf returns random value when condition is false")
 }
 
 object Driver {

@@ -231,6 +231,6 @@ case class TailInts(f1: FuncInt, toDrop: Int, originalWidth: Int) extends IntExp
 
 case class UndefinedInts(width: Int) {
   val maxValue: Int = 1 << width
-  def apply(): Int = util.Random.nextInt(maxValue)
+  def apply(): Int = firrtl_interpreter.random.nextInt(maxValue)
 }
 

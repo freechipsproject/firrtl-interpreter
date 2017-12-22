@@ -204,6 +204,6 @@ case class TailBigs(f1: FuncBig, toDrop: Int, originalWidth: Int) extends BigExp
 }
 
 case class UndefinedBigs(width: Int) {
-  def apply(): Big = BigInt(width, util.Random)
+  def apply(): Big = BigInt(width, firrtl_interpreter.random)
 }
 

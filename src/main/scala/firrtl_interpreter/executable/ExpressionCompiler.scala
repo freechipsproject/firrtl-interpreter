@@ -173,18 +173,18 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             case Div => DivInts(e1.apply, e2.apply)
             case Rem => RemInts(e1.apply, e2.apply)
 
-            case Eq => EqInts(e1.apply, e2.apply)
+            case Eq  => EqInts(e1.apply,  e2.apply)
             case Neq => NeqInts(e1.apply, e2.apply)
-            case Lt => LtInts(e1.apply, e2.apply)
+            case Lt  => LtInts(e1.apply,  e2.apply)
             case Leq => LeqInts(e1.apply, e2.apply)
-            case Gt => GtInts(e1.apply, e2.apply)
+            case Gt  => GtInts(e1.apply,  e2.apply)
             case Geq => GeqInts(e1.apply, e2.apply)
 
             case Dshl => DshlInts(e1.apply, e2.apply)
             case Dshr => DshrInts(e1.apply, e2.apply)
 
             case And => AndInts(e1.apply, e2.apply, arg1Width.max(arg2Width))
-            case Or => OrInts(e1.apply, e2.apply, arg1Width.max(arg2Width))
+            case Or  => OrInts(e1.apply,  e2.apply, arg1Width.max(arg2Width))
             case Xor => XorInts(e1.apply, e2.apply, arg1Width.max(arg2Width))
 
             case Cat =>
@@ -484,20 +484,25 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             createAccessor(expand(subIndex.serialize))
 
           case ValidIf(condition, value, tpe) =>
-            processExpression(condition) match {
-              case c: IntExpressionResult =>
-                processExpression(value) match {
-                  case t: IntExpressionResult =>
-                    MuxInts(c.apply, t.apply, UndefinedInts(getWidth(tpe)).apply)
-                  case t: LongExpressionResult =>
-                    MuxLongs(c.apply, t.apply, UndefinedLongs(getWidth(tpe)).apply)
-                  case t: BigExpressionResult =>
-                    MuxBigs(c.apply, t.apply, UndefinedBigs(getWidth(tpe)).apply)
-                  case _ =>
-                    throw InterpreterException(s"Mux condition is not 1 bit $condition parsed as $c")
-                }
-              case c =>
-                throw InterpreterException(s"Mux condition is not 1 bit $condition parsed as $c")
+            if(parent.interpreterOptions.validIfIsRandom) {
+              processExpression(condition) match {
+                case c: IntExpressionResult =>
+                  processExpression(value) match {
+                    case t: IntExpressionResult =>
+                      MuxInts(c.apply, t.apply, UndefinedInts(getWidth(tpe)).apply)
+                    case t: LongExpressionResult =>
+                      MuxLongs(c.apply, t.apply, UndefinedLongs(getWidth(tpe)).apply)
+                    case t: BigExpressionResult =>
+                      MuxBigs(c.apply, t.apply, UndefinedBigs(getWidth(tpe)).apply)
+                    case _ =>
+                      throw InterpreterException(s"Mux condition is not 1 bit $condition parsed as $c")
+                  }
+                case c =>
+                  throw InterpreterException(s"Mux condition is not 1 bit $condition parsed as $c")
+              }
+            }
+            else {
+              processExpression(value)
             }
           case DoPrim(op, args, const, tpe) =>
             val v = op match {

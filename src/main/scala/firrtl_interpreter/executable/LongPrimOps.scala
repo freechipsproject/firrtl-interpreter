@@ -210,7 +210,7 @@ case class TailLongs(f1: FuncLong, toDrop: Int, originalWidth: Int) extends Long
 
 case class UndefinedLongs(width: Int) {
   val mask: Long = LongUtils.makeMask(width)
-  def apply(): Long = util.Random.nextLong() & mask
+  def apply(): Long = firrtl_interpreter.random.nextLong() & mask
 }
 
 object LongUtils {
