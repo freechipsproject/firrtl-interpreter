@@ -18,6 +18,8 @@ circuit VcdAdder :
 
     inst do_add of DoAdd
 
+    do_add.clock <= clock
+
     do_add.a <= io_a
     do_add.b <= io_b
 
