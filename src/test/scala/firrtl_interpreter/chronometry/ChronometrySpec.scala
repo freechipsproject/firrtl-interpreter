@@ -87,7 +87,7 @@ class ChronometrySpec extends FreeSpec with Matchers {
     }
     val stopTime = System.currentTimeMillis()
 
-    val eps = toDo.toDouble * 1000 / (stopTime - startTime)
-    println(f"$toDo events in ${(stopTime - startTime) / 1000.0}%10.5f seconds, rate = $eps%10.5f KHz utc = ${utc.currentTime}")
+    val eps = toDo.toDouble / (stopTime - startTime)
+    println(f"$toDo events in ${(stopTime - startTime) / 1000.0}%10.5f seconds, rate = $eps%10.5f MHz utc = ${utc.currentTime}")
   }
 }

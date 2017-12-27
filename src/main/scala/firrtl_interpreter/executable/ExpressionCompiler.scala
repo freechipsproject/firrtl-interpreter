@@ -70,7 +70,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
   }
 
   //scalastyle:off cyclomatic.complexity
-  def makeAssigner(symbol: Symbol, expressionResult: ExpressionResult): Assigner = {
+  def makeAssigner(symbol: Symbol, expressionResult: ExpressionResult): Unit = {
     val assigner = (symbol.dataSize, expressionResult) match {
       case (IntSize,  result: IntExpressionResult)  => dataStore.AssignInt(symbol, result.apply)
       case (IntSize,  result: LongExpressionResult) => dataStore.AssignInt(symbol, ToInt(result.apply).apply)
@@ -92,11 +92,6 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
           s"Error:assignment size mismatch ($size)${symbol.name} <= ($expressionSize)$expressionResult")
     }
     symbolTable.addAssigner(symbol, assigner)
-    assigner
-  }
-
-  def makeAssignerByName(name: String, expressionResult: ExpressionResult): Assigner = {
-    makeAssigner(symbolTable(name), expressionResult)
   }
 
   def triggeredAssign(
@@ -115,41 +110,42 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
   }
 
   def makeIndirectAssigner(
-                            portSymbol: Symbol,
-                            memorySymbol: Symbol,
-                            indexSymbol: Symbol,
-                            enableSymbol: Symbol,
-                            expressionResult: ExpressionResult
-                          ): Assigner = {
+      portSymbol      : Symbol,
+      memorySymbol    : Symbol,
+      indexSymbol     : Symbol,
+      enableSymbol    : Symbol,
+      expressionResult: ExpressionResult,
+      clock           : Symbol
+  ): Unit = {
 
-    val getIndex  = dataStore.GetInt(indexSymbol.index).apply _
+    val getIndex = dataStore.GetInt(indexSymbol.index).apply _
     val getEnable = dataStore.GetInt(enableSymbol.index).apply _
 
     val assigner = (memorySymbol.dataSize, expressionResult) match {
-      case (IntSize,  result: IntExpressionResult)  =>
+      case (IntSize, result: IntExpressionResult) =>
         dataStore.AssignIntIndirect(portSymbol, memorySymbol, getIndex, getEnable, result.apply)
-      case (LongSize, result: IntExpressionResult)  =>
+      case (LongSize, result: IntExpressionResult) =>
         dataStore.AssignLongIndirect(portSymbol, memorySymbol, getIndex, getEnable, ToLong(result.apply).apply)
       case (LongSize, result: LongExpressionResult) =>
         dataStore.AssignLongIndirect(portSymbol, memorySymbol, getIndex, getEnable, result.apply)
-      case (BigSize,  result: IntExpressionResult)  =>
+      case (BigSize, result: IntExpressionResult) =>
         dataStore.AssignBigIndirect(portSymbol, memorySymbol, getIndex, getEnable, ToBig(result.apply).apply)
-      case (BigSize,  result: LongExpressionResult) =>
+      case (BigSize, result: LongExpressionResult) =>
         dataStore.AssignBigIndirect(portSymbol, memorySymbol, getIndex, getEnable, LongToBig(result.apply).apply)
-      case (BigSize,  result: BigExpressionResult)  =>
+      case (BigSize, result: BigExpressionResult) =>
         dataStore.AssignBigIndirect(portSymbol, memorySymbol, getIndex, getEnable, result.apply)
       case (size, result) =>
         val expressionSize = result match {
-          case _: IntExpressionResult  => "Int"
+          case _: IntExpressionResult => "Int"
           case _: LongExpressionResult => "Long"
-          case _: BigExpressionResult  => "Big"
+          case _: BigExpressionResult => "Big"
         }
 
         throw InterpreterException(
           s"Error:assignment size mismatch ($size)${memorySymbol.name} <= ($expressionSize)$expressionResult")
     }
     symbolTable.addAssigner(portSymbol, assigner)
-    assigner
+    scheduler.triggeredAssigns(clock) += assigner
   }
 
   // scalastyle:off
@@ -588,7 +584,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             }
           }
           val lhsName = renameIfRegister(expand(con.loc.serialize))
-          makeAssignerByName(lhsName, processExpression(con.expr))
+          makeAssigner(symbolTable(lhsName), processExpression(con.expr))
 
         case WDefInstance(info, instanceName, moduleName, _) =>
           val subModule = FindModule(moduleName, circuit)
@@ -631,7 +627,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
 
         case DefNode(info, name, expression) =>
           logger.debug(s"declaration:DefNode:$name:${expression.serialize}")
-          makeAssignerByName(expand(name), processExpression(expression))
+          makeAssigner(symbolTable(expand(name)), processExpression(expression))
 
         case DefWire(info, name, tpe) =>
           logger.debug(s"declaration:DefWire:$name")

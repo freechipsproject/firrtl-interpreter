@@ -323,15 +323,14 @@ object Memory {
       val endOfAddrPipeline  = buildWritePipelineAssigners(clock, addr, writerName, "addr")
       val endOfDataPipeline  = buildWritePipelineAssigners(clock, data, writerName, "data")
 
-      val indirectAssigner = compiler.makeIndirectAssigner(
+      compiler.makeIndirectAssigner(
         portSymbol,
         memorySymbol,
         endOfAddrPipeline,
         endOfValidPipeline,
-        compiler.makeGet(endOfDataPipeline)
+        compiler.makeGet(endOfDataPipeline),
+        clock
       )
-      scheduler.triggeredAssigns(clock) += indirectAssigner
-
     }
 
     memory.readwriters.foreach { readWriterString =>
@@ -364,15 +363,14 @@ object Memory {
       val endOfAddrPipeline  = buildWritePipelineAssigners(clock, addr,  writerName, "addr")
       val endOfDataPipeline  = buildWritePipelineAssigners(clock, wdata, writerName, "wdata")
 
-      val indirectAssigner = compiler.makeIndirectAssigner(
+      compiler.makeIndirectAssigner(
         portSymbol,
         memorySymbol,
         endOfAddrPipeline,
         endOfValidPipeline,
-        compiler.makeGet(endOfDataPipeline)
+        compiler.makeGet(endOfDataPipeline),
+        clock
       )
-
-      scheduler.triggeredAssigns(clock) += indirectAssigner
     }
   }
 
