@@ -25,6 +25,7 @@ object Memory {
   ): Seq[Symbol] = {
     val memorySymbol = Symbol(expandedName, memory.dataType, MemKind, memory.depth)
     val addrWidth = IntWidth(requiredBitsForUInt(memory.depth - 1))
+    val addrType  = firrtl.ir.UIntType(addrWidth)
 
     def buildPipelineDependencies(rootSymbol:      Symbol,
                                   pipelineSymbols: Seq[Symbol],
@@ -56,7 +57,7 @@ object Memory {
 
       val en   = Symbol(s"$readerName.en",   firrtl.ir.UIntType(IntWidth(1)), WireKind)
       val clk  = Symbol(s"$readerName.clk",  firrtl.ir.UIntType(IntWidth(1)), WireKind)
-      val addr = Symbol(s"$readerName.addr", firrtl.ir.UIntType(addrWidth), WireKind)
+      val addr = Symbol(s"$readerName.addr", addrType, WireKind)
       val data = Symbol(s"$readerName.data", memory.dataType, WireKind)
 
       val readerInterfaceSymbols = Seq(en, clk, addr, data)
@@ -82,7 +83,7 @@ object Memory {
 
       val en    = Symbol(s"$writerName.en", firrtl.ir.UIntType(IntWidth(1)), WireKind)
       val clk   = Symbol(s"$writerName.clk", firrtl.ir.UIntType(IntWidth(1)), WireKind)
-      val addr  = Symbol(s"$writerName.addr", firrtl.ir.UIntType(addrWidth), WireKind)
+      val addr  = Symbol(s"$writerName.addr", addrType, WireKind)
       val mask  = Symbol(s"$writerName.mask", firrtl.ir.UIntType(IntWidth(1)), WireKind)
       val data  = Symbol(s"$writerName.data", memory.dataType, WireKind)
       val valid = Symbol(s"$writerName.valid", firrtl.ir.UIntType(IntWidth(1)), WireKind)
@@ -95,8 +96,8 @@ object Memory {
 
       val pipelineValidSymbols = (0 until memory.writeLatency).flatMap { n =>
         Seq(
-          Symbol(s"$expandedName.$writerString.pipeline_valid_$n/in", memory.dataType, WireKind),
-          Symbol(s"$expandedName.$writerString.pipeline_valid_$n", memory.dataType, WireKind)
+          Symbol(s"$expandedName.$writerString.pipeline_valid_$n/in", firrtl.ir.UIntType(IntWidth(1)), WireKind),
+          Symbol(s"$expandedName.$writerString.pipeline_valid_$n", firrtl.ir.UIntType(IntWidth(1)), WireKind)
         )
       }
       buildPipelineDependencies(valid, pipelineValidSymbols, clockSymbol = Some(clk))
@@ -111,8 +112,8 @@ object Memory {
 
       val pipelineAddrSymbols = (0 until memory.writeLatency).flatMap { n =>
         Seq(
-          Symbol(s"$expandedName.$writerString.pipeline_addr_$n/in", memory.dataType, WireKind),
-          Symbol(s"$expandedName.$writerString.pipeline_addr_$n", memory.dataType, WireKind)
+          Symbol(s"$expandedName.$writerString.pipeline_addr_$n/in", addrType, WireKind),
+          Symbol(s"$expandedName.$writerString.pipeline_addr_$n", addrType, WireKind)
         )
       }
       buildPipelineDependencies(addr, pipelineAddrSymbols, clockSymbol = Some(clk))
@@ -127,7 +128,7 @@ object Memory {
 
       val en    =  Symbol(s"$writerName.en", firrtl.ir.UIntType(IntWidth(1)), WireKind)
       val clk   =  Symbol(s"$writerName.clk", firrtl.ir.UIntType(IntWidth(1)), WireKind)
-      val addr  =  Symbol(s"$writerName.addr", firrtl.ir.UIntType(addrWidth), WireKind)
+      val addr  =  Symbol(s"$writerName.addr", addrType, WireKind)
       val rdata =  Symbol(s"$writerName.rdata", memory.dataType, WireKind)
       val mode  =  Symbol(s"$writerName.wmode", firrtl.ir.UIntType(IntWidth(1)), WireKind)
       val mask  =  Symbol(s"$writerName.wmask", firrtl.ir.UIntType(IntWidth(1)), WireKind)
@@ -152,8 +153,8 @@ object Memory {
 
       val pipelineEnableSymbols = (0 until memory.writeLatency).flatMap { n =>
         Seq(
-          Symbol(s"$expandedName.$readWriterString.pipeline_valid_$n/in", memory.dataType, WireKind),
-          Symbol(s"$expandedName.$readWriterString.pipeline_valid_$n", memory.dataType, WireKind)
+          Symbol(s"$expandedName.$readWriterString.pipeline_valid_$n/in", firrtl.ir.UIntType(IntWidth(1)), WireKind),
+          Symbol(s"$expandedName.$readWriterString.pipeline_valid_$n", firrtl.ir.UIntType(IntWidth(1)), WireKind)
         )
       }
       buildPipelineDependencies(valid, pipelineEnableSymbols, clockSymbol = Some(clk))
@@ -168,8 +169,8 @@ object Memory {
 
       val pipelineAddrSymbols = (0 until memory.writeLatency).flatMap { n =>
         Seq(
-          Symbol(s"$expandedName.$readWriterString.pipeline_addr_$n/in", memory.dataType, WireKind),
-          Symbol(s"$expandedName.$readWriterString.pipeline_addr_$n", memory.dataType, WireKind)
+          Symbol(s"$expandedName.$readWriterString.pipeline_addr_$n/in", addrType, WireKind),
+          Symbol(s"$expandedName.$readWriterString.pipeline_addr_$n", addrType, WireKind)
         )
       }
       buildPipelineDependencies(addr, pipelineAddrSymbols, clockSymbol = Some(clk))

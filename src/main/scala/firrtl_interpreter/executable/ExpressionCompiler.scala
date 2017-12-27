@@ -118,8 +118,8 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
       clock           : Symbol
   ): Unit = {
 
-    val getIndex = dataStore.GetInt(indexSymbol.index).apply _
-    val getEnable = dataStore.GetInt(enableSymbol.index).apply _
+    def getIndex = dataStore.GetInt(indexSymbol.index).apply _
+    def getEnable = dataStore.GetInt(enableSymbol.index).apply _
 
     val assigner = (memorySymbol.dataSize, expressionResult) match {
       case (IntSize, result: IntExpressionResult) =>
