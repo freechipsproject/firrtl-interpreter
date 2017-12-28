@@ -289,6 +289,9 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     if(checkStopped("cycle")) return
 
     if(inputsChanged) {
+      if(verbose) {
+        println(s"Executing assigns that depend on inputs")
+      }
       inputsChanged = false
       scheduler.executeInputSensitivities()
     }
