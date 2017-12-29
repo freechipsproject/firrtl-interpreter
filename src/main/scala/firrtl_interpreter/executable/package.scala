@@ -18,7 +18,9 @@ package object executable {
 
   trait Assigner {
     val symbol: Symbol
+    var verboseAssign: Boolean = false
     def run: FuncUnit
+    def setLeanMode(isLean: Boolean): Unit = {}
     def render: String = symbol.render
   }
 }

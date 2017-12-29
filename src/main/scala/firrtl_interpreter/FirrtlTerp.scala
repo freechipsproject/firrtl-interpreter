@@ -18,7 +18,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   var vcdOption: Option[VCD] = None
   var vcdFileName: String    = ""
 
-  var verbose: Boolean = true
+  var verbose: Boolean = false
 
   var inputsChanged: Boolean = false
 
@@ -35,15 +35,21 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
   val blackBoxFactories: Seq[BlackBoxFactory] = interpreterOptions.blackBoxFactories
 
+  def setLeanMode(): Unit = {
+    val canBeLean = ! (verbose || vcdOption.isDefined)
+    scheduler.setLeanMode(canBeLean)
+    scheduler.setVerboseAssign(verbose)
+  }
+
   /**
     * turns on evaluator debugging. Can make output quite
     * verbose.
     *
-    * @param value  The desired verbose setting
+    * @param isVerbose  The desired verbose setting
     */
-  def setVerbose(value: Boolean = true): Unit = {
-    // Logger.setLevel(classOf[FirrtlTerp], LogLevel.None)
-    //TODO: This is supposed to set verbose execution
+  def setVerbose(isVerbose: Boolean = true): Unit = {
+    setLeanMode()
+    scheduler.setVerboseAssign(isVerbose)
   }
 
   val timer = new Timer
@@ -115,11 +121,14 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     vcdFileName = fileName
 
     dataStore.vcdOption = vcdOption
+
+    setLeanMode()
   }
   def disableVCD(): Unit = {
     writeVCD()
     vcdOption = None
     vcdFileName = ""
+    setLeanMode()
   }
   def writeVCD(): Unit = {
     vcdOption.foreach(_.write(vcdFileName))

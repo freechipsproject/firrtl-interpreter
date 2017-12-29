@@ -23,6 +23,28 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
     }
   }
 
+  def setVerboseAssign(isVerbose: Boolean): Unit = {
+    def setMode(assigner: Assigner): Unit = {
+      assigner.verboseAssign = isVerbose
+    }
+    inputDependentAssigns.foreach { setMode }
+    orphanedAssigns.foreach { setMode }
+    triggeredAssigns.values.foreach { assigners =>
+      assigners.foreach { setMode }
+    }
+  }
+
+  def setLeanMode(setLean: Boolean): Unit = {
+    def setMode(assigner: Assigner): Unit = {
+      assigner.setLeanMode(setLean)
+    }
+    inputDependentAssigns.foreach { setMode }
+    orphanedAssigns.foreach { setMode }
+    triggeredAssigns.values.foreach { assigners =>
+      assigners.foreach { setMode }
+    }
+  }
+
   /**
     * Execute the seq of assigners
     * @param assigners list of assigners

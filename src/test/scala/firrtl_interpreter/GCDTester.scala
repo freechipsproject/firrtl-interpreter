@@ -72,7 +72,7 @@ class GCDTester extends FlatSpec with Matchers {
     // interpreter.setVerbose()
     tester.poke("clock", 1)
 
-    List((34, 17, 17)).foreach { case (x, y, z) =>
+    List((344, 17, 17)).foreach { case (x, y, z) =>
       //    List((1, 1, 1), (34, 17, 17), (8, 12, 4)).foreach { case (x, y, z) =>
       //    for((x, y, z) <- values) {
       tester.step()
@@ -84,9 +84,15 @@ class GCDTester extends FlatSpec with Matchers {
       tester.poke("io_e", 0)
       tester.step()
 
+      var count = 0
       while (tester.peek("io_v") != Big1) {
+        if(count > 1) {
+          tester.setVerbose(true)
+        }
+        count += 1
         tester.step()
       }
+      tester.setVerbose(false)
 
       val right = tester.peek("io_z") == BigInt(z)
       if(right) {
@@ -214,7 +220,7 @@ class GCDTester extends FlatSpec with Matchers {
     sizableTest(68)
   }
 
-  it should "run a lot of values" ignore {
+  it should "run a lot of values" in {
     manyValuesTest(24)
   }
 }
