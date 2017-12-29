@@ -50,6 +50,11 @@ object Memory {
           sensitivityGraphBuilder.addSensitivity(source, target)
         case _ =>
       }
+      chain.tail.grouped(2).withFilter(_.length == 2).foreach {
+        case source :: target :: Nil =>
+          sensitivityGraphBuilder.addSensitivity(target, source)
+        case _ =>
+      }
     }
 
     val readerSymbols = memory.readers.flatMap { readerString =>
