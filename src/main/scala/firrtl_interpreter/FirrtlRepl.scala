@@ -4,6 +4,7 @@ package firrtl_interpreter
 import java.io.File
 
 import firrtl_interpreter.vcd.VCD
+import logger.Logger
 
 import scala.collection.mutable.ArrayBuffer
 import scala.tools.jline.console.ConsoleReader
@@ -1033,8 +1034,10 @@ object FirrtlRepl {
     val optionsManager = new InterpreterOptionsManager with HasReplConfig
 
     if(optionsManager.parse(args)) {
-      val repl = new FirrtlRepl(optionsManager)
-      repl.run()
+      Logger.makeScope(optionsManager) {
+        val repl = new FirrtlRepl(optionsManager)
+        repl.run()
+      }
     }
   }
 }

@@ -362,12 +362,12 @@ object SymbolTable extends LazyLogging {
 
     sorted.zipWithIndex.foreach { case (symbol, index) => symbol.cardinalNumber = index }
 
-    logger.trace(s"Build SymbolTable pass 2 -- sort complete")
+    logger.trace(s"Build SymbolTable pass 3 -- sort complete")
     // logger.debug(s"Sorted elements\n${sorted.map(_.name).mkString("\n")}")
 
     symbolTable.orphans = sensitivityGraphBuilder.orphans(symbolTable)
     logger.trace(
-      s"Symbol table pass4 -- find sources. ${symbolTable.orphans.length} non-input non-register sinks found")
+      s"Build Symbol table pass 4 -- find sources. ${symbolTable.orphans.length} non-input non-register sinks found")
 
     logger.info(s"SymbolTable is built")
 
