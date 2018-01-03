@@ -1,4 +1,3 @@
-import firrtl.passes.CheckWidths.BitsWidthException
 // See LICENSE for license details.
 
 //scalastyle:off package.object.name

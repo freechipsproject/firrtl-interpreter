@@ -44,6 +44,6 @@ class ValidIfSpec extends FreeSpec with Matchers {
     }
     val tester = new InterpretiveTester(input, options)
     tester.poke("in1", 42)
-    tester.expect("out1", 54489) // value based on random with seed 0L
+    assert(tester.peek("out1") != 42)
   }
 }

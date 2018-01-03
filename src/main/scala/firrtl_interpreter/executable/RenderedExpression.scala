@@ -8,14 +8,14 @@ import scala.collection.mutable
 object RenderHelper {
 
   implicit class ExpressionHelper(val sc: StringContext) extends AnyVal {
-    def expression(args: Any*)(implicit ds: DataStore): ExpressionView = {
-      new ExpressionView(ds, sc, args.toSeq)
+    def expression(args: Any*): ExpressionView = {
+      new ExpressionView(sc, args.toSeq)
     }
   }
 
 }
 
-class ExpressionView(val dataStore: DataStore, val sc: StringContext, val args: Seq[Any])
+class ExpressionView(val sc: StringContext, val args: Seq[Any])
 
 case class SymbolAtDepth(symbol: Symbol, depth: Int)
 
