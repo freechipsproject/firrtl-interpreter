@@ -227,4 +227,32 @@ class SymbolTableSpec extends FreeSpec with Matchers {
     tester.report()
   }
 
+
+  """Orphaned symbols should be found correctly""" in {
+    val simpleFirrtl: String =
+      s"""
+         |circuit Simple :
+         |  module Simple :
+         |    input clock : Clock
+         |    input reset : UInt<1>
+         |    input io_in1 : UInt<16>
+         |    input io_in2 : UInt<16>
+         |    output io_out1 : UInt<17>
+         |
+         |    reg b3 : UInt<16>, clock with :
+         |      reset => (UInt<1>("h0"), b3)
+         |
+         |    node a1 = UInt<8>("h3")
+         |    node a2 = UInt<8>("h8")
+         |    node a3 = add(a1, a2)
+         |
+         |    io_out1 <= a3
+         """
+        .stripMargin
+
+    val tester = new InterpretiveTester(simpleFirrtl)
+    val simulator = tester.interpreter
+
+  }
+
 }

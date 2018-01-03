@@ -7,6 +7,7 @@ import firrtl._
 import firrtl.ir._
 import firrtl_interpreter._
 
+//noinspection ScalaUnusedSymbol
 class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.LazyLogging {
   val dataStore:   DataStore   = program.dataStore
   val symbolTable: SymbolTable = program.symbolTable

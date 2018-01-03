@@ -4,6 +4,7 @@ package firrtl_interpreter
 
 import firrtl.{ExecutionOptionsManager, HasFirrtlOptions}
 
+//scalastyle:off magic.number
 case class InterpreterOptions(
     writeVCD:          Boolean              = false,
     vcdShowUnderscored:Boolean              = false,
@@ -14,7 +15,8 @@ case class InterpreterOptions(
     blackBoxFactories: Seq[BlackBoxFactory] = Seq.empty,
     showFirrtlAtLoad:  Boolean              = false,
     lowCompileAtLoad:  Boolean              = true,
-    validIfIsRandom:   Boolean              = false
+    validIfIsRandom:   Boolean              = false,
+    rollbackBuffers:   Int                  = 4
   )
   extends firrtl.ComposableOptions {
 
@@ -90,7 +92,7 @@ trait HasInterpreterOptions {
     .foreach { _ =>
       interpreterOptions = interpreterOptions.copy(lowCompileAtLoad = false)
     }
-    .text("run lowering compuler when firrtl file is loaded")
+    .text("run lowering compiler when firrtl file is loaded")
 
   parser.opt[Unit]("validif-random")
     .abbr("fivir")
@@ -98,7 +100,14 @@ trait HasInterpreterOptions {
       interpreterOptions = interpreterOptions.copy(validIfIsRandom = true)
     }
     .text("validIf returns random value when condition is false")
-}
+
+  parser.opt[Int]("fint-rollback-buffers")
+    .abbr("firb")
+    .valueName("<int-value>")
+    .foreach { x =>
+      interpreterOptions = interpreterOptions.copy(rollbackBuffers = x)
+    }
+    .text("number of rollback buffers, 0 is no buffers, default is 4")}
 
 object Driver {
 

@@ -246,6 +246,9 @@ object SymbolTable extends LazyLogging {
         case _: Print  =>
         case EmptyStmt =>
 
+        case invalid: IsInvalid =>
+          logger.debug(f"IsInvalid found for ${invalid.expr}%20s")
+
         case conditionally: Conditionally =>
           // logger.debug(s"got a conditionally $conditionally")
           throw new InterpreterException(s"conditionally unsupported in interpreter $conditionally")
@@ -327,7 +330,9 @@ object SymbolTable extends LazyLogging {
         throw InterpreterException(s"Top level module is not the right kind of module $x")
     }
 
+    logger.trace(s"Build SymbolTable pass 1 -- gather starting")
     processModule("", module)
+    logger.trace(s"Build SymbolTable pass 1 -- gather complete: ${nameToSymbol.size} entries found")
 
     // scalastyle:on cyclomatic.complexity
 
@@ -352,14 +357,19 @@ object SymbolTable extends LazyLogging {
           throw e
         }
     }
+    logger.trace(s"Build SymbolTable pass 2 -- linearize complete")
 
 
     sorted.zipWithIndex.foreach { case (symbol, index) => symbol.cardinalNumber = index }
 
-    logger.debug(s"Sorted elements\n${sorted.map(_.name).mkString("\n")}")
-    logger.info(s"End of dependency graph")
+    logger.trace(s"Build SymbolTable pass 2 -- sort complete")
+    // logger.debug(s"Sorted elements\n${sorted.map(_.name).mkString("\n")}")
 
     symbolTable.orphans = sensitivityGraphBuilder.orphans(symbolTable)
+    logger.trace(
+      s"Symbol table pass4 -- find sources. ${symbolTable.orphans.length} non-input non-register sinks found")
+
+    logger.info(s"SymbolTable is built")
 
     symbolTable
   }

@@ -8,6 +8,8 @@ import firrtl_interpreter.executable._
 import firrtl_interpreter.real.DspRealFactory
 import firrtl_interpreter.vcd.VCD
 
+import scala.collection.mutable
+
 //scalastyle:off magic.number
 class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
@@ -50,6 +52,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   def setVerbose(isVerbose: Boolean = true): Unit = {
     setLeanMode()
     scheduler.setVerboseAssign(isVerbose)
+    verbose = isVerbose
   }
 
   val timer = new Timer
@@ -58,7 +61,9 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     SymbolTable(loweredAst, blackBoxFactories, interpreterOptions.allowCycles)
   }
 
-  val dataStore = DataStore(numberOfBuffers = 10, optimizationLevel = if(verbose) 0 else 1)
+  val dataStore = DataStore(
+    numberOfBuffers = interpreterOptions.rollbackBuffers + 1, optimizationLevel = if (verbose) 0 else 1)
+
   symbolTable.allocateData(dataStore)
   println(s"Symbol table:\n${symbolTable.render}")
 
@@ -70,6 +75,9 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   timer("compile") {
     compiler.compile(loweredAst, blackBoxFactories)
   }
+
+  val expressionViews: Map[Symbol, ExpressionView] = ExpressionViewBuilder.getExpressionViews(
+    program, parent = this, circuit = loweredAst, blackBoxFactories)
 
   // println(s"Scheduler before sort ${scheduler.renderHeader}")
   scheduler.inputDependentAssigns ++= symbolTable.inputChildrenAssigners()
@@ -137,6 +145,29 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   setVerbose(interpreterOptions.setVerbose)
 
   var isStale: Boolean = false
+
+  def renderComputation(symbolNames: String): String = {
+    val symbolsSeen = Set[Symbol]()
+
+    val renderer = new ExpressionViewRenderer(dataStore, symbolTable, expressionViews)
+
+    val symbols = mutable.Queue(
+      symbolNames
+      .split(",")
+      .map(_.trim)
+      .flatMap { s =>
+        symbolTable.get(s)
+      }:_*
+    )
+
+    symbols.flatMap { symbol =>
+      expressionViews.get(symbol) match {
+        case Some(e) =>
+          Some(s"${symbol.name} <= ${dataStore(symbol)} : ${renderer.render(symbol)}")
+        case _ => None
+      }
+    }.mkString("\n")
+  }
 
   def getValue(name: String, offset: Int = 0): BigInt = {
     assert(symbolTable.contains(name),

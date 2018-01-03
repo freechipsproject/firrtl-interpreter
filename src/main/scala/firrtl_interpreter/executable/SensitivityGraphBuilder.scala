@@ -3,7 +3,11 @@
 package firrtl_interpreter.executable
 
 import firrtl.graph.{DiGraph, MutableDiGraph}
+import firrtl.ir.ClockType
 
+/**
+  * builds driving and driven by relationships between symbols
+  */
 class SensitivityGraphBuilder {
   val childrenOf: MutableDiGraph[Symbol] = new MutableDiGraph[Symbol]
   val parentsOf:  MutableDiGraph[Symbol] = new MutableDiGraph[Symbol]
@@ -21,9 +25,18 @@ class SensitivityGraphBuilder {
   def getChildrenOfDiGraph: DiGraph[Symbol] = DiGraph(childrenOf)
   def getParentsOfDiGraph:  DiGraph[Symbol] = DiGraph(parentsOf)
 
+  /**
+    * Find all sources that are not inputs or registers.  These should be initialized
+    * once at beginning of simulation
+    * @param symbolTable used for testing properties of symbols
+    * @return
+    */
   def orphans(symbolTable: SymbolTable): Seq[Symbol] = {
-    parentsOf.getVertices.filter { symbol =>
-      parentsOf.reachableFrom(symbol).isEmpty && ! symbolTable.isTopLevelInput(symbol.name)
+    val o2 = childrenOf.findSources.filterNot { symbol =>
+      symbolTable.isTopLevelInput(symbol.name) ||
+        symbolTable.isRegister(symbol.name) ||
+        symbol.firrtlType == ClockType
     }.toSeq
+    o2
   }
 }

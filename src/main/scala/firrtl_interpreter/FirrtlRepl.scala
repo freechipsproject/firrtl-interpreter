@@ -53,6 +53,8 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
   var currentScript: Option[Script] = None
   val IntPattern: Regex = """(-?\d+)""".r
 
+  var currentSymbols: String = ""
+
   var currentVcdScript: Option[VCD] = None
   var replVcdController: Option[ReplVcdController] = None
 
@@ -730,6 +732,31 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
           }
         }
       },
+      new Command("display") {
+        def usage: (String, String) = ("how signal[, signal, ...]", "show computation of symbols")
+        override def completer: Option[ArgumentCompleter] = {
+          if(currentInterpreterOpt.isEmpty) {
+            None
+          }
+          else {
+            Some(new ArgumentCompleter(
+              new StringsCompleter({ "display"}),
+              new StringsCompleter(jlist(interpreter.symbolTable.keys.toSeq))
+            ))
+          }
+        }
+
+        def run(args: Array[String]): Unit = {
+          getOneArg("", Some("state")) match {
+            case Some(symbolList) =>
+              if(currentInterpreterOpt.isDefined) {
+                console.println(interpreter.renderComputation(symbolList))
+              }
+            case _ =>
+              console.println(interpreter.getPrettyString)
+          }
+        }
+      },
       new Command("info") {
         def usage: (String, String) = ("info", "show information about the circuit")
         def run(args: Array[String]): Unit = {
@@ -944,18 +971,21 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
       try {
         val line = getNextLine
 
-        args = line.split(" +")
+        line.split(""";""").foreach { subLine =>
 
-        if (args.length > 0) {
-          if (Commands.commandMap.contains(args.head)) {
-            Commands.commandMap(args.head).run(args.tail)
+          args = subLine.trim.split(" +")
+
+          if (args.length > 0) {
+            if (Commands.commandMap.contains(args.head)) {
+              Commands.commandMap(args.head).run(args.tail)
+            }
+            else {
+              if (subLine.nonEmpty) error(s"unknown command $subLine, try help")
+            }
           }
           else {
-            if(line.nonEmpty) error(s"unknown command $line, try help")
+            error(s"unknown command: $subLine")
           }
-        }
-        else {
-          error("unknown command")
         }
       }
       catch {

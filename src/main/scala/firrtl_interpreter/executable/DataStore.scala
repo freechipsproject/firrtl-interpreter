@@ -364,6 +364,20 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
     }
   }
 
+  def earlierBufferIndex(lookback: Int): Int = {
+    ((currentBufferIndex + numberOfBuffers) - lookback) % numberOfBuffers
+  }
+
+  def earlierValue(symbol: Symbol, lookBack: Int): Big = {
+    val lookBackIndex = earlierBufferIndex(lookBack)
+
+    symbol.dataSize match {
+      case IntSize  => intData(lookBackIndex)(symbol.index)
+      case LongSize => longData(lookBackIndex)(symbol.index)
+      case BigSize  => bigData(lookBackIndex)(symbol.index)
+    }
+  }
+
   def update(symbol: Symbol, value: Big): Unit = {
     symbol.dataSize match {
       case IntSize  => currentIntArray(symbol.index) = value.toInt
