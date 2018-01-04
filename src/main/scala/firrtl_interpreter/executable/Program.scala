@@ -8,17 +8,18 @@ case class Program(
                     scheduler: Scheduler
                   ) {
   def header: String = {
-    symbolTable.keys.toArray.sorted.map { name =>
-      val s = s"$name:${symbolTable(name).index}"
+    "Buf " +
+      symbolTable.keys.toArray.sorted.map { name =>
+      val s = name.takeRight(10)
       f"$s%10.10s"
     }.mkString("")
   }
 
   def dataInColumns: String = {
-    ("-" * 100) + s"\n${dataStore.previousBufferIndex}  " +
+    ("-" * 100) + f"\n${dataStore.previousBufferIndex}%2s  " +
     symbolTable.keys.toArray.sorted.map { name =>
-      val value = dataStore(symbolTable(name))
-      f"$value%10.10s" }.mkString("") + s"\n${dataStore.currentBufferIndex}  " +
+      val value = dataStore.earlierValue(symbolTable(name), 1)
+      f"$value%10.10s" }.mkString("") + f"\n${dataStore.currentBufferIndex}%2s  " +
     symbolTable.keys.toArray.sorted.map { name =>
       val value = dataStore(symbolTable(name))
       f"$value%10.10s" }.mkString("") + "\n" +

@@ -147,23 +147,17 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   var isStale: Boolean = false
 
   def renderComputation(symbolNames: String): String = {
-    val symbolsSeen = Set[Symbol]()
-
     val renderer = new ExpressionViewRenderer(dataStore, symbolTable, expressionViews)
 
-    val symbols = mutable.Queue(
-      symbolNames
-      .split(",")
-      .map(_.trim)
-      .flatMap { s =>
-        symbolTable.get(s)
-      }:_*
-    )
+    val symbols = symbolNames.split(",").map(_.trim).flatMap { s => symbolTable.get(s) }.distinct
+
+    /* this forces the circuit to be current */
+    program.scheduler.executeInputSensitivities()
 
     symbols.flatMap { symbol =>
       expressionViews.get(symbol) match {
         case Some(e) =>
-          Some(s"${symbol.name} <= ${dataStore(symbol)} : ${renderer.render(symbol)}")
+          Some(s"${renderer.render(symbol)}")
         case _ => None
       }
     }.mkString("\n")
@@ -362,7 +356,10 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   }
 
   def getInfoString: String = "Info"  //TODO (chick) flesh this out
-  def getPrettyString: String = program.dataInColumns
+  def getPrettyString: String = {
+    program.header + "\n" +
+    program.dataInColumns
+  }
 }
 
 object FirrtlTerp {
