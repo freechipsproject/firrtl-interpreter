@@ -1,6 +1,8 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
+import firrtl_interpreter.executable.ExpressionViewRenderer
+
 /**
   * Works a lot like the chisel classic tester compiles a firrtl input string
   * and allows poke, peek, expect and step
@@ -114,7 +116,10 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     interpreter.program.scheduler.executeInputSensitivities()
     val value = interpreter.getValue(name)
     if(value != expectedValue) {
-      fail(new InterpreterException (s"Error:expect($name, $expectedValue) got $value $message"))
+      val renderer = new ExpressionViewRenderer(
+        interpreter.dataStore, interpreter.symbolTable, interpreter.expressionViews)
+      val calculation = renderer.render(interpreter.symbolTable(name))
+      fail(new InterpreterException (s"Error:expect($name, $expectedValue) got $value $message\n$calculation"))
     }
     expectationsMet += 1
   }

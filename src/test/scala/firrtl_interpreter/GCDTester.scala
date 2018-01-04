@@ -72,7 +72,7 @@ class GCDTester extends FlatSpec with Matchers {
     // interpreter.setVerbose()
     tester.poke("clock", 1)
 
-    List((344, 17, 17)).foreach { case (x, y, z) =>
+    List((344, 17, 1)).foreach { case (x, y, z) =>
       //    List((1, 1, 1), (34, 17, 17), (8, 12, 4)).foreach { case (x, y, z) =>
       //    for((x, y, z) <- values) {
       tester.step()
@@ -101,6 +101,7 @@ class GCDTester extends FlatSpec with Matchers {
       else {
         println(s"${Console.RED}GOT io_z ${tester.peek("io_z")} NOT $z  io_v ${tester.peek("io_v")}${Console.RESET}")
       }
+        tester.expect("io_z", BigInt(z))
 
 
       //      tester.expect("io_z", z)
