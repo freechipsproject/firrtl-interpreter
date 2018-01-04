@@ -8,8 +8,6 @@ import firrtl_interpreter.executable._
 import firrtl_interpreter.real.DspRealFactory
 import firrtl_interpreter.vcd.VCD
 
-import scala.collection.mutable
-
 //scalastyle:off magic.number
 class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
@@ -306,11 +304,6 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
           throw StopException(s"Failure: Stop with unexpected result $result")
       }
     }
-  }
-
-  def reEvaluate(name: String): Unit = {
-    setVerbose()
-    evaluateCircuit(Seq(name))
   }
 
   def checkStopped(attemptedCommand: => String = "command"): Boolean = {

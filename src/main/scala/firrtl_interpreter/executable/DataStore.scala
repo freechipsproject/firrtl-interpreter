@@ -110,7 +110,7 @@ class DataStore(val numberOfBuffers: Int, optimizationLevel: Int = 0) {
       for(i <- currentLongArray.indices) { currentLongArray(i) = previousLongArray(i) }
       for(i <- currentBigArray.indices)  { currentBigArray(i)  = previousBigArray(i) }
 
-      println(s"dataStore:advanceBuffers:current $currentBufferIndex previous $previousBufferIndex")
+      // println(s"dataStore:advanceBuffers:current $currentBufferIndex previous $previousBufferIndex")
     }
   }
 

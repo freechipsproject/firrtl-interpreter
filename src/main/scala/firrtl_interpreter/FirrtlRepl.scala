@@ -656,7 +656,6 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
                   for (_ <- 0 until numberOfSteps) {
                     interpreter.timer("step") {
                       interpreter.cycle()
-                      interpreter.evaluateCircuit()
                     }
                   }
                 }

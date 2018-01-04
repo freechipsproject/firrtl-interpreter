@@ -114,7 +114,6 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     interpreter.program.scheduler.executeInputSensitivities()
     val value = interpreter.getValue(name)
     if(value != expectedValue) {
-      if(! interpreter.verbose) interpreter.reEvaluate(name)
       fail(new InterpreterException (s"Error:expect($name, $expectedValue) got $value $message"))
     }
     expectationsMet += 1

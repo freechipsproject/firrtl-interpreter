@@ -16,12 +16,15 @@ case class Program(
   }
 
   def dataInColumns: String = {
+    val keys = symbolTable.keys.toArray.sorted
     ("-" * 100) + f"\n${dataStore.previousBufferIndex}%2s  " +
-    symbolTable.keys.toArray.sorted.map { name =>
-      val value = dataStore.earlierValue(symbolTable(name), 1)
+    keys.map { name =>
+      val symbol = symbolTable(name)
+      val value = symbol.normalize(dataStore.earlierValue(symbolTable(name), 1))
       f"$value%10.10s" }.mkString("") + f"\n${dataStore.currentBufferIndex}%2s  " +
-    symbolTable.keys.toArray.sorted.map { name =>
-      val value = dataStore(symbolTable(name))
+    keys.map { name =>
+      val symbol = symbolTable(name)
+      val value = symbol.normalize(dataStore(symbolTable(name)))
       f"$value%10.10s" }.mkString("") + "\n" +
     ("-" * 100)
   }
