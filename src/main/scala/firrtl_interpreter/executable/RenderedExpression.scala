@@ -79,25 +79,27 @@ class ExpressionViewRenderer(
 
       builder ++= sc.parts.head
       val argStrings = args.map {
-        case s: Symbol =>
+        case symbol: Symbol =>
           if(! (
-            symbolTable.isRegister(s.name) ||
-              symbolTable.inputPortsNames.contains(s.name) ||
-              symbolsSeen.contains(s)
+            symbolTable.isRegister(symbol.name) ||
+              symbolTable.inputPortsNames.contains(symbol.name) ||
+              symbolsSeen.contains(symbol)
             )) {
-            symbolsToDo.enqueue(SymbolAtDepth(s, displayDepth + 1, lookBackDepth))
+            symbolsToDo.enqueue(SymbolAtDepth(symbol, displayDepth + 1, lookBackDepth))
           }
 
-          symbolsSeen += s
+          symbolsSeen += symbol
 
-          (if(lookBackDepth > 1) Console.RED else "") +
-          s"${s.name}:${dataStore.earlierValue(s, lookBackDepth)}" +
-          (if(lookBackDepth > 1) Console.RESET else "")
+          val string = s"${symbol.name} <= " +
+              (if(lookBackDepth > 0) Console.RED else "") +
+              s"${symbol.normalize(dataStore.earlierValue(symbol, lookBackDepth))}" +
+              (if(lookBackDepth > 0) Console.RESET else "")
+          string
 
         case subView: ExpressionView =>
           renderView(subView, displayDepth + 1, lookBackDepth)
 
-        case x => x.toString
+        case other => other.toString
       }
 
       argStrings.zip(sc.parts.tail).foreach { case (s1, s2) =>
@@ -116,9 +118,20 @@ class ExpressionViewRenderer(
 
       expressionViews.get(symbol).foreach { view =>
         builder ++= "  " * symbolAtDepth.displayDepth
-        builder ++= s"${symbol.name}:$currentValue <= [[["
+        builder ++= s"${symbol.name} <= "
+        if(lookBackDepth > 0) {
+          builder ++= Console.RED
+        }
+        builder ++= s"$currentValue : "
+        if(lookBackDepth > 0) {
+          builder ++= Console.RESET
+        }
         builder ++= renderView(view, symbolAtDepth.displayDepth, adjustedLookBackDepth)
-        builder ++= s"]]]($adjustedLookBackDepth)\n"
+        if(adjustedLookBackDepth > lookBackDepth) {
+          builder ++= s" :  Values in red are from $adjustedLookBackDepth cycle"
+          builder ++= (if(adjustedLookBackDepth > 1) "s before" else " before")
+        }
+        builder ++= "\n"
       }
     }
 

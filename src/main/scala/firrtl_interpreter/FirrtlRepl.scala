@@ -925,6 +925,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
         console.readLine()
     }
     if(rawLine == null) {
+      history.add("quit")
       "quit"
     }
     else {
