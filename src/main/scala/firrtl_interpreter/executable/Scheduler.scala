@@ -118,7 +118,6 @@ class Scheduler(val dataStore: DataStore, val symbolTable: SymbolTable) extends 
     triggeredAssigns.clear()
 
     unifiedTriggerAssigns.foreach { case (trigger, assigners) =>
-//      val sensitiveSymbols  = symbolTable.getChildren(assigners.map(_.memorySymbol)).toSeq
       val sensitiveSymbols  = symbolTable.getChildren(Seq(trigger)).toSeq
       val senstiveAssigners = (assigners ++ symbolTable.getAssigners(sensitiveSymbols)).distinct
 

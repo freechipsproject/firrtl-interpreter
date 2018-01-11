@@ -224,7 +224,7 @@ object SymbolTable extends LazyLogging {
           val expandedName = expand(name)
 
           val registerIn = Symbol(expandedName + "/in", tpe, RegKind, info = info)
-          val registerOut = Symbol(expandedName, tpe,RegKind, info = info)
+          val registerOut = Symbol(expandedName, tpe, RegKind, info = info)
           registerNames += registerOut.name
           nameToSymbol(registerIn.name) = registerIn
           nameToSymbol(registerOut.name) = registerOut
@@ -240,9 +240,8 @@ object SymbolTable extends LazyLogging {
             nameToSymbol(symbol.name) = symbol
           }
 
-        //      case IsInvalid(info, expression) =>
-        //        IsInvalid(info, expressionToReferences(expression))
         case _: Stop   =>
+          nameToSymbol(StopOp.StopOpSymbol.name) = StopOp.StopOpSymbol
         case _: Print  =>
         case EmptyStmt =>
 
@@ -250,7 +249,6 @@ object SymbolTable extends LazyLogging {
           logger.debug(f"IsInvalid found for ${invalid.expr}%20s")
 
         case conditionally: Conditionally =>
-          // logger.debug(s"got a conditionally $conditionally")
           throw new InterpreterException(s"conditionally unsupported in interpreter $conditionally")
         case _ =>
           println(s"TODO: Unhandled statement $s")

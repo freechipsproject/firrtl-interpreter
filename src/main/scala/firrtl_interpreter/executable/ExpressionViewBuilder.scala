@@ -12,14 +12,14 @@ import RenderHelper.ExpressionHelper
 import scala.collection.mutable
 
 //noinspection ScalaUnusedSymbol
-class ExpressionViewBuilder(program: Program, parent: FirrtlTerp) extends logger.LazyLogging {
-  val dataStore:   DataStore   = program.dataStore
-  val symbolTable: SymbolTable = program.symbolTable
-  val scheduler:   Scheduler   = program.scheduler
-
-  val blackBoxFactories: Seq[BlackBoxFactory] = parent.blackBoxFactories
-
-  implicit val ds: DataStore = dataStore
+class ExpressionViewBuilder(
+    symbolTable: SymbolTable,
+    dataStore: DataStore,
+    scheduler: Scheduler,
+    validIfIsRandom: Boolean,
+    blackBoxFactories: Seq[BlackBoxFactory]
+)
+  extends logger.LazyLogging {
 
   val expressionViews: mutable.HashMap[Symbol, ExpressionView] = new mutable.HashMap
 
@@ -125,7 +125,7 @@ class ExpressionViewBuilder(program: Program, parent: FirrtlTerp) extends logger
             expression"${symbolTable(expand(subIndex.serialize))}"
 
           case ValidIf(condition, value, tpe) =>
-            if(parent.interpreterOptions.validIfIsRandom) {
+            if(validIfIsRandom) {
               expression"ValidIf(${processExpression(condition)}, ${processExpression(value)}}"
             }
             else {
@@ -301,11 +301,14 @@ object ExpressionViewBuilder {
   val RegisterInputSuffix = "/in"
 
   def getExpressionViews(
-      program: Program,
-      parent: FirrtlTerp,
+      symbolTable: SymbolTable,
+      dataStore: DataStore,
+      scheduler: Scheduler,
+      validIfIsRandom: Boolean,
       circuit: Circuit,
       blackBoxFactories: Seq[BlackBoxFactory]): Map[Symbol, ExpressionView] = {
-    val builder = new ExpressionViewBuilder(program, parent)
+    val builder = new ExpressionViewBuilder(
+      symbolTable, dataStore, scheduler, validIfIsRandom, blackBoxFactories)
     builder.compile(circuit, blackBoxFactories)
     builder.expressionViews.toMap
   }

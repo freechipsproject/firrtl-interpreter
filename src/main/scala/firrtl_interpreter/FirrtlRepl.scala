@@ -15,7 +15,7 @@ import collection.JavaConverters._
 import scala.util.matching.Regex
 
 abstract class Command(val name: String) {
-  def run(args: Array[String])
+  def run(args: Array[String]): Unit
   def usage: (String, String)
   def completer: Option[ArgumentCompleter] = {
     Some(new ArgumentCompleter(
@@ -63,15 +63,6 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
     currentInterpreterOpt = Some(FirrtlTerp(input, optionsManager))
     currentInterpreterOpt.foreach { _ =>
       interpreter.setVerbose(interpreterOptions.setVerbose)
-
-      console.println(s"Flags: $showFlags")
-      //TODO (chick) resture this useful information
-//      console.println(
-//        s"dependency graph ${interpreter.dependencyGraph.validNames.size} " +
-//          s"elements ${interpreter.dependencyGraph.numberOfStatements} " +
-//          s"statements ${interpreter.dependencyGraph.numberOfNodes} nodes"
-//      )
-//      interpreter.evaluator.timer.enabled = true
     }
     buildCompletions()
   }
@@ -941,7 +932,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
   }
 
   //scalastyle:off method.length
-  def run() {
+  def run(): Unit = {
     if(replConfig.firrtlSource.nonEmpty) {
       loadSource(replConfig.firrtlSource)
     }
@@ -1011,10 +1002,6 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
 
   def error(message: String): Unit = {
     console.println(s"Error: $message")
-  }
-
-  def showFlags: String = {
-    "no flags to show"
   }
 
   def jlist(list: Seq[String]): java.util.List[String]= {

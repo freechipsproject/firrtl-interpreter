@@ -8,12 +8,14 @@ import firrtl.ir._
 import firrtl_interpreter._
 
 //noinspection ScalaUnusedSymbol
-class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.LazyLogging {
-  val dataStore:   DataStore   = program.dataStore
-  val symbolTable: SymbolTable = program.symbolTable
-  val scheduler:   Scheduler   = program.scheduler
-
-  val blackBoxFactories: Seq[BlackBoxFactory] = parent.blackBoxFactories
+class ExpressionCompiler(
+    val symbolTable: SymbolTable,
+    val dataStore: DataStore,
+    scheduler: Scheduler,
+    interpreterOptions: InterpreterOptions,
+    blackBoxFactories: Seq[BlackBoxFactory]
+)
+  extends logger.LazyLogging {
 
   def getWidth(tpe: firrtl.ir.Type): Int = {
     tpe match {
@@ -481,7 +483,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
             createAccessor(expand(subIndex.serialize))
 
           case ValidIf(condition, value, tpe) =>
-            if(parent.interpreterOptions.validIfIsRandom) {
+            if(interpreterOptions.validIfIsRandom) {
               processExpression(condition) match {
                 case c: IntExpressionResult =>
                   processExpression(value) match {
@@ -690,7 +692,7 @@ class ExpressionCompiler(program: Program, parent: FirrtlTerp) extends logger.La
         case IsInvalid(info, expression) =>
 //          IsInvalid(info, processExpression(expression))
         case Stop(info, ret, clockExpression, enableExpression) =>
-          val stopOp = StopOp(info, returnValue = ret, condition = processExpression(enableExpression), parent)
+          val stopOp = StopOp(info, returnValue = ret, condition = processExpression(enableExpression), dataStore)
           val clockTrigger = symbolTable.getSymbolFromGetter(processExpression(clockExpression), dataStore).get
           scheduler.triggeredAssigns(clockTrigger) += stopOp
 

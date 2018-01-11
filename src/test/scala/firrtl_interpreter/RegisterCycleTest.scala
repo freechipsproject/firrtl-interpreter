@@ -43,13 +43,13 @@ class RegisterCycleTest extends FreeSpec with Matchers {
 //        tester.setVerbose(true)
 
         tester.poke("reset", 1)
-        tester.step(1)
+        tester.step()
         tester.poke("io_In", 1)
         tester.poke("reset", 0)
-        tester.step(1)
+        tester.step()
         println(s"System state:")
-        println(s"${tester.interpreter.program.header}")
-        println(s"System state: ${tester.interpreter.program.dataInColumns}")
+        println(s"${tester.interpreter.header}")
+        println(s"System state: ${tester.interpreter.dataInColumns}")
         tester.expect("io_Out", 1)
       }
     }
@@ -84,7 +84,7 @@ class RegisterCycleTest extends FreeSpec with Matchers {
 
 
       val tester = new InterpretiveTester(input)
-      tester.setVerbose(true)
+      tester.setVerbose()
 
       tester.poke("io_In", 1)
       tester.step(3)

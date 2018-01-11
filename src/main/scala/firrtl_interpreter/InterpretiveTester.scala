@@ -23,7 +23,6 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
 
   val interpreter: FirrtlTerp                = FirrtlTerp(input, optionsManager)
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
-  val commonOptions: firrtl.CommonOptions    = optionsManager.commonOptions
 
   interpreter.setVerbose(interpreterOptions.setVerbose)
 
@@ -113,7 +112,7 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
     * @param expectedValue the BigInt value required
     */
   def expect(name: String, expectedValue: BigInt, message: String = ""): Unit = {
-    interpreter.program.scheduler.executeInputSensitivities()
+    interpreter.scheduler.executeInputSensitivities()
     val value = interpreter.getValue(name)
     if(value != expectedValue) {
       val renderer = new ExpressionViewRenderer(

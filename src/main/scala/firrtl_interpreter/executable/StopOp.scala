@@ -7,11 +7,11 @@ import firrtl.ir.{Info, IntWidth, NoInfo, UIntType}
 import firrtl_interpreter.FirrtlTerp
 
 case class StopOp(
-                   info: Info,
-                   returnValue: Int,
-                   condition: ExpressionResult,
-                   parent: FirrtlTerp
-                 ) extends Assigner {
+    info       : Info,
+    returnValue: Int,
+    condition  : ExpressionResult,
+    dataStore  : DataStore
+) extends Assigner {
 
   val symbol: Symbol = StopOp.StopOpSymbol
 
@@ -22,14 +22,13 @@ case class StopOp(
       case e: BigExpressionResult => e.apply() > Big(0)
     }
     if (conditionValue) {
-      parent.lastStopResult = Some(returnValue)
+      dataStore(symbol) = returnValue + 1
     }
     () => Unit
   }
 }
 
 object StopOp {
-  val StopOpSymbol = Symbol("stopop", IntSize, UnsignedInt, WireKind, 1, 1, UIntType(IntWidth(1)), NoInfo)
-  StopOpSymbol.index = 0
+  val StopOpSymbol = Symbol("/stopped", IntSize, UnsignedInt, WireKind, 1, 1, UIntType(IntWidth(1)), NoInfo)
   StopOpSymbol.cardinalNumber = Int.MaxValue
 }

@@ -164,7 +164,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
             interpreter.setValue(name, newValue, registerPoke = isRegister)
           }
           interpreter.setValue(name, newValue, registerPoke = isRegister)
-          showProgress(s"recording: $name to ${newValue} $message")
+          showProgress(s"recording: $name to $newValue $message")
         }
         else {
           // showProgress(s"Don't know how to process entry: change $fullName to $newValue")
@@ -278,6 +278,7 @@ class ReplVcdController(val repl: FirrtlRepl, val interpreter: FirrtlTerp, val v
         val suffix = if (mismatch) Console.RESET else ""
         console.println(prefix + message + suffix)
       }
+
     }
   }
 

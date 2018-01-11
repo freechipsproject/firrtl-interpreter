@@ -5,15 +5,36 @@ package firrtl_interpreter
 import firrtl.PortKind
 import firrtl.ir.Circuit
 import firrtl_interpreter.executable._
-import firrtl_interpreter.real.DspRealFactory
 import firrtl_interpreter.vcd.VCD
 
 //scalastyle:off magic.number
-class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
-  val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
+class FirrtlTerp(
+    val ast: Circuit,
+    val optionsManager: HasInterpreterSuite,
+    val symbolTable: SymbolTable,
+    val dataStore: DataStore,
+    val scheduler: Scheduler,
+    val expressionViews: Map[Symbol, ExpressionView]
+) {
+  private val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
 
-  var lastStopResult: Option[Int] = None
-  def stopped: Boolean = lastStopResult.nonEmpty
+  def lastStopResult: Option[Int] = {
+    if(symbolTable.contains(StopOp.StopOpSymbol.name)) {
+      val stopValue = dataStore(StopOp.StopOpSymbol).toInt
+      if (stopValue > 0) {
+        Some(stopValue - 1)
+      }
+      else {
+        None
+      }
+    }
+    else {
+      None
+    }
+  }
+  def stopped: Boolean    = {
+    lastStopResult.isDefined
+  }
 
   var vcdOption: Option[VCD] = None
   var vcdFileName: String    = ""
@@ -26,11 +47,6 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     ToLoFirrtl.lower(ast, optionsManager)
   } else {
     ast
-  }
-
-  if(interpreterOptions.showFirrtlAtLoad) {
-    println("LoFirrtl" + "=" * 120)
-    println(loweredAst.serialize)
   }
 
   val blackBoxFactories: Seq[BlackBoxFactory] = interpreterOptions.blackBoxFactories
@@ -55,28 +71,6 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
   val timer = new Timer
 
-  val symbolTable: SymbolTable = timer("build memorySymbol table") {
-    SymbolTable(loweredAst, blackBoxFactories, interpreterOptions.allowCycles)
-  }
-
-  val dataStore = DataStore(
-    numberOfBuffers = interpreterOptions.rollbackBuffers + 1, optimizationLevel = if (verbose) 0 else 1)
-
-  symbolTable.allocateData(dataStore)
-  println(s"Symbol table:\n${symbolTable.render}")
-
-  val scheduler = new Scheduler(dataStore, symbolTable)
-  val program = Program(symbolTable, dataStore, scheduler)
-
-  val compiler = new ExpressionCompiler(program, this)
-
-  timer("compile") {
-    compiler.compile(loweredAst, blackBoxFactories)
-  }
-
-  val expressionViews: Map[Symbol, ExpressionView] = ExpressionViewBuilder.getExpressionViews(
-    program, parent = this, circuit = loweredAst, blackBoxFactories)
-
   // println(s"Scheduler before sort ${scheduler.renderHeader}")
   scheduler.inputDependentAssigns ++= symbolTable.inputChildrenAssigners()
   scheduler.sortInputSensitiveAssigns()
@@ -93,10 +87,6 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
 
   println(s"Scheduler after sort:\n ${scheduler.render}")
 
-  private val orphansAndSensitives = symbolTable.orphans ++ symbolTable.getChildren(symbolTable.orphans)
-
-  scheduler.setOrphanedAssigners(symbolTable.getAssigners(orphansAndSensitives))
-
   if(verbose) {
     println(s"Executing static assignments")
   }
@@ -109,7 +99,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     * Once a stop has occured, the interpreter will not allow pokes until
     * the stop has been cleared
     */
-  def clearStop(): Unit = {lastStopResult = None}
+  def clearStop(): Unit = {dataStore(StopOp.StopOpSymbol) = 0}
 
   def makeVCDLogger(fileName: String, showUnderscored: Boolean): Unit = {
     val vcd = VCD(ast.main)
@@ -150,11 +140,11 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     val symbols = symbolNames.split(",").map(_.trim).flatMap { s => symbolTable.get(s) }.distinct
 
     /* this forces the circuit to be current */
-    program.scheduler.executeInputSensitivities()
+    scheduler.executeInputSensitivities()
 
     symbols.flatMap { symbol =>
       expressionViews.get(symbol) match {
-        case Some(e) =>
+        case Some(_) =>
           Some(s"${renderer.render(symbol)}")
         case _ => None
       }
@@ -269,7 +259,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
   def symbols: Iterable[Symbol] = symbolTable.symbols
 
   def evaluateCircuit(specificDependencies: Seq[String] = Seq()): Unit = {
-    program.dataStore.advanceBuffers()
+    dataStore.advanceBuffers()
 
     if(verbose) {
       println("Inputs" + ("-" * 120))
@@ -280,11 +270,11 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
       println("-" * 120)
     }
 
-    program.scheduler.getTriggerExpressions.foreach { key =>
+    scheduler.getTriggerExpressions.foreach { key =>
       if(verbose) {
         println(s"Running triggered expressions for $key")
       }
-      program.scheduler.executeTriggeredAssigns(key)
+      scheduler.executeTriggeredAssigns(key)
     }
 
     if(verbose) {
@@ -292,7 +282,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     }
     if(inputsChanged) {
       inputsChanged = false
-      program.scheduler.executeInputSensitivities()
+      scheduler.executeInputSensitivities()
     }
     if (stopped) {
       lastStopResult match {
@@ -333,13 +323,13 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
       dataStore.AssignInt(clock, GetIntConstant(0).apply).run()
     }
 
-    if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n${program.dataInColumns}")
+    if(showState) println(s"FirrtlTerp: next state computed ${"="*80}\n$dataInColumns")
   }
 
   def doCycles(n: Int): Unit = {
     if(checkStopped(s"doCycles($n)")) return
 
-    println(s"Initial state ${"-"*80}\n${program.dataInColumns}")
+    println(s"Initial state ${"-"*80}\n$dataInColumns")
 
     for(cycle_number <- 1 to n) {
       println(s"Cycle $cycle_number ${"-"*80}")
@@ -348,18 +338,124 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) {
     }
   }
 
+  def header: String = {
+    "Buf " +
+      symbolTable.keys.toArray.sorted.map { name =>
+        val s = name.takeRight(10)
+        f"$s%10.10s"
+      }.mkString("")
+  }
+
+  def dataInColumns: String = {
+    val keys = symbolTable.keys.toArray.sorted
+    ("-" * 100) + f"\n${dataStore.previousBufferIndex}%2s  " +
+      keys.map { name =>
+        val symbol = symbolTable(name)
+        val value = symbol.normalize(dataStore.earlierValue(symbolTable(name), 1))
+        f"$value%10.10s" }.mkString("") + f"\n${dataStore.currentBufferIndex}%2s  " +
+      keys.map { name =>
+        val symbol = symbolTable(name)
+        val value = symbol.normalize(dataStore(symbolTable(name)))
+        f"$value%10.10s" }.mkString("") + "\n" +
+      ("-" * 100)
+  }
+
   def getInfoString: String = "Info"  //TODO (chick) flesh this out
   def getPrettyString: String = {
-    program.header + "\n" +
-    program.dataInColumns
+    header + "\n" +
+    dataInColumns
   }
 }
 
 object FirrtlTerp {
-  val blackBoxFactory = new DspRealFactory
-
+//  def apply(input: String, optionsManager: HasInterpreterSuite = new InterpreterOptionsManager): FirrtlTerp = {
+//    val ast = firrtl.Parser.parse(input.split("\n").toIterator)
+//    new FirrtlTerp(ast, optionsManager)
+//  }
+//
+  //scalastyle:off method.length
   def apply(input: String, optionsManager: HasInterpreterSuite = new InterpreterOptionsManager): FirrtlTerp = {
+    val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
+
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
-    new FirrtlTerp(ast, optionsManager)
+
+    var lastStopResult: Option[Int] = None
+    def stopped: Boolean = lastStopResult.nonEmpty
+
+    var vcdOption: Option[VCD] = None
+    var vcdFileName: String    = ""
+
+    var verbose: Boolean = false
+
+    var inputsChanged: Boolean = false
+
+    val loweredAst: Circuit = if(interpreterOptions.lowCompileAtLoad) {
+      ToLoFirrtl.lower(ast, optionsManager)
+    } else {
+      ast
+    }
+
+    if(interpreterOptions.showFirrtlAtLoad) {
+      println("LoFirrtl" + "=" * 120)
+      println(loweredAst.serialize)
+    }
+
+    val blackBoxFactories: Seq[BlackBoxFactory] = interpreterOptions.blackBoxFactories
+
+    val timer = new Timer
+
+    val symbolTable: SymbolTable = timer("Build Symbol Table") {
+      SymbolTable(loweredAst, blackBoxFactories, interpreterOptions.allowCycles)
+    }
+
+    val dataStore = DataStore(
+      numberOfBuffers = interpreterOptions.rollbackBuffers + 1, optimizationLevel = if (verbose) 0 else 1)
+
+    symbolTable.allocateData(dataStore)
+    println(s"Symbol table:\n${symbolTable.render}")
+
+    val scheduler = new Scheduler(dataStore, symbolTable)
+    val program = Program(symbolTable, dataStore, scheduler)
+
+    val compiler = new ExpressionCompiler(symbolTable, dataStore, scheduler, interpreterOptions, blackBoxFactories)
+
+    timer("Build Compiled Expressions") {
+      compiler.compile(loweredAst, blackBoxFactories)
+    }
+
+    val expressionViews: Map[Symbol, ExpressionView] = ExpressionViewBuilder.getExpressionViews(
+      symbolTable, dataStore, scheduler,
+      interpreterOptions.validIfIsRandom,
+      loweredAst, blackBoxFactories)
+
+    // println(s"Scheduler before sort ${scheduler.renderHeader}")
+    scheduler.inputDependentAssigns ++= symbolTable.inputChildrenAssigners()
+    scheduler.sortInputSensitiveAssigns()
+    scheduler.sortTriggeredAssigns()
+
+    println("")
+
+    val clockOption: Option[Symbol] = {
+      symbolTable.get("clock") match {
+        case Some(clock) => Some(clock)
+        case _           => symbolTable.get("clk")
+      }
+    }
+
+    println(s"Scheduler after sort:\n ${scheduler.render}")
+
+    val orphansAndSensitives = symbolTable.orphans ++ symbolTable.getChildren(symbolTable.orphans)
+
+    scheduler.setOrphanedAssigners(symbolTable.getAssigners(orphansAndSensitives))
+
+    if(verbose) {
+      println(s"Executing static assignments")
+    }
+    scheduler.executeAssigners(scheduler.orphanedAssigns)
+    if(verbose) {
+      println(s"Finished executing static assignments")
+    }
+
+    new FirrtlTerp(ast, optionsManager, symbolTable, dataStore, scheduler, expressionViews)
   }
 }

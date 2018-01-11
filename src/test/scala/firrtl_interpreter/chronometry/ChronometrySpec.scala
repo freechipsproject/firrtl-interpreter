@@ -3,7 +3,7 @@
 package firrtl_interpreter.chronometry
 
 import firrtl.WireKind
-import firrtl.ir.{IntWidth, SIntType, UIntType}
+import firrtl.ir.{IntWidth, UIntType}
 import org.scalatest.{FreeSpec, Matchers}
 import firrtl_interpreter.executable._
 
