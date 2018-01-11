@@ -415,7 +415,6 @@ object FirrtlTerp {
     println(s"Symbol table:\n${symbolTable.render}")
 
     val scheduler = new Scheduler(dataStore, symbolTable)
-    val program = Program(symbolTable, dataStore, scheduler)
 
     val compiler = new ExpressionCompiler(symbolTable, dataStore, scheduler, interpreterOptions, blackBoxFactories)
 
