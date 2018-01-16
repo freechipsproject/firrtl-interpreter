@@ -7,6 +7,8 @@ circuit Top :
 
         inst level2 of Level2
 
+        level2.clk <= clk
+        level2.reset <= reset
         level2.addr <= addr
         data <= level2.data
 
@@ -18,6 +20,8 @@ circuit Top :
 
         inst memory of Level3
 
+        memory.clk <= clk
+        memory.reset <= reset
         memory.addr <= addr
         data <= memory.data
 
@@ -37,6 +41,8 @@ circuit Top :
 
         inst level1 of Level1
 
+        level1.clk <= clk
+        level1.reset <= reset
         level1.addr <= addr
         data <= level1.data
 
