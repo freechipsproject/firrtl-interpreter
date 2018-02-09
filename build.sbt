@@ -4,15 +4,19 @@ enablePlugins(BuildInfoPlugin)
 
 ChiselProjectDependenciesPlugin.chiselBuildInfoSettings
 
+// sbt-site - sbt-ghpages
+
+enablePlugins(SiteScaladocPlugin)
+
+enablePlugins(GhpagesPlugin)
+
+git.remoteRepo := "git@github.com:freechipsproject/firrlt-interpreter.git"
+
 ChiselProjectDependenciesPlugin.chiselProjectSettings
 
 name := "firrtl-interpreter"
 
 version := "1.1-SNAPSHOT"
-
-scalaVersion := "2.11.12"
-
-crossScalaVersions := Seq("2.11.12", "2.12.4")
 
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
 val defaultVersions = Map(
@@ -36,11 +40,8 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules" % "scala-jline" % "2.12.1"
 ) ++ chiselDeps.libraries
 
+// Don't add 'scm' elements if we have a git.remoteRepo definition.
 pomExtra := pomExtra.value ++ (
-<scm>
-  <url>https://github.com/freechipsproject/firrtl-interpreter.git</url>
-  <connection>scm:git:github.com/freechipsproject/firrlt-interpreter.git</connection>
-</scm>
 <developers>
   <developer>
     <id>chick</id>
