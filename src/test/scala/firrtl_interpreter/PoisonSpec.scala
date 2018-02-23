@@ -13,11 +13,11 @@ class PoisonSpec extends FreeSpec with Matchers {
       s"""
         |circuit Poison :
         |  module Poison :
-        |    input u_in : UInt<$TestWidth>
-        |    input s_in : SInt<$TestWidth>
+        |    input s_in1 : SInt<$TestWidth>
+        |    input s_in2 : SInt<$TestWidth>
         |    output s_out: SInt<${TestWidth + 2}>
         |
-        |    node T_1 = add(u_in, s_in)
+        |    node T_1 = add(s_in1, s_in2)
         |    s_out <= T_1
       """.stripMargin
 
@@ -27,25 +27,25 @@ class PoisonSpec extends FreeSpec with Matchers {
     //does not randomly blow up.
     // tester.interpreter.setVerbose(true)
 
-    tester.poke("u_in", Concrete.poisonedUInt(TestWidth))
-    tester.poke("s_in", Concrete.poisonedSInt(TestWidth))
+    tester.poke("s_in1", Concrete.poisonedUInt(TestWidth))
+    tester.poke("s_in2", Concrete.poisonedSInt(TestWidth))
 
     tester.peekConcrete("s_out").toString should include ("P")
 
-    tester.poke("u_in", Concrete.poisonedUInt(TestWidth))
-    tester.poke("s_in", TestWidth)
+    tester.poke("s_in1", Concrete.poisonedUInt(TestWidth))
+    tester.poke("s_in2", TestWidth)
 
     tester.peekConcrete("s_out").toString should include ("P")
 
-    tester.poke("u_in", 17)
-    tester.poke("s_in", Concrete.poisonedSInt(TestWidth))
+    tester.poke("s_in1", 17)
+    tester.poke("s_in2", Concrete.poisonedSInt(TestWidth))
 
     println(s"peek should show little skulls for poison ${tester.peekConcrete("s_out").showValue}")
 
     tester.peekConcrete("s_out").toString should include ("P")
 
-    tester.poke("u_in", TestWidth)
-    tester.poke("s_in", TestWidth)
+    tester.poke("s_in1", TestWidth)
+    tester.poke("s_in2", TestWidth)
 
     tester.peekConcrete("s_out").toString should not include "P"
   }
