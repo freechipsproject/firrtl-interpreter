@@ -84,7 +84,7 @@ object DependencyGraph extends SimpleLogger {
         processModule(newPrefix, subModule, dependencyGraph)
 
         subModule match {
-          case module: Module =>
+          case _: Module =>
           case extModule: ExtModule => // Look to see if we have an implementation for this
             log(s"got external module ${extModule.name} instance $modulePrefix")
             /* use exists while looking for the right factory, short circuits iteration when found */
@@ -182,7 +182,7 @@ object DependencyGraph extends SimpleLogger {
     for(port <- extModule.ports) {
       if(port.direction == Output) {
         val outputDependencies = instance.outputDependencies(port.name)
-        val dependendInputs = outputDependencies.map(s => s"$instanceName.$s")
+        val dependendInputs = outputDependencies.map(s => s"$modulePrefix.$s")
         dependencyGraph(expand(port.name)) = BlackBoxOutput(port.name, instance, dependendInputs, port.tpe)
       }
     }
