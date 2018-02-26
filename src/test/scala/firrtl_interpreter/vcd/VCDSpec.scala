@@ -48,6 +48,19 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
     s.toString().contains("7 => b0111") should be (true)
   }
 
+  it should "serialize poison as x's" in {
+    val wire = Wire("testwire", "t", width = 4)
+
+    Change(wire, 3, uninitialized = true).serialize should be ("bxxxx t")
+    Change(wire, 0, uninitialized = true).serialize should be ("bxxxx t")
+    Change(wire, -2, uninitialized = true).serialize should be ("bxxxx t")
+
+    val smallWire = Wire("testwire", "t", width = 1)
+    Change(smallWire, 0, uninitialized = true).serialize should be ("bx t")
+    Change(smallWire, -1, uninitialized = true).serialize should be ("bx t")
+
+  }
+
   it should "allow add wires" in {
     val vcd = getVcd
 
@@ -72,9 +85,9 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
     // time starts at -1 to support initialized values
     vcd.incrementTime()
     for(i <- 0 to 10) {
-      vcd.wireChanged("bob", i)
-      vcd.wireChanged("carol", i / 2)
-      vcd.wireChanged("ted", i / 4)
+      vcd.wireChanged("bob", i, uninitialized = false)
+      vcd.wireChanged("carol", i / 2, uninitialized = false)
+      vcd.wireChanged("ted", i / 4, uninitialized = false)
       vcd.incrementTime()
     }
 

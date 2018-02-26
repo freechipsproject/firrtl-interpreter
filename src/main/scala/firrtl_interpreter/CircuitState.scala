@@ -104,12 +104,7 @@ case class CircuitState(
 
     vcd.timeStamp = -1
     for((name, concreteValue) <- circuitState.nameToConcreteValue) {
-      if(concreteValue.poisoned) {
-        vcd.wireChanged(name, concreteValue.value, concreteValue.width)
-      }
-      else {
-        vcd.wireChanged(name, concreteValue.value, concreteValue.width)
-      }
+        vcd.wireChanged(name, concreteValue.value, concreteValue.width, concreteValue.poisoned)
     }
     vcd.timeStamp = 0
   }
@@ -151,7 +146,7 @@ case class CircuitState(
     }
   }
   def vcdWireChangedwire(key: String, concrete: Concrete): Unit = {
-    vcdLoggerOption.foreach { _.wireChanged(key, concrete.value, concrete.width) }
+    vcdLoggerOption.foreach { _.wireChanged(key, concrete.value, concrete.width, concrete.poisoned) }
   }
   /**
     * prepare this cycle

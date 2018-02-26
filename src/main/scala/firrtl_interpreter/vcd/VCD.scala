@@ -588,12 +588,12 @@ case class VCD(
     * @param width    width of wire (needed for header info)
     * @return         false if the value is not different
     */
-  def wireChanged(wireName: String, value: BigInt, width: Int = 1): Boolean = {
+  def wireChanged(wireName: String, value: BigInt, width: Int = 1, uninitialized: Boolean): Boolean = {
     if(ignoreUnderscoredNames && wireName.startsWith("_")) return false
 
     def updateInfo(): Unit = {
       val wire = wires(wireName)
-      val change = Change(wire, value)
+      val change = Change(wire, value, uninitialized)
       lastValues(wireName) = change
 
       if(timeStamp < 0) {
@@ -626,7 +626,7 @@ case class VCD(
     if(isNewValue(VCD.ClockName, BigInt(1))) {
       incrementTime()
       logger.info(f"vcd-clock  time $timeStamp%6d clock raised")
-      wireChanged(VCD.ClockName, BigInt(1))
+      wireChanged(VCD.ClockName, BigInt(1), uninitialized = false)
     } else {
       logger.info(f"vcd-clock  time $timeStamp%6d clock already raised")
     }
@@ -636,7 +636,7 @@ case class VCD(
     if(isNewValue(VCD.ClockName, BigInt(0))) {
       logger.info(f"vcd-clock  time $timeStamp%6d clock lowered")
       incrementTime()
-      wireChanged(VCD.ClockName, BigInt(0))
+      wireChanged(VCD.ClockName, BigInt(0), uninitialized = false)
     } else {
       logger.info(f"vcd-clock  time $timeStamp%6d clock already lowered")
     }
@@ -719,10 +719,13 @@ case class Wire(name: String, id: String, width: Int, path: Array[String] = Arra
   * @param wire wire who's status is being monitored
   * @param value the value this wire now has
   */
-case class Change(wire: Wire, value: BigInt) {
+case class Change(wire: Wire, value: BigInt, uninitialized: Boolean = false) {
   def serialize: String = {
-    if(wire.width == 1) {
-      s"${if(value < 0) "x" else value.toString()}${wire.id}"
+    if(uninitialized) {
+      serializeUninitialized
+    }
+    else if(wire.width == 1) {
+      s"${if(value < 0) "1" else "0"}"
     }
     else {
       "b" +
@@ -731,15 +734,11 @@ case class Change(wire: Wire, value: BigInt) {
     }
 
   }
-  def serializeUninitialized: String = {
-    if(wire.width == 1) {
-      s"$value${wire.id}"
-    }
-    else {
-      "b" +
-        (wire.width - 1 to 0 by -1).map { _ => "x" }.mkString("") +
-        s" ${wire.id}"
-    }
+
+  private def serializeUninitialized: String = {
+    "b" +
+      (wire.width - 1 to 0 by -1).map { _ => "x" }.mkString("") +
+      s" ${wire.id}"
   }
 }
 
