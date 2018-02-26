@@ -720,28 +720,13 @@ case class Wire(name: String, id: String, width: Int, path: Array[String] = Arra
   * @param value the value this wire now has
   */
 case class Change(wire: Wire, value: BigInt) {
-  def normalizeSInt(a: BigInt): BigInt = {
-    val allBits = (BigInt(1) << wire.width) - BigInt(1)
-    val msb     = BigInt(1) << (wire.width - 1)
-    val np2     = BigInt(1) << wire.width
-    val b = a & allBits
-    if ((b & msb) > BigInt(0)) {
-      b - np2
-    }
-    else {
-      b
-    }
-  }
-
   def serialize: String = {
     if(wire.width == 1) {
       s"${if(value < 0) "x" else value.toString()}${wire.id}"
     }
     else {
-      val adjustedValue = if(value < 0) { normalizeSInt(value) } else value
-
       "b" +
-        (wire.width - 1 to 0 by -1).map { index => if (adjustedValue.testBit(index)) "1" else "0" }.mkString("") +
+        (wire.width - 1 to 0 by -1).map { index => if (value.testBit(index)) "1" else "0" }.mkString("") +
         s" ${wire.id}"
     }
 
