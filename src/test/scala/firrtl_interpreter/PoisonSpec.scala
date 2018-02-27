@@ -27,26 +27,28 @@ class PoisonSpec extends FreeSpec with Matchers {
     //does not randomly blow up.
     // tester.interpreter.setVerbose(true)
 
-    tester.poke("s_in1", Concrete.poisonedUInt(TestWidth))
-    tester.poke("s_in2", Concrete.poisonedSInt(TestWidth))
+    for(_ <- 0 to 100) {
+      tester.poke("s_in1", Concrete.poisonedSInt(TestWidth))
+      tester.poke("s_in2", Concrete.poisonedSInt(TestWidth))
 
-    tester.peekConcrete("s_out").toString should include ("P")
+      tester.peekConcrete("s_out").toString should include("P")
 
-    tester.poke("s_in1", Concrete.poisonedUInt(TestWidth))
-    tester.poke("s_in2", TestWidth)
+      tester.poke("s_in1", Concrete.poisonedSInt(TestWidth))
+      tester.poke("s_in2", TestWidth)
 
-    tester.peekConcrete("s_out").toString should include ("P")
+      tester.peekConcrete("s_out").toString should include("P")
 
-    tester.poke("s_in1", 17)
-    tester.poke("s_in2", Concrete.poisonedSInt(TestWidth))
+      tester.poke("s_in1", 17)
+      tester.poke("s_in2", Concrete.poisonedSInt(TestWidth))
 
-    println(s"peek should show little skulls for poison ${tester.peekConcrete("s_out").showValue}")
+      tester.peekConcrete("s_out").showValue.contains("☠") should be (true)
 
-    tester.peekConcrete("s_out").toString should include ("P")
+      tester.peekConcrete("s_out").toString should include("P")
 
-    tester.poke("s_in1", TestWidth)
-    tester.poke("s_in2", TestWidth)
+      tester.poke("s_in1", TestWidth)
+      tester.poke("s_in2", TestWidth)
 
-    tester.peekConcrete("s_out").toString should not include "P"
+      tester.peekConcrete("s_out").toString should not include "P"
+    }
   }
 }
