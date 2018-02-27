@@ -115,6 +115,64 @@ class BlackBoxOutputSpec extends FreeSpec with Matchers {
     }
   }
 
+  "this tests nested black box implementation that have multiple outputs" - {
+    val adderInput =
+      """
+        |circuit FanOutTest :
+        |  extmodule FanOut :
+        |    output out1 : UInt<64>
+        |    output out2 : UInt<64>
+        |    output out3 : UInt<64>
+        |    input in : UInt<64>
+        |
+        |  module FanOutMiddleMan :
+        |    output output1 : UInt<64>
+        |    output output2 : UInt<64>
+        |    output output3 : UInt<64>
+        |    input input1 : UInt<64>
+        |
+        |    inst fo of FanOut
+        |    fo.in <= input1
+        |    output1 <= fo.out1
+        |    output2 <= fo.out2
+        |    output3 <= fo.out3
+        |
+        |  module FanOutTest :
+        |    input clk : Clock
+        |    input reset : UInt<1>
+        |    input in : UInt<64>
+        |    output out1 : UInt<64>
+        |    output out2 : UInt<64>
+        |    output out3 : UInt<64>
+        |
+        |    inst fo of FanOutMiddleMan
+        |    fo.input1 <= in
+        |    out1 <= fo.output1
+        |    out2 <= fo.output2
+        |    out3 <= fo.output3
+      """.stripMargin
+
+    "each output should hold a different values" in {
+
+      val factory = new FanOutAdderFactory
+
+      val optionsManager = new InterpreterOptionsManager {
+        interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(factory), randomSeed = 0L)
+      }
+      val tester = new InterpretiveTester(adderInput, optionsManager)
+      tester.interpreter.verbose = true
+      tester.interpreter.setVerbose()
+
+      for(i <- 0 until 10) {
+        tester.poke("in", i)
+        tester.expect("out1", i + 1)
+        tester.expect("out2", i + 2)
+        tester.expect("out3", i + 3)
+        tester.step()
+      }
+    }
+  }
+
   "this test a black box of an accumulator that implements reset" - {
     val input =
       """
