@@ -275,32 +275,111 @@ class ConcreteSpec extends FlatSpec with Matchers {
   behavior of "not"
 
   it should "flip bits of UInts" in {
+
+    def compare(s1: String, s2: String): Boolean = {
+      s1.zip(s2).forall {
+        case ('0', '1') => true
+        case ('1', '0') => true
+        case _          => false
+
+      }
+    }
+
     for(width <- IntWidthTestValuesGenerator(-MaxWidth, MaxWidth)) {
       if (width < -1 || width > 1) {
-        val bitString1 = (0 until width.abs-1).map(x => (x % 2).toString).mkString
-        val bitString2 = (0 until width.abs-1).map(x => ((x + 1) % 2).toString).mkString
+        val bitString1 = (0 until width.abs).map(x => (x % 2).toString).mkString
+        val bitString2 = (0 until width.abs).map(x => ((x + 1) % 2).toString).mkString
 
-        for(sign <- Array(-1, 1)) {
-          val bigInt = sign*BigInt(bitString1, 2)
-          val si = ConcreteSInt(bigInt, width.abs)
-          val topUintBit1 = if (bigInt < 0) "1" else "0"
-          val topUintBit2 = if (bigInt < 0) "0" else "1"
+        for(bitString <- Seq(bitString1, bitString2)) {
 
-          val ui       = ConcreteUInt(BigInt(topUintBit1 + bitString1, 2), width.abs)
-          val expected = ConcreteUInt(BigInt(topUintBit2 + bitString2, 2), width.abs)
+          val u1 = ConcreteUInt(BigInt(bitString, 2), width.abs)
 
-//          println(s"width $width si     ${si.asBinaryString}")
-//          println(s"width $width ui     ${ui.asBinaryString}")
-//          println(s"width $width si.ex  ${expected.asBinaryString}")
-//          println(s"width $width si.not ${si.not.asBinaryString}")
-//          println()
+          compare(u1.toBinaryString, u1.not.toBinaryString) should be(true)
 
-          si.not should be (expected)
-          ui.not should be (expected)
+          val s1 = u1.asSInt
+
+          compare(s1.toBinaryString, s1.not.toBinaryString) should be(true)
+
+          println(f"u1     $u1%60s ${u1.toBinaryString}")
+          println(f"u1.not ${u1.not}%60s ${u1.not.toBinaryString}")
+
+          println(f"s1     $s1%60s ${s1.toBinaryString}")
+          println(f"s1.not ${s1.not}%60s ${s1.not.toBinaryString}")
         }
       }
     }
   }
+
+  behavior of "firrtl:issue-753"
+
+  it should "invert an SInt" in {
+    val a = ConcreteSInt(-1, 32)
+    val notA = a.not
+    val notNotA = notA.not
+    val signedNotNotA = notNotA.asSInt
+    println("a:            " + a.value.toString(16))
+    println("~a:           " + notA.value.toString(16))
+    println("~(~a):        " + notNotA.value.toString(16))
+    println("$signed~(~a): " + signedNotNotA.value.toString(16))
+    signedNotNotA.value should be (a.value)
+  }
+
+  it should "invert an UInt" in {
+    val a = ConcreteUInt(BigInt("1" * 32, 2), 32)
+    val notA = a.not
+    val notNotA = notA.not
+    val signedNotNotA = notNotA.asSInt
+    println("a:            " + a.value.toString(16))
+    println("~a:           " + notA.value.toString(16))
+    println("~(~a):        " + notNotA.value.toString(16))
+    println("$signed~(~a): " + signedNotNotA.value.toString(16))
+    signedNotNotA.value should be (a.asSInt.value)
+  }
+
+  behavior of "toBinaryString"
+
+  it should "be same for complementary SInt UInt pairs" in {
+    val pairs = Seq(
+      (0,0), (1,1), (2,2), (3,3), (4,4), (5,5), (6,6), (7,7), (8,-8),
+      (9,-7), (10,-6), (11,-5), (12,-4), (13,-3), (14,-2), (15,-1)
+    )
+
+    for((i, j) <- pairs) {
+      val u1 = ConcreteUInt(i, 4)
+      val s1 = ConcreteSInt(j, 4)
+
+      u1 should be (s1.asUInt)
+      u1.asSInt should be (s1)
+
+      u1.toBinaryString should be (s1.toBinaryString)
+      u1.toBinaryString should be (s1.toBinaryString)
+      println(f"u1 $u1%8s ${u1.toBinaryString} s1 $s1%8s ${s1.toBinaryString}")
+    }
+  }
+
+  behavior of "toHexString"
+
+  it should "be same for complementary SInt UInt pairs" in {
+    val pairs = Seq(
+      (0,0), (1,1), (2,2), (3,3), (4,4), (5,5), (6,6), (7,7), (8,-8),
+      (9,-7), (10,-6), (11,-5), (12,-4), (13,-3), (14,-2), (15,-1)
+    )
+
+    for((i, j) <- pairs) {
+      val u1 = ConcreteUInt(i, 4)
+      val s1 = ConcreteSInt(j, 4)
+
+      u1 should be (s1.asUInt)
+      u1.asSInt should be (s1)
+
+      u1.toHexString should be (s1.toHexString)
+      u1.toHexString should be (s1.toHexString)
+      println(f"u1 $u1%8s ${u1.toHexString} s1 $s1%8s ${s1.toHexString}")
+    }
+  }
+
+
+
   behavior of "bits"
 
   it should "allows arbitrary selection of bits" in {
