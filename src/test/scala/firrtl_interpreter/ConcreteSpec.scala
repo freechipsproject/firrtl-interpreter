@@ -276,7 +276,7 @@ class ConcreteSpec extends FlatSpec with Matchers {
 
   it should "flip bits of UInts" in {
 
-    def compare(s1: String, s2: String): Boolean = {
+    def bitwiseXorReduction(s1: String, s2: String): Boolean = {
       s1.zip(s2).forall {
         case ('0', '1') => true
         case ('1', '0') => true
@@ -294,11 +294,11 @@ class ConcreteSpec extends FlatSpec with Matchers {
 
           val u1 = ConcreteUInt(BigInt(bitString, 2), width.abs)
 
-          compare(u1.toBinaryString, u1.not.toBinaryString) should be(true)
+          bitwiseXorReduction(u1.toBinaryString, u1.not.toBinaryString) should be (true)
 
           val s1 = u1.asSInt
 
-          compare(s1.toBinaryString, s1.not.toBinaryString) should be(true)
+          bitwiseXorReduction(s1.toBinaryString, s1.not.toBinaryString) should be (true)
 
           println(f"u1     $u1%60s ${u1.toBinaryString}")
           println(f"u1.not ${u1.not}%60s ${u1.not.toBinaryString}")
@@ -310,9 +310,7 @@ class ConcreteSpec extends FlatSpec with Matchers {
     }
   }
 
-  behavior of "firrtl:issue-753"
-
-  it should "invert an SInt" in {
+  it should "invert an SInt, per: firrtl:issue-122" in {
     val a = ConcreteSInt(-1, 32)
     val notA = a.not
     val notNotA = notA.not
@@ -324,7 +322,7 @@ class ConcreteSpec extends FlatSpec with Matchers {
     signedNotNotA.value should be (a.value)
   }
 
-  it should "invert an UInt" in {
+  it should "invert an UInt, per: firrtl:issue-122" in {
     val a = ConcreteUInt(BigInt("1" * 32, 2), 32)
     val notA = a.not
     val notNotA = notA.not
