@@ -310,7 +310,7 @@ class ConcreteSpec extends FlatSpec with Matchers {
     }
   }
 
-  it should "invert an SInt, per: firrtl:issue-122" in {
+  it should "invert an SInt, per: firrtl-interpreter:issue-122" in {
     val a = ConcreteSInt(-1, 32)
     val notA = a.not
     val notNotA = notA.not
@@ -322,7 +322,7 @@ class ConcreteSpec extends FlatSpec with Matchers {
     signedNotNotA.value should be (a.value)
   }
 
-  it should "invert an UInt, per: firrtl:issue-122" in {
+  it should "invert an UInt, per: firrtl-interpreter:issue-122" in {
     val a = ConcreteUInt(BigInt("1" * 32, 2), 32)
     val notA = a.not
     val notNotA = notA.not
