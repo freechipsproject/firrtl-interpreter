@@ -725,7 +725,7 @@ case class Change(wire: Wire, value: BigInt, uninitialized: Boolean = false) {
       serializeUninitialized
     }
     else if(wire.width == 1) {
-      s"${if(value < 0) "1" else "0"}"
+      s"${if(value < 0) "1" else value}${wire.id}"
     }
     else {
       "b" +
