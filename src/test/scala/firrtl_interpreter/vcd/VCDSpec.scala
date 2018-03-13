@@ -48,6 +48,17 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
     s.toString().contains("7 => b0111") should be (true)
   }
 
+  it should "serialize 1 bit numbers correctly" in {
+    val c0 = Change(Wire("test1", "%", 1), 0, false)
+    c0.serialize should be ("0%")
+
+    val c1 = Change(Wire("test1", "%", 1), 1, false)
+    c1.serialize should be ("1%")
+
+    val c2 = Change(Wire("test1", "%", 1), -1, false)
+    c2.serialize should be ("1%")
+  }
+
   it should "serialize poison as x's" in {
     val wire = Wire("testwire", "t", width = 4)
 
