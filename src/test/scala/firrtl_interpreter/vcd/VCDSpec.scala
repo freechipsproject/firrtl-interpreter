@@ -67,8 +67,8 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
     Change(wire, -2, uninitialized = true).serialize should be ("bxxxx t")
 
     val smallWire = Wire("testwire", "t", width = 1)
-    Change(smallWire, 0, uninitialized = true).serialize should be ("bx t")
-    Change(smallWire, -1, uninitialized = true).serialize should be ("bx t")
+    Change(smallWire, 0, uninitialized = true).serialize should be ("xt")
+    Change(smallWire, -1, uninitialized = true).serialize should be ("xt")
 
   }
 
