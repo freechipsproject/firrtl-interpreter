@@ -725,7 +725,7 @@ case class Change(wire: Wire, value: BigInt, uninitialized: Boolean = false) {
       serializeUninitialized
     }
     else if(wire.width == 1) {
-      s"${if(value < 0) "1" else "0"}"
+      s"${if(value < 0) "1" else value}${wire.id}"
     }
     else {
       "b" +
@@ -736,9 +736,12 @@ case class Change(wire: Wire, value: BigInt, uninitialized: Boolean = false) {
   }
 
   private def serializeUninitialized: String = {
-    "b" +
-      (wire.width - 1 to 0 by -1).map { _ => "x" }.mkString("") +
-      s" ${wire.id}"
+    if(wire.width == 1) {
+      s"x${wire.id}"
+    }
+    else {
+      "b" + (wire.width - 1 to 0 by -1).map { _ => "x" }.mkString("") + s" ${wire.id}"
+    }
   }
 }
 

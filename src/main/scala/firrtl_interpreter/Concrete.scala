@@ -176,19 +176,13 @@ trait Concrete {
     ConcreteSInt(-value, width + 1)
   }
   def not: ConcreteUInt = this match {
-    case ConcreteUInt(v, _, p) =>
-      var flipped = value
-      for(bitIndex <- 0 until width) {
+    case _ : ConcreteUInt | _ : ConcreteSInt =>
+      val uInt = this.asUInt
+      var flipped = uInt.value
+      for(bitIndex <- 0 until uInt.width) {
         flipped = flipped.flipBit(bitIndex)
       }
-      ConcreteUInt(flipped, width, p)
-    case ConcreteSInt(v, _, p) =>
-      var flipped = value.abs
-      for(bitIndex <- 0 until width-1) {
-        flipped = flipped.flipBit(bitIndex)
-      }
-      if(v >= 0) flipped = flipped.setBit(width-1) // invert sign and stick at high end
-      ConcreteUInt(flipped, width, p)
+      ConcreteUInt(flipped, width, poisoned)
   }
   def &(that: Concrete): ConcreteUInt = {
     ConcreteUInt(this.asUInt.value & that.asUInt.value, width.max(that.width), poison(this.poisoned, that.poisoned))
@@ -272,6 +266,8 @@ trait Concrete {
   }
   def forceWidth(newWidth: Int): Concrete
   def forceWidth(tpe: Type): Concrete
+
+  @deprecated(s"Use toBinaryString instead")
   def asBinaryString: String = {
     val bitString = value.abs.toString(2)
 
@@ -282,6 +278,43 @@ trait Concrete {
         s"${poisonString}SInt<$width>${if(v<0)"1" else "0"}${"0"*((width-1)-bitString.length)}$bitString"
     }
   }
+  /**
+    * Show just the bit value of this concrete, string is left padded with zeros to match width
+    * This functions does not include type and poison information, it's just the bits.
+    * @return
+    */
+  def toBinaryString: String = {
+    val bitString = {
+      val v = if(value < Big0) {
+        (value + (BigInt(1) << width)).toString(2)
+      }
+      else {
+        value.toString(2)
+      }
+      ("0" * (width - v.length)) + v
+    }
+
+    bitString
+  }
+
+  /**
+    * Show just the bit value of this concrete, string is left padded with zeros to match width
+    * @return
+    */
+  def toHexString: String = {
+    val hexString = {
+      val v = if(value < Big0) {
+        (value + (BigInt(1) << width)).toString(16)
+      }
+      else {
+        value.toString(16)
+      }
+      ("0" * ((width / 4) - v.length)) + v
+    }
+
+    hexString
+  }
+
   def showValue: String = {
     def showPoison: String = if(poisoned) "☠" else ""
     s"$showPoison $value$showPoison"
