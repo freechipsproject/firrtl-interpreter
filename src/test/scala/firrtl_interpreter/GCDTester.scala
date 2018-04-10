@@ -160,6 +160,7 @@ class GCDTester extends FlatSpec with Matchers {
     tester.report()
   }
 
+  // This test is used for benchmarking against the treadle project.
   it should "run a lot of values" in {
     manyValuesTest(24)
   }
