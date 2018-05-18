@@ -6,7 +6,7 @@ enablePlugins(SiteScaladocPlugin)
 
 enablePlugins(GhpagesPlugin)
 
-git.remoteRepo := "git@github.com:freechipsproject/firrlt-interpreter.git"
+git.remoteRepo := "git@github.com:freechipsproject/firrtl-interpreter.git"
 
 def scalacOptionsVersion(scalaVersion: String): Seq[String] = {
   Seq() ++ {
