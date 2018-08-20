@@ -13,7 +13,7 @@ case class InterpreterTesterCreated(tester: InterpretiveTester) extends DriverEx
 case class InterpreterTesterFailed(message: String) extends DriverExecutionResult
 
 
-object Driver {
+object Driver extends firrtl.options.Driver {
 
   def vcdOutputFileName(annotationSeq: AnnotationSeq): String = {
     val firrtlOptions = view[FirrtlExecutionOptions](annotationSeq).get

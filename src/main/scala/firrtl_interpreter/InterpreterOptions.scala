@@ -10,7 +10,7 @@ import scopt.OptionParser
 sealed trait InterpreterOption extends HasScoptOptions
 
 /**
-  * Tells treadle to write a vcd file during simulation
+  * Tells interpreter to write a vcd file during simulation
   */
 case object WriteVcdAnnotation extends NoTargetAnnotation with InterpreterOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[Unit]("fint-write-vcd")
@@ -21,7 +21,7 @@ case object WriteVcdAnnotation extends NoTargetAnnotation with InterpreterOption
 }
 
 /**
-  * Tells treadle to include _T_* and _GEN_* wires in VCD output
+  * Tells interpreter to include _T_* and _GEN_* wires in VCD output
   */
 case object VcdShowUnderScoredAnnotation extends NoTargetAnnotation with InterpreterOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[Unit]("fint-vcd-show-underscored-vars")
@@ -32,18 +32,18 @@ case object VcdShowUnderScoredAnnotation extends NoTargetAnnotation with Interpr
 }
 
 /**
-  *  Tells treadle to execute verbosely
+  *  Tells interpreter to execute verbosely
   */
 case object VerboseAnnotation extends NoTargetAnnotation with InterpreterOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[Unit]("fint-verbose")
     .abbr("fiv")
     .action( (_, c) => c :+ this )
     .unbounded()
-    .text("makes the treadle very verbose")
+    .text("makes the interpreter very verbose")
 }
 
 /**
-  *  Tells treadle to allow cycles
+  *  Tells interpreter to allow cycles
   */
 case object AllowCyclesAnnotation extends NoTargetAnnotation with InterpreterOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[Unit]("fint-allow-cycle")
@@ -54,7 +54,7 @@ case object AllowCyclesAnnotation extends NoTargetAnnotation with InterpreterOpt
 }
 
 /**
-  *  Sets the seed for treadle's private random number generator
+  *  Sets the seed for interpreter's private random number generator
   */
 case class RandomSeedAnnotation(seed: Long = 0L) extends NoTargetAnnotation with InterpreterOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[Long]("fint-random-seed")
@@ -65,18 +65,18 @@ case class RandomSeedAnnotation(seed: Long = 0L) extends NoTargetAnnotation with
 }
 
 /**
-  *  Tells treadle to show the low firrtl it is starting out with
+  *  Tells interpreter to show the low firrtl it is starting out with
   */
 case object ShowFirrtlAtLoadAnnotation extends NoTargetAnnotation with InterpreterOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[Unit]("fint-show-firrtl-at-load")
     .abbr("fisfal")
     .action( (_, c) => c :+ this )
     .unbounded()
-    .text("show the low firrtl source treadle is using to build simulator")
+    .text("show the low firrtl source interpreter is using to build simulator")
 }
 
 /**
-  *  Tells treadle to not run its own lowering pass on firrtl input (not recommended)
+  *  Tells interpreter to not run its own lowering pass on firrtl input (not recommended)
   */
 case object DontRunLoweringCompilerLoadAnnotation extends NoTargetAnnotation with InterpreterOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[Unit]("fint-dont-run-lower-compiler-on-load")
@@ -87,7 +87,7 @@ case object DontRunLoweringCompilerLoadAnnotation extends NoTargetAnnotation wit
 }
 
 /**
-  *  Tells treadle to present random value when validIf's condition is off
+  *  Tells interpreter to present random value when validIf's condition is off
   */
 case object ValidIfIsRandomAnnotation extends NoTargetAnnotation with InterpreterOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[Unit]("fint-validif-random")
@@ -109,7 +109,7 @@ case class RollBackBuffersAnnotation(rollbackBufferDepth: Int = 4) extends NoTar
     .text("number of rollback buffers, 0 is no buffers, default is 4")
 }
 /**
-  *  Sets the seed for treadle's private random number generator
+  *  Sets the seed for interpreter's private random number generator
   */
 case class ResetNameAnnotation(symbolNames: String = "") extends NoTargetAnnotation with InterpreterOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[String]("fint-reset-name")
@@ -120,14 +120,14 @@ case class ResetNameAnnotation(symbolNames: String = "") extends NoTargetAnnotat
 }
 
 /**
-  *  Tells treadle to present random value when validIf's condition is off
+  *  Tells interpreter to present random value when validIf's condition is off
   */
 case object CallResetAtStartupAnnotation extends NoTargetAnnotation with InterpreterOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[Unit]("fint-call-reset-at-startup")
     .abbr("ficras")
     .action( (_, c) => c :+ this )
     .unbounded()
-    .text("makes treadle do it's own reset at startup, usually for internal use only")
+    .text("makes interpreter do it's own reset at startup, usually for internal use only")
 }
 
 case class InterpreterFirrtlString(firrtl: String = "") extends NoTargetAnnotation with InterpreterOption {
@@ -141,7 +141,7 @@ case class InterpreterFirrtlString(firrtl: String = "") extends NoTargetAnnotati
 case class InterpreterBlackBoxFactoriesAnnotation(blackBoxFactories: Seq[BlackBoxFactory]) extends NoTargetAnnotation
 
 class InterpreterLibrary extends RegisteredLibrary {
-  val name: String = "treadle"
+  val name: String = "interpreter"
   override def addOptions(parser: OptionParser[AnnotationSeq]): Unit = {
     val seq: Seq[HasScoptOptions] = Seq(
       WriteVcdAnnotation,

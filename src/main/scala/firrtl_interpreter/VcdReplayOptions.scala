@@ -57,7 +57,7 @@ case class VcdReplayVcdFileAnnotation(name: String = "") extends NoTargetAnnotat
 
 case class VcdReplaySkipEventsAnnotation(skip: Int = 0) extends NoTargetAnnotation with VcdReplayOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[Int]("vcd-replay-skip-events")
-    .abbr("vr-vf")
+    .abbr("vr-se")
     .action( (skip, c) => c :+ VcdReplaySkipEventsAnnotation(skip) )
     .unbounded()
 
@@ -75,7 +75,7 @@ case class VcdReplayEventsToRunAnnotation(events: Int = 0) extends NoTargetAnnot
 
 case object VcdReplayTestAliasedWiresAnnotation extends NoTargetAnnotation with VcdReplayOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[Unit]("vcd-replay-test-aliased-wires")
-    .abbr("vr-evtr")
+    .abbr("vr-taw")
     .action( (_, c) => c :+ VcdReplayTestAliasedWiresAnnotation )
     .unbounded()
 

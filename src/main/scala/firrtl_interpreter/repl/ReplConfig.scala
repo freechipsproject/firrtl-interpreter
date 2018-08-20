@@ -56,7 +56,7 @@ case class ReplFirrtlAnnotation(name: String = "") extends NoTargetAnnotation wi
 
 case class ReplScriptNameAnnotation(name: String = "") extends NoTargetAnnotation with ReplOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[String]("irepl-script-name")
-    .abbr("ir-sf")
+    .abbr("ir-sn")
     .action( (name, c) => c :+ ReplScriptNameAnnotation(name) )
     .unbounded()
     .text("script file to load")
@@ -64,7 +64,7 @@ case class ReplScriptNameAnnotation(name: String = "") extends NoTargetAnnotatio
 
 case object ReplUseVcdScriptAnnotation extends NoTargetAnnotation with ReplOption {
   def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[Unit]("irepl-use-vcd")
-    .abbr("ir-sf")
+    .abbr("ir-uv")
     .action( (_, c) => c :+ this )
     .unbounded()
     .text("script file to load")

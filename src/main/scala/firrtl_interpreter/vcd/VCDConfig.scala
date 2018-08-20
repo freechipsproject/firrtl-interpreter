@@ -38,7 +38,7 @@ object VcdConfigViewer {
 sealed trait VcdConfigOption extends HasScoptOptions
 
 case class VcdSourceNameAnnotation(name: String = "") extends NoTargetAnnotation with VcdConfigOption {
-  def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[String]("vcd-start-scope")
+  def addOptions(p: OptionParser[AnnotationSeq]): Unit = p.opt[String]("vcd-source-file")
     .abbr("vcd-sf")
     .action( (name, c) => c :+ VcdSourceNameAnnotation(name) )
     .unbounded()
@@ -85,7 +85,7 @@ case class VcdNewVarPrefixAnnotation(name: String = "") extends NoTargetAnnotati
     .text("change vars prefix vars to this")
 }
 
-class TreadleReplLibrary extends RegisteredLibrary {
+class FirrtlReplLibrary extends RegisteredLibrary {
   override def name: String = "vcd-replay"
 
   override def addOptions(parser: OptionParser[AnnotationSeq]): Unit = {
