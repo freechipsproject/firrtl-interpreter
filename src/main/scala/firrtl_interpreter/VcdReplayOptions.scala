@@ -82,7 +82,7 @@ case object VcdReplayTestAliasedWiresAnnotation extends NoTargetAnnotation with 
     .text("test aliased wires during execution")
 }
 
-object VcdReplayLibrary extends RegisteredLibrary {
+class VcdReplayLibrary extends RegisteredLibrary {
   override def name: String = "vcd-replay"
 
   override def addOptions(parser: OptionParser[AnnotationSeq]): Unit = {

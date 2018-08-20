@@ -1,0 +1,4 @@
+firrtl_interpreter.InterpreterLibrary
+firrtl_interpreter.VcdReplayLibrary
+firrtl_interpreter.repl.InterpreterReplLibrary
+firrtl_interpreter.vcd.TreadleReplLibrary

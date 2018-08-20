@@ -94,7 +94,7 @@ case class ReplOutputFormatAnnotation(name: String = "d") extends NoTargetAnnota
     .text("default output format when display wire values b, d, x")
 }
 
-object InterpreterReplLibrary extends RegisteredLibrary {
+class InterpreterReplLibrary extends RegisteredLibrary {
   override def name: String = "interpreter-repl"
 
   override def addOptions(parser: OptionParser[AnnotationSeq]): Unit = {
@@ -111,5 +111,3 @@ object InterpreterReplLibrary extends RegisteredLibrary {
     seq.foreach(_.addOptions(parser))
   }
 }
-
-
