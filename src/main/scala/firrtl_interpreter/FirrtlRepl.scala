@@ -4,6 +4,8 @@ package firrtl_interpreter
 import java.io.File
 import java.util.regex.Matcher
 
+import firrtl.{AnnotationSeq, HasFirrtlExecutionOptions, ProgramArgsAnnotation}
+import firrtl.options.{DriverExecutionResult, ExecutionOptionsManager}
 import firrtl_interpreter.vcd.VCD
 
 import scala.collection.mutable.ArrayBuffer
@@ -13,6 +15,10 @@ import scala.tools.jline.{Terminal, TerminalFactory}
 import scala.tools.jline.console.completer._
 import collection.JavaConverters._
 import scala.util.matching.Regex
+import firrtl.options.Viewer._
+import firrtl_interpreter.repl.ReplViewer._
+import firrtl_interpreter.InterpreterViewer._
+import firrtl_interpreter.repl.{ReplExecutionOptions, ReplVcdController}
 
 abstract class Command(val name: String) {
   def run(args: Array[String])
@@ -24,15 +30,17 @@ abstract class Command(val name: String) {
   }
 }
 
-class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfig) {
-  val replConfig: ReplConfig = optionsManager.replConfig
-  val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
+class FirrtlRepl(val annotationSeq: AnnotationSeq) {
+  val replConfig: ReplExecutionOptions = view[ReplExecutionOptions](annotationSeq).get
+  val interpreterOptions: InterpreterExecutionOptions = view[InterpreterExecutionOptions](annotationSeq).get
 
   firrtl_interpreter.random.setSeed(interpreterOptions.randomSeed)
 
   val terminal: Terminal = TerminalFactory.create()
   val console = new ConsoleReader
-  private val historyPath = "~/.firrtl_repl_history".replaceFirst("^~",Matcher.quoteReplacement(System.getProperty("user.home")))
+  private val historyPath =
+    "~/.firrtl_repl_history".replaceFirst("^~",Matcher.quoteReplacement(System.getProperty("user.home")))
+
   val historyFile = new File(historyPath)
   if(! historyFile.exists()) {
     println(s"creating ${historyFile.getName}")
@@ -57,8 +65,11 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
   var currentVcdScript: Option[VCD] = None
   var replVcdController: Option[ReplVcdController] = None
 
+  var sourceFirrtl: String = ""
+
   def loadSource(input: String): Unit = {
-    currentInterpreterOpt = Some(FirrtlTerp(input, optionsManager))
+    sourceFirrtl = input
+    currentInterpreterOpt = Some(FirrtlTerp(input, interpreterOptions, annotationSeq))
     currentInterpreterOpt.foreach { _=>
       interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
       interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
@@ -330,7 +341,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
               interpreter.disableVCD()
             case Some(fileName) =>
               interpreter.makeVCDLogger(
-                fileName, showUnderscored = optionsManager.interpreterOptions.vcdShowUnderscored)
+                fileName, showUnderscored = interpreterOptions.vcdShowUnderscored)
             case _ =>
               interpreter.disableVCD()
           }
@@ -355,7 +366,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
         //scalastyle:off cyclomatic.complexity
         def run(args: Array[String]): Unit = {
           getOneArg("type regex") match {
-            case Some((peekRegex)) =>
+            case Some(peekRegex) =>
               try {
                 val portRegex = peekRegex.r
                 val numberOfThingsPeeked = peekableThings.sorted.count { settableThing =>
@@ -619,7 +630,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
         //scalastyle:off cyclomatic.complexity
         def run(args: Array[String]): Unit = {
           getOneArg("rpeek regex") match {
-            case Some((peekRegex)) =>
+            case Some(peekRegex) =>
               try {
                 val portRegex = peekRegex.r
                 val numberOfThingsPeeked = peekableThings.sorted.count { settableThing =>
@@ -840,7 +851,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
         def run(args: Array[String]): Unit = {
           getOneArg("", Some("state")) match {
             case Some("lofirrtl") =>
-              console.println(interpreter.loweredAst.serialize)
+              console.println(interpreter.ast.serialize)
             case Some("input") =>
               console.println(interpreter.ast.serialize)
             case _ =>
@@ -1095,14 +1106,20 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
     else if(replConfig.firrtlSourceName.nonEmpty) {
       loadFile(replConfig.firrtlSourceName)
     }
-    else if(optionsManager.commonOptions.programArgs.nonEmpty) {
-      loadFile(optionsManager.commonOptions.programArgs.head)
+    else {
+      annotationSeq.exists {
+        case ProgramArgsAnnotation(programArg) =>
+          loadFile(programArg)
+          true
+        case _ => false
+      }
     }
+
     if(replConfig.scriptName.nonEmpty) {
       loadScript(replConfig.scriptName)
     }
     if(replConfig.useVcdScript) {
-      loadVcdScript(optionsManager.getVcdFileName)
+      loadVcdScript(Driver.vcdInputFileName(annotationSeq, Some(replConfig.vcdScriptOverride)))
     }
     buildCompletions()
 
@@ -1175,18 +1192,19 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
   }
 }
 
-object FirrtlRepl {
-  def execute(optionsManager: InterpreterOptionsManager with HasReplConfig): Unit = {
-    val repl = new FirrtlRepl(optionsManager)
-    repl.run()
+case object ReplExecutionResult extends DriverExecutionResult
+
+object FirrtlRepl extends firrtl.options.Driver {
+
+  val optionsManager: ExecutionOptionsManager = {
+    new ExecutionOptionsManager("interpreter") with HasFirrtlExecutionOptions
   }
 
-  def main(args: Array[String]): Unit = {
-    val optionsManager = new InterpreterOptionsManager with HasReplConfig
+  override def execute(args: Array[String], initialAnnotations: AnnotationSeq = Seq.empty): DriverExecutionResult = {
+    val annotations = optionsManager.parse(args, initialAnnotations)
 
-    if(optionsManager.parse(args)) {
-      val repl = new FirrtlRepl(optionsManager)
-      repl.run()
-    }
+    val repl = new FirrtlRepl(annotations)
+    repl.run()
+    ReplExecutionResult
   }
 }

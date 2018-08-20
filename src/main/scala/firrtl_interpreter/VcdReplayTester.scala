@@ -4,9 +4,14 @@ package firrtl_interpreter
 
 import java.io.File
 
-import firrtl.{ExecutionOptionsManager}
+import firrtl.{AnnotationSeq, HasFirrtlExecutionOptions}
+import firrtl.options.{DriverExecutionResult, ExecutionOptionsManager}
 import firrtl_interpreter.vcd.{VCD, Wire}
 import logger.LazyLogging
+
+import firrtl.options.Viewer._
+import firrtl_interpreter.InterpreterViewer._
+import firrtl_interpreter.VcdReplayOptionsViewer._
 
 /**
   * This tester runs a VCD file against a circuit expressed in a firrtl file.  The VCD file should
@@ -20,11 +25,9 @@ import logger.LazyLogging
   * -vcd src/test/resources/VcdAdder.vcd'
   * }}}
   *
-  * @param optionsManager Used to set various options
+  * @param annotationSeq options be here
   */
-class VcdReplayTester(
-    optionsManager: VcdReplayTesterOptions)
-  extends LazyLogging {
+class VcdReplayTester(annotationSeq: AnnotationSeq) extends LazyLogging {
 
   private def getInput(fileName: String): String = {
     var file = new File(fileName)
@@ -37,17 +40,18 @@ class VcdReplayTester(
     io.Source.fromFile(file).mkString
   }
 
-  val vcdTesterOptions = optionsManager.goldenVcdOptions
-  val interpreterOptions = optionsManager.interpreterOptions
+  val vcdTesterOptions: VcdReplayExecutionOptions = view[VcdReplayExecutionOptions](annotationSeq).get
+  val interpreterOptions  : InterpreterExecutionOptions   = view[InterpreterExecutionOptions](annotationSeq).get
 
-  val tester = new InterpretiveTester(getInput(vcdTesterOptions.firrtlSourceName), optionsManager)
-  val interpreter = tester.interpreter
 
-  val dutName = interpreter.ast.main
+  val tester: InterpretiveTester = new InterpretiveTester(getInput(vcdTesterOptions.firrtlSourceName), annotationSeq)
+  val interpreter: FirrtlTerp = tester.interpreter
+
+  val dutName: String = interpreter.ast.main
 
   val vcd: VCD = VCD.read(vcdTesterOptions.vcdSourceName, dutName)
-  val timeStamps = vcd.valuesAtTime.keys.toList.sorted.toArray
-  var runVerbose = false
+  val timeStamps: Array[Long] = vcd.valuesAtTime.keys.toList.sorted.toArray
+  var runVerbose: Boolean = false
 
   private var eventsRun = 0
   private var inputValuesSet = 0L
@@ -56,8 +60,8 @@ class VcdReplayTester(
   private var testFailures = 0L
   private var clockCycles = 0L
 
-  val vcdCircuitState = interpreter.circuitState.clone
-  val inputs = {
+  val vcdCircuitState: CircuitState = interpreter.circuitState.clone
+  val inputs: Set[String] = {
     vcd.scopeRoot.wires
       .filter { wire =>
         interpreter.circuitState.isInput(wire.name)
@@ -150,7 +154,7 @@ class VcdReplayTester(
 
   def checkClock(timeIndex: Int): Unit = {
     vcd.valuesAtTime(timeStamps(timeIndex)).foreach { change =>
-      vcd.wiresFor(change).exists { wire =>
+      vcd.wiresFor(change).exists { _ =>
         val fullName = change.wire.fullName
         if(fullName == "clock" && change.value > BigInt(0)) {
           interpreter.cycle()
@@ -193,63 +197,18 @@ class VcdReplayTester(
   }
 }
 
-object VcdReplayTester {
-  def main(args: Array[String]) {
-    val optionsManager = new VcdReplayTesterOptions
+case object VcdReplayExecutionResult extends DriverExecutionResult
 
-    optionsManager.parse(args) match {
-      case true =>
-        val repl = new VcdReplayTester(optionsManager)
-        repl.run()
-      case _ =>
-    }
+object VcdReplayTester extends firrtl.options.Driver {
+  val optionsManager: ExecutionOptionsManager = {
+    new ExecutionOptionsManager("vcd-replay") with HasFirrtlExecutionOptions
+  }
+
+  override def execute(args: Array[String], initialAnnotations: AnnotationSeq = Seq.empty): DriverExecutionResult = {
+    val annotations = optionsManager.parse(args, initialAnnotations)
+
+    val replayer = new VcdReplayTester(annotations)
+    replayer.run()
+    ReplExecutionResult
   }
 }
-
-case class VcdReplayOptions(
-    firrtlSourceName:     String = "",
-    vcdSourceName:        String = "",
-    skipEvents:           Int = 0,
-    eventsToRun:          Int = -1,
-    testAliasedWires:     Boolean = false)
-  extends firrtl.ComposableOptions
-
-trait HasVcdReplayOptions {
-  self: ExecutionOptionsManager =>
-
-  var goldenVcdOptions = VcdReplayOptions()
-
-  parser.note("golden-vcd")
-
-  parser.opt[String]("firrtl-source")
-    .abbr("fs")
-    .valueName("<firrtl-source-file>")
-    .foreach { x => goldenVcdOptions = goldenVcdOptions.copy(firrtlSourceName = x) }
-    .text("firrtl source file to load on startup")
-
-  parser.opt[String]("vcd-file")
-    .abbr("vcd")
-    .valueName("<vcd-file>")
-    .foreach { x => goldenVcdOptions = goldenVcdOptions.copy(vcdSourceName = x) }
-    .text("firrtl source file to load on startup")
-
-  parser.opt[Int]("skip-events")
-    .abbr("se")
-    .valueName("<number>")
-    .foreach { x => goldenVcdOptions = goldenVcdOptions.copy(skipEvents = x) }
-    .text("number of events to skip before starting")
-
-  parser.opt[Int]("events-to-run")
-    .abbr("etr")
-    .valueName("<number>")
-    .foreach { x => goldenVcdOptions = goldenVcdOptions.copy(eventsToRun = x) }
-    .text("number of events to run")
-
-  parser.opt[Unit]("test-aliased-wires")
-    .abbr("taw")
-    .foreach { _ => goldenVcdOptions = goldenVcdOptions.copy(testAliasedWires = true) }
-    .text("number of events to run")
-}
-
-class VcdReplayTesterOptions extends InterpreterOptionsManager with HasVcdReplayOptions
-

@@ -2,7 +2,8 @@
 
 package firrtl_interpreter
 
-import org.scalatest.{Matchers, FreeSpec}
+import firrtl.FirrtlSourceAnnotation
+import org.scalatest.{FreeSpec, Matchers}
 
 class DriverSpec extends FreeSpec with Matchers {
   "The Driver class provides a simple caller with run-time parameters" - {
@@ -15,15 +16,15 @@ class DriverSpec extends FreeSpec with Matchers {
           |    output y : UInt<1>
           |    y <= x
         """.stripMargin
-      //      val interpreter = Driver.execute(Array.empty[String], input)
-      val interpreter = Driver.execute(Array("--fint-verbose"), input)
 
-      interpreter should not be empty
+      val source = FirrtlSourceAnnotation(input)
+      val result = Driver.execute(Array("--fint-verbose"), Seq(source))
+      result.isInstanceOf[InterpreterTesterCreated] should be (true)
 
-      interpreter.foreach { tester =>
-        tester.poke("x", 1)
-        tester.expect("y", 1)
-      }
+      val tester = result.asInstanceOf[InterpreterTesterCreated].tester
+
+      tester.poke("x", 1)
+      tester.expect("y", 1)
     }
   }
 }

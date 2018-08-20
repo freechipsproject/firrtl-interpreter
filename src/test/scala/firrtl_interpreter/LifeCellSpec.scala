@@ -1,7 +1,7 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
-import firrtl.CommonOptions
+import firrtl.TargetDirAnnotation
 import org.scalatest.{FlatSpec, Matchers}
 
 class LifeCellSpec extends FlatSpec with Matchers {
@@ -47,12 +47,9 @@ class LifeCellSpec extends FlatSpec with Matchers {
         |    io.is_alive <= T_36
         |      """.stripMargin
 
-    val optionsManager = new InterpreterOptionsManager {
-      interpreterOptions = InterpreterOptions(writeVCD = true)
-      commonOptions = CommonOptions(targetDirName = "test_run_dir")
-    }
+    val annos = Seq(TargetDirAnnotation("test_run_dir"), WriteVcdAnnotation)
 
-    new InterpretiveTester(input, optionsManager) {
+    new InterpretiveTester(input, annos) {
       // setVerbose()
       step(1)
 
@@ -192,7 +189,7 @@ class LifeCellSpec extends FlatSpec with Matchers {
       step(1)
       expect("io_is_alive", 0)
 
-      interpreter.circuitState.vcdLoggerOption.get.write(optionsManager.targetDirName + "/" + "life.vcd")
+      interpreter.circuitState.vcdLoggerOption.get.write("test_run_dir/" + "life.vcd")
       report()
     }
   }

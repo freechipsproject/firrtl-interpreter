@@ -10,6 +10,12 @@ import logger.LazyLogging
 import collection._
 import java.util.{Date, TimeZone}
 
+import firrtl.options.Viewer.view
+import firrtl_interpreter.vcd.VcdConfigViewer._
+
+import firrtl.{AnnotationSeq, HasFirrtlExecutionOptions}
+import firrtl.options.{DriverExecutionResult, ExecutionOptionsManager}
+
 import scala.collection.mutable.ArrayBuffer
 import scala.util.matching.Regex
 
@@ -429,29 +435,31 @@ object VCD extends LazyLogging {
     * are specific to a particular module
     * @param args command lines strings use --help to see what they are
     */
-  def main(args: Array[String]) {
-    val manager = new VCDOptionsManager
+  object VcdExecutionResult extends DriverExecutionResult
 
-    if(manager.parse(args)) {
-      val config = manager.vcdConfig
+  val optionsManager: ExecutionOptionsManager = {
+    new ExecutionOptionsManager("vcd-replay") with HasFirrtlExecutionOptions
+  }
 
-      val vcd = read(
-        vcdFile = config.vcdSourceName,
-        startScope = config.startScope,
-        renameStartScope = config.renameStartScope,
-        varPrefix = config.varPrefix,
-        newVarPrefix = config.newVarPrefix
-      )
+  def execute(args: Array[String], initialAnnos: AnnotationSeq = Seq.empty): DriverExecutionResult = {
+    val annotations = optionsManager.parse(args, initialAnnos)
 
-      println(s"${vcd.info}")
+    val config: VCDConfig = view[VCDConfig](annotations).get
 
-      if(config.vcdTargetName.nonEmpty) {
-        vcd.write(config.vcdTargetName) }
+    val vcd = read(
+      vcdFile = config.vcdSourceName,
+      startScope = config.startScope,
+      renameStartScope = config.renameStartScope,
+      varPrefix = config.varPrefix,
+      newVarPrefix = config.newVarPrefix
+    )
+
+    println(s"${vcd.info}")
+
+    if(config.vcdTargetName.nonEmpty) {
+      vcd.write(config.vcdTargetName)
     }
-    else {
-      manager.parser.showUsageAsError()
-    }
-
+    VcdExecutionResult
   }
 }
 
@@ -490,6 +498,7 @@ case class VCD(
       this(key)
     }
   }
+  def events: Array[Long] = valuesAtTime.keys.toArray.sorted
 
   def info: String = {
     val infoLines = Seq(

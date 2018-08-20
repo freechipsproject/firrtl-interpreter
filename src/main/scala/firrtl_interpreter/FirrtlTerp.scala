@@ -2,8 +2,10 @@
 
 package firrtl_interpreter
 
+import firrtl.AnnotationSeq
 import firrtl_interpreter.real.DspRealFactory
 import firrtl.ir._
+import firrtl.transforms.DontCheckCombLoopsAnnotation
 
 // TODO: consider adding x-state
 // TODO: Support forced values on nodes (don't recompute them if forced)
@@ -22,22 +24,15 @@ import firrtl.ir._
   *
   * @param ast the circuit to be simulated
   */
-class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) extends SimpleLogger {
-  val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
+class FirrtlTerp(val ast: Circuit, interpreterOptions: InterpreterExecutionOptions) extends SimpleLogger {
 
   var lastStopResult: Option[Int] = None
   def stopped: Boolean = lastStopResult.nonEmpty
   def stopResult: Int  = lastStopResult.get
 
-  val loweredAst: Circuit = if(interpreterOptions.lowCompileAtLoad) {
-    ToLoFirrtl.lower(ast, optionsManager)
-  } else {
-    ast
-  }
-
   if(interpreterOptions.showFirrtlAtLoad) {
     println("LoFirrtl" + "=" * 120)
-    println(loweredAst.serialize)
+    println(ast.serialize)
   }
 
   val blackBoxFactories: Seq[BlackBoxFactory] = interpreterOptions.blackBoxFactories
@@ -53,7 +48,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
     evaluator.setVerbose(value)
   }
 
-  val dependencyGraph = DependencyGraph(loweredAst, this)
+  val dependencyGraph = DependencyGraph(ast, this)
   /**
     * Once a stop has occured, the interpreter will not allow pokes until
     * the stop has been cleared
@@ -290,9 +285,31 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 object FirrtlTerp {
   val blackBoxFactory = new DspRealFactory
 
-  def apply(input: String, optionsManager: HasInterpreterSuite = new InterpreterOptionsManager): FirrtlTerp = {
+  def apply(
+    input: String,
+    interpreterExecutionOptions: InterpreterExecutionOptions = InterpreterExecutionOptions(),
+    annotationSeq: AnnotationSeq = Seq.empty
+  ): FirrtlTerp = {
+
     val ast = firrtl.Parser.parse(input.split("\n").toIterator)
-    val interpreter = new FirrtlTerp(ast, optionsManager)
+
+    val loweredAst: Circuit = if(interpreterExecutionOptions.lowCompileAtLoad) {
+      val updatedAnnotations: AnnotationSeq = if(interpreterExecutionOptions.allowCycles) {
+        annotationSeq :+ DontCheckCombLoopsAnnotation
+      }
+      else {
+        annotationSeq
+      }
+      ToLoFirrtl.lower(ast, updatedAnnotations)
+    } else {
+      ast
+    }
+
+    if(interpreterExecutionOptions.showFirrtlAtLoad) {
+      println("LoFirrtl" + "=" * 120)
+      println(loweredAst.serialize)
+    }
+    val interpreter = new FirrtlTerp(loweredAst, interpreterExecutionOptions)
 
     /* run the circuit once to get the circuit state fully populated. Evaluate all makes sure both
     branches of muxes get computed, while we are at we can compute the sort key order

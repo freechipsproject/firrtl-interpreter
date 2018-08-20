@@ -2,7 +2,7 @@
 
 package firrtl_interpreter.real
 
-import firrtl.{ExecutionOptionsManager, HasFirrtlOptions}
+import firrtl.AnnotationSeq
 import firrtl_interpreter._
 import org.scalatest.{FreeSpec, Matchers}
 
@@ -38,10 +38,10 @@ class BlackBoxRealSpec extends FreeSpec with Matchers {
 
     "addition should work expand instances as found" in {
 
-      val optionsManager = new InterpreterOptionsManager {
-        interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(new DspRealFactory), randomSeed = 0L)
-      }
-      val tester = new InterpretiveTester(adderInput, optionsManager)
+      val factory = InterpreterBlackBoxFactoriesAnnotation(Seq(new DspRealFactory))
+      val annos = Seq(factory, RandomSeedAnnotation(0L))
+      val tester = new InterpretiveTester(adderInput, annos)
+
       tester.interpreter.verbose = true
       tester.interpreter.setVerbose()
 
@@ -54,10 +54,10 @@ class BlackBoxRealSpec extends FreeSpec with Matchers {
     }
 
     "poison should propagate through black boxes" in {
-      val optionsManager = new InterpreterOptionsManager {
-        interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(new DspRealFactory), randomSeed = 0L)
-      }
-      val tester = new InterpretiveTester(adderInput, optionsManager)
+      val factory = InterpreterBlackBoxFactoriesAnnotation(Seq(new DspRealFactory))
+      val annos = Seq(factory, RandomSeedAnnotation(0L))
+      val tester = new InterpretiveTester(adderInput, annos)
+
       tester.interpreter.verbose = true
       tester.interpreter.setVerbose()
 
@@ -91,10 +91,10 @@ class BlackBoxRealSpec extends FreeSpec with Matchers {
         |    BBFIntPart_1.in <= io_a_node
       """.stripMargin
 
-    val optionsManager = new InterpreterOptionsManager {
-      interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(new DspRealFactory))
-    }
-    val tester = new InterpretiveTester(input, optionsManager)
+    val factory = InterpreterBlackBoxFactoriesAnnotation(Seq(new DspRealFactory))
+    val annos = Seq(factory, RandomSeedAnnotation(0L))
+    val tester = new InterpretiveTester(input, annos)
+
     tester.interpreter.verbose = true
     tester.interpreter.setVerbose()
 

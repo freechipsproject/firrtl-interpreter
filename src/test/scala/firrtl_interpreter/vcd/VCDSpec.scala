@@ -2,11 +2,11 @@
 
 package firrtl_interpreter.vcd
 
-import firrtl_interpreter.{InterpreterOptionsManager, InterpretiveTester, StopException}
-import firrtl.CommonOptions
+import firrtl_interpreter.{InterpretiveTester, StopException, WriteVcdAnnotation}
 import firrtl.util.BackendCompilationUtilities
 import java.io.File
 
+import firrtl.TargetDirAnnotation
 import logger.LogLevel
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -49,13 +49,13 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
   }
 
   it should "serialize 1 bit numbers correctly" in {
-    val c0 = Change(Wire("test1", "%", 1), 0, false)
+    val c0 = Change(Wire("test1", "%", 1), 0)
     c0.serialize should be ("0%")
 
-    val c1 = Change(Wire("test1", "%", 1), 1, false)
+    val c1 = Change(Wire("test1", "%", 1), 1)
     c1.serialize should be ("1%")
 
-    val c2 = Change(Wire("test1", "%", 1), -1, false)
+    val c2 = Change(Wire("test1", "%", 1), -1)
     c2.serialize should be ("1%")
   }
 
@@ -139,11 +139,7 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
         |    c <= add(a, b)
       """.stripMargin
 
-    val manager = new InterpreterOptionsManager {
-      interpreterOptions = interpreterOptions.copy(writeVCD = true)
-      commonOptions = CommonOptions(targetDirName = "test_run_dir")
-    }
-    val interpreter = new InterpretiveTester(input, manager)
+    val interpreter = new InterpretiveTester(input, Seq(WriteVcdAnnotation, TargetDirAnnotation("test_run_dir")))
     interpreter.poke("a", -1)
     interpreter.peek("a") should be (BigInt(-1))
     interpreter.poke("b", -7)
@@ -169,12 +165,7 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
     val stream = getClass.getResourceAsStream("/VcdAdder.fir")
     val input = scala.io.Source.fromInputStream(stream).getLines().mkString("\n")
 
-    val manager = new InterpreterOptionsManager {
-      interpreterOptions = interpreterOptions.copy(writeVCD = true)
-      commonOptions = CommonOptions(targetDirName = "test_run_dir")
-    }
-
-    val interpreter = new InterpretiveTester(input, manager)
+    val interpreter = new InterpretiveTester(input, Seq(WriteVcdAnnotation, TargetDirAnnotation("test_run_dir")))
     interpreter.step()
     interpreter.poke("io_a", 3)
     interpreter.poke("io_b", 5)
@@ -219,12 +210,10 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
 
     logger.Logger.setLevel(LogLevel.Debug)
 
-    val manager = new InterpreterOptionsManager {
-      interpreterOptions = interpreterOptions.copy(writeVCD = true)
-      commonOptions = CommonOptions(targetDirName = "test_run_dir/vcd_register_delay")
-    }
     {
-      val interpreter = new InterpretiveTester(input, manager)
+      val interpreter = new InterpretiveTester(
+        input, Seq(WriteVcdAnnotation, TargetDirAnnotation("test_run_dir/vcd_register_delay"))
+      )
       //  interpreter.setVerbose()
       interpreter.poke("reset", 0)
 
@@ -233,8 +222,6 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
       interpreter.report()
       interpreter.finish
     }
-
-//    Thread.sleep(3000)
 
     val vcd = VCD.read("test_run_dir/vcd_register_delay/pwminCount.vcd")
 
@@ -283,15 +270,11 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
         |
       """.stripMargin
 
-//    logger.Logger.setLevel(LogLevel.Debug)
-
-    val manager = new InterpreterOptionsManager {
-      interpreterOptions = interpreterOptions.copy(writeVCD = true)
-      commonOptions = CommonOptions(targetDirName = "test_run_dir/vcd_stop_test")
-    }
 
     intercept[StopException] {
-      val interpreter = new InterpretiveTester(input, manager)
+      val interpreter = new InterpretiveTester(
+        input, Seq(WriteVcdAnnotation, TargetDirAnnotation("test_run_dir/vcd_stop_test"))
+      )
       interpreter.setVerbose()
       interpreter.poke("reset", 1)
       interpreter.step()

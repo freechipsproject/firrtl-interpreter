@@ -97,11 +97,8 @@ class BlackBoxOutputSpec extends FreeSpec with Matchers {
     "each output should hold a different values" in {
 
       val factory = new FanOutAdderFactory
+      val tester = new InterpretiveTester(adderInput, Seq(InterpreterBlackBoxFactoriesAnnotation(Seq(factory))))
 
-      val optionsManager = new InterpreterOptionsManager {
-        interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(factory), randomSeed = 0L)
-      }
-      val tester = new InterpretiveTester(adderInput, optionsManager)
       tester.interpreter.verbose = true
       tester.interpreter.setVerbose()
 
@@ -155,11 +152,8 @@ class BlackBoxOutputSpec extends FreeSpec with Matchers {
     "each output should hold a different values" in {
 
       val factory = new FanOutAdderFactory
+      val tester = new InterpretiveTester(adderInput, Seq(InterpreterBlackBoxFactoriesAnnotation(Seq(factory))))
 
-      val optionsManager = new InterpreterOptionsManager {
-        interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(factory), randomSeed = 0L)
-      }
-      val tester = new InterpretiveTester(adderInput, optionsManager)
       tester.interpreter.verbose = true
       tester.interpreter.setVerbose()
 
@@ -197,10 +191,9 @@ class BlackBoxOutputSpec extends FreeSpec with Matchers {
 
       val factory = new BlackBoxCounterFactory
 
-      val optionsManager = new InterpreterOptionsManager {
-        interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(factory), randomSeed = 0L)
-      }
-      val tester = new InterpretiveTester(input, optionsManager)
+      val tester = new InterpretiveTester(input, Seq(InterpreterBlackBoxFactoriesAnnotation(Seq(factory))))
+
+
       tester.interpreter.verbose = true
       tester.interpreter.setVerbose()
 
@@ -244,10 +237,9 @@ class BlackBoxOutputSpec extends FreeSpec with Matchers {
 
       val factory = new BlackBoxCounterFactory
 
-      val optionsManager = new InterpreterOptionsManager {
-        interpreterOptions = InterpreterOptions(blackBoxFactories = Seq(factory), randomSeed = 0L)
-      }
-      val tester = new InterpretiveTester(input, optionsManager)
+      val tester = new InterpretiveTester(input, Seq(InterpreterBlackBoxFactoriesAnnotation(Seq(factory))))
+
+
       tester.interpreter.verbose = true
       tester.interpreter.setVerbose()
 

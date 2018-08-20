@@ -108,13 +108,12 @@ class GCDTester extends FlatSpec with Matchers {
     """
               .stripMargin
 
-    val manager = new InterpreterOptionsManager
     val values =
       for {x <- 10 to 100
            y <- 1 to 100
       } yield (x, y, computeGcd(x, y)._1)
 
-    val tester = new InterpretiveTester(gcdFirrtl, manager)
+    val tester = new InterpretiveTester(gcdFirrtl, Seq.empty)
 
     val startTime = System.nanoTime()
     tester.poke("clock", 1)

@@ -1,6 +1,11 @@
 // See LICENSE for license details.
 package firrtl_interpreter
 
+import firrtl.{AnnotationSeq, FirrtlExecutionOptions, FirrtlSourceAnnotation, InputFileAnnotation, TopNameAnnotation}
+import firrtl.options.Viewer._
+import firrtl.FirrtlViewer._
+import firrtl_interpreter.InterpreterViewer._
+
 /**
   * Works a lot like the chisel classic tester compiles a firrtl input string
   * and allows poke, peek, expect and step
@@ -12,16 +17,29 @@ package firrtl_interpreter
   * so that io.a.b must be referenced as io_a_b
   *
   * @param input              a firrtl program contained in a string
-  * @param optionsManager     collection of options for the interpreter
+  * @param annotations        all the options are here
   */
-class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = new InterpreterOptionsManager) {
+class InterpretiveTester(input: String, annotations: AnnotationSeq = Seq.empty) {
   var expectationsMet = 0
 
-  firrtl_interpreter.random.setSeed(optionsManager.interpreterOptions.randomSeed)
+  val annosWithSource: AnnotationSeq = if(annotations.exists {
+      case _: TopNameAnnotation => true
+      case _: InputFileAnnotation => true
+      case _: FirrtlSourceAnnotation => true
+      case _ => false
+    }) {
+      annotations
+    }
+    else {
+      annotations :+ FirrtlSourceAnnotation(input)
+    }
 
-  val interpreter: FirrtlTerp                = FirrtlTerp(input, optionsManager)
-  val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
-  val commonOptions: firrtl.CommonOptions    = optionsManager.commonOptions
+  val firrtlOptions:  FirrtlExecutionOptions = view[FirrtlExecutionOptions](annosWithSource).get
+  val interpreterOptions: InterpreterExecutionOptions = view[InterpreterExecutionOptions](annotations).get
+
+  firrtl_interpreter.random.setSeed(interpreterOptions.randomSeed)
+
+  val interpreter: FirrtlTerp = FirrtlTerp(input, interpreterOptions, annosWithSource)
 
   interpreter.evaluator.allowCombinationalLoops = interpreterOptions.allowCycles
   interpreter.evaluator.useTopologicalSortedKeys = interpreterOptions.setOrderedExec
@@ -31,13 +49,22 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
   setVerbose(interpreterOptions.setVerbose)
 
   if(interpreterOptions.writeVCD) {
-    optionsManager.setTopNameIfNotSet(interpreter.loweredAst.main)
-    optionsManager.makeTargetDir()
-    interpreter.makeVCDLogger(
-      interpreterOptions.vcdOutputFileName(optionsManager),
-      interpreterOptions.vcdShowUnderscored
-    )
+    val updatedOptions = if(firrtlOptions.topName.isEmpty) {
+      firrtlOptions.copy(topName = Some(interpreter.ast.main))
+    }
+    else {
+      firrtlOptions
+    }
+
+    interpreter.makeVCDLogger(updatedOptions.getBuildFileName("vcd"), interpreterOptions.vcdShowUnderscored)
   }
+//    optionsManager.setTopNameIfNotSet(interpreter.loweredAst.main)
+//    optionsManager.makeTargetDir()
+//    interpreter.makeVCDLogger(
+//      interpreterOptions.vcdOutputFileName(optionsManager),
+//      interpreterOptions.vcdShowUnderscored
+//    )
+//  }
 
   def setVerbose(value: Boolean = true): Unit = {
     interpreter.setVerbose(value)
@@ -234,7 +261,7 @@ class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = ne
           }
       }
     }
-    s"test ${interpreter.loweredAst.main} " +
+    s"test ${interpreter.ast.main} " +
       s"$status $expectationsMet tests passed " +
       s"in ${interpreter.circuitState.stateCounter} cycles " +
       f"taking $elapsedSeconds%.6f seconds"
