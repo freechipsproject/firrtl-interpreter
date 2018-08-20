@@ -85,7 +85,7 @@ case class VcdNewVarPrefixAnnotation(name: String = "") extends NoTargetAnnotati
     .text("change vars prefix vars to this")
 }
 
-object TreadleReplLibrary extends RegisteredLibrary {
+class TreadleReplLibrary extends RegisteredLibrary {
   override def name: String = "vcd-replay"
 
   override def addOptions(parser: OptionParser[AnnotationSeq]): Unit = {
