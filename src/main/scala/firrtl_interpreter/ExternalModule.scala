@@ -22,6 +22,9 @@ case class BlackBoxOutput(name: String,
   def mapExpr(f: Expression => Expression): Expression = f(this)
   def mapType(f: Type => Type): Expression = this
   def mapWidth(f: Width => Width): Expression = this
+  def foreachExpr(f: Expression => Unit): Unit = f(this)
+  def foreachType(f: Type => Unit): Unit = Unit
+  def foreachWidth(f: Width => Unit): Unit = Unit
   def execute(inputValues: Seq[Concrete]): Concrete = {
     implementation.execute(inputValues, tpe: Type, name)
   }
