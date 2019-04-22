@@ -392,11 +392,14 @@ class Memory(
 
 object Memory {
   def apply(defMemory: DefMemory): Memory = {
+    if(defMemory.depth >= BigInt(Int.MaxValue)) {
+      throw InterpreterException(s"Interpreter error: memory ${defMemory.depth} is too big")
+    }
     new Memory(
       defMemory.info,
       defMemory.name,
       defMemory.dataType,
-      defMemory.depth,
+      defMemory.depth.toInt,
       defMemory.writeLatency,
       defMemory.readLatency,
       defMemory.readers,
