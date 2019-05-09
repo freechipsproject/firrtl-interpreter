@@ -26,6 +26,9 @@ package object firrtl_interpreter {
     case UIntType(w)  => widthToInt(w)
     case SIntType(w)  => widthToInt(w)
     case ClockType    => 1
+    case other =>
+      throw InterpreterException(s"Can't find width for unsupported type: $other")
+
   }
   def ceilingLog2(x: Int): Int = scala.math.ceil(scala.math.log(x) / scala.math.log(2)).toInt
 
