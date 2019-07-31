@@ -334,6 +334,8 @@ object Concrete {
       case SIntType(IntWidth(w))     => ConcreteSInt(value, w.toInt)
 //      case SIntLiteral(v, IntWidth(w)) => ConcreteSInt(v, w.toInt)
       case ClockType                 => ConcreteClock(value)
+      case other =>
+        throw InterpreterException(s"Cannot create value for unsupported type: $other")
     }
   }
   def poisonedUInt(width: Int): ConcreteUInt = randomUInt(width, poisoned = true)

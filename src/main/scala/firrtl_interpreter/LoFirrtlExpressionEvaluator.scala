@@ -319,6 +319,8 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
               case UIntType(IntWidth(w)) => Concrete.randomUInt(w.toInt)
               case SIntType(IntWidth(w)) => Concrete.randomSInt(w.toInt)
               case ClockType             => Concrete.randomClock()
+              case other =>
+                throw InterpreterException(s"ValidIf found unsupported type: $other")
             }
           }
         case DoPrim(op, args, const, tpe) =>
