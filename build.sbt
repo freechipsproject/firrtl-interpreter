@@ -38,7 +38,7 @@ name := "firrtl-interpreter"
 
 organization := "edu.berkeley.cs"
 
-version := "1.2-20191030-SNAPSHOT"
+version := "1.2-20191106-SNAPSHOT"
 
 scalaVersion := "2.12.6"
 
@@ -51,7 +51,7 @@ resolvers ++= Seq(
 )
 
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
-val defaultVersions = Map("firrtl" -> "1.2-20191030-SNAPSHOT")
+val defaultVersions = Map("firrtl" -> "1.2-20191106-SNAPSHOT")
 
 libraryDependencies ++= (Seq("firrtl").map {
   dep: String => "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", defaultVersions(dep)) })
