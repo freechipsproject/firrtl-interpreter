@@ -7,7 +7,7 @@ import firrtl.CommonOptions
 import firrtl.util.BackendCompilationUtilities
 import java.io.File
 
-import logger.LogLevel
+import logger.{Logger, LogLevel}
 import org.scalatest.{FlatSpec, Matchers}
 
 // scalastyle:off magic.number
@@ -217,7 +217,7 @@ class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
         |
       """.stripMargin
 
-    logger.Logger.setLevel(LogLevel.Debug)
+    Logger.setLevel(LogLevel.Debug)
 
     val manager = new InterpreterOptionsManager {
       interpreterOptions = interpreterOptions.copy(writeVCD = true)
