@@ -20,11 +20,12 @@ import firrtl.ir._
 import firrtl.PrimOps._
 import firrtl.passes.PassException
 import firrtl_interpreter.TestUtils._
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 // scalastyle:off magic.number
 
-class LoFirrtlExpressionEvaluatorSpec extends FlatSpec with Matchers {
+class LoFirrtlExpressionEvaluatorSpec extends AnyFlatSpec with Matchers {
   behavior of "Mux"
 
   it should "throw exception if condition is not (0|1).U<1> , return true and false branch correctly" in {

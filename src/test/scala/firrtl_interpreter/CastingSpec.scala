@@ -19,10 +19,11 @@ package firrtl_interpreter
 import firrtl.PrimOps.{AsUInt, AsSInt}
 import firrtl.ir._
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 // scalastyle:off magic.number
-class CastingSpec extends FlatSpec with Matchers {
+class CastingSpec extends AnyFlatSpec with Matchers {
   behavior of "requiredBitsForSInt"
 
   it should "return correct values as specified in list" in {
