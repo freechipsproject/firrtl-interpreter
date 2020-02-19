@@ -55,7 +55,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
 
   val dependencyGraph = DependencyGraph(loweredAst, this)
   /**
-    * Once a stop has occured, the interpreter will not allow pokes until
+    * Once a stop has occurred, the interpreter will not allow pokes until
     * the stop has been cleared
     */
   def clearStop(): Unit = {lastStopResult = None}
@@ -141,7 +141,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
           case ConcreteUInt(value, _, _) => value
           case ConcreteSInt(value, _, _) => value
           case x =>
-            throw new InterpreterException(s"Error:peekMemory($memoryName, $index) unknow value $x found")
+            throw new InterpreterException(s"Error:peekMemory($memoryName, $index) unknown value $x found")
         }
       case _ =>
         throw InterpreterException(s"Error: peekMemory($memoryName, $index). memory not found")
