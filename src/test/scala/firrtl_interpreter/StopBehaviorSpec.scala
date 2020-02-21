@@ -16,9 +16,10 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{Matchers, FreeSpec}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
-class StopBehaviorSpec extends FreeSpec with Matchers {
+class StopBehaviorSpec extends AnyFreeSpec with Matchers {
   val input =
     """
       |circuit myRisc :

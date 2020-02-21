@@ -16,9 +16,10 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{Matchers, FreeSpec}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
-class OutputAsSourceSpec extends FreeSpec with Matchers {
+class OutputAsSourceSpec extends AnyFreeSpec with Matchers {
   "it must be possible for the interpreter to handle module outputs as rhs dependencies" in {
     val input =
       """

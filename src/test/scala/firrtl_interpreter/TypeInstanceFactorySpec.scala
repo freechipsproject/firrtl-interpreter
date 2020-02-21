@@ -17,10 +17,11 @@ limitations under the License.
 package firrtl_interpreter
 
 import firrtl.ir._
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 // scalastyle:off magic.number
-class TypeInstanceFactorySpec extends FlatSpec with Matchers {
+class TypeInstanceFactorySpec extends AnyFlatSpec with Matchers {
   behavior of "TypeInstanceFactory"
 
   it should "concrete types are initialized with value zero" in {

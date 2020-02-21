@@ -16,9 +16,10 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class SourceInfoSpec extends FlatSpec with Matchers {
+class SourceInfoSpec extends AnyFlatSpec with Matchers {
   behavior of "source information"
 
   it should "be visible when logging and errors occur" in {

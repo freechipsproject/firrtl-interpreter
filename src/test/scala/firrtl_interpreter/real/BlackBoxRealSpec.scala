@@ -18,10 +18,11 @@ package firrtl_interpreter.real
 
 import firrtl.{ExecutionOptionsManager, HasFirrtlOptions}
 import firrtl_interpreter._
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 
-class BlackBoxRealSpec extends FreeSpec with Matchers {
+class BlackBoxRealSpec extends AnyFreeSpec with Matchers {
   "this tests black box implmentation of real numbers" - {
     val adderInput =
       """

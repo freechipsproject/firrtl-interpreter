@@ -16,9 +16,10 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class FailSpec extends FlatSpec with Matchers {
+class FailSpec extends AnyFlatSpec with Matchers {
   behavior of "explict fail"
 
   it should "fail a test with an explicit failure code" in {

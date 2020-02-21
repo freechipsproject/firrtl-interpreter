@@ -16,9 +16,10 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class ModuleInLineSpec extends FlatSpec with Matchers {
+class ModuleInLineSpec extends AnyFlatSpec with Matchers {
   behavior of "multiple modes"
 
   it should "expand instances as found" in {
