@@ -54,9 +54,9 @@ organization := "edu.berkeley.cs"
 
 version := "1.3-SNAPSHOT"
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.10"
 
-crossScalaVersions := Seq("2.12.6", "2.11.12")
+crossScalaVersions := Seq("2.12.10", "2.11.12")
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("snapshots"),
