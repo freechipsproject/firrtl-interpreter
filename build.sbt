@@ -54,9 +54,9 @@ organization := "edu.berkeley.cs"
 
 version := "1.3-20200310-SNAPSHOT"
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.10"
 
-crossScalaVersions := Seq("2.12.6", "2.11.12")
+crossScalaVersions := Seq("2.12.10", "2.11.12")
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("snapshots"),
@@ -76,7 +76,7 @@ libraryDependencies ++= (Seq("firrtl").map {
 libraryDependencies ++= Seq(
   "junit" % "junit" % "4.12" % "test",
   "org.scalatest" %% "scalatest" % "3.0.8" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.14.0" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.14.3" % "test",
   "org.scala-lang.modules" % "scala-jline" % "2.12.1"
 )
 
