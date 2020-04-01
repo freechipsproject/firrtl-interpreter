@@ -23,13 +23,13 @@
     switch (d[1]) {
       case /maven-version/ :
         if (n != 3) {
-          err[errLines++]="missing version parameter: " a[i]
+          err[errLines++]="unrecognized maven-version stanza: " a[i]
         }
         break
 
       case /git-clone/ :
         if (n != 4) {
-          err[errLines++]="missing git-clone parameter: " a[i]
+          err[errLines++]="unrecognized git-clone stanza: " a[i]
         }
         break
 
