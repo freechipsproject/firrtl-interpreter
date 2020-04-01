@@ -1,0 +1,70 @@
+name: Test
+
+on: [pull_request]
+
+jobs:
+  build:
+    name: ci
+    runs-on: ubuntu-latest
+    container:
+      image: ucbbar/chisel3-tools
+      options: --user github --entrypoint /bin/bash
+    env:
+      CHISEL3_REF: master
+      FIRRTL_REF: master
+      FIRRTL_INTERPRETER_REF: master
+      TREADLE_REF: master
+      CONTAINER_HOME: /home/github
+
+    steps:
+      - name: id
+        run: |
+          uid=$(id -u)
+          echo ::set-env name=CONTAINER_HOME::$(if [ "$uid" = "0" ]; then echo "/root"; else echo "/home/github"; fi)
+          printenv
+          whoami
+          git --version
+          pwd
+          echo "Link $CONTAINER_HOME caches to $HOME"
+          echo mkdir -p $HOME/.cache $HOME/.ivy2 $HOME/.sbt
+          mkdir -p $HOME/.cache $HOME/.ivy2 $HOME/.sbt
+          echo ln -s $HOME/.cache $HOME/.ivy2 $HOME/.sbt $CONTAINER_HOME
+          ln -s $HOME/.cache $HOME/.ivy2 $HOME/.sbt $CONTAINER_HOME
+          echo ls -la $HOME . $CONTAINER_HOME
+          ls -la $HOME . $CONTAINER_HOME
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          path: repo
+      - name: list
+        id: list
+        run: |
+          echo ls -la . repo
+          ls -la . repo repo/.github/scripts
+      - name: env
+        id: env
+        run: |
+          echo "cat $GITHUB_EVENT_PATH"
+          cat $GITHUB_EVENT_PATH
+      - name: gawk
+        id: gawk
+        run: |
+          gawk -f repo/.github/scripts/ExtractBuildDependenciesFromPullRequest.gawk $GITHUB_EVENT_PATH > deps
+          ls -l deps
+          cat deps
+      - name: clone-deps
+        id: clone-deps
+        run: |
+          gawk -f repo/.github/scripts/generateGitClones.gawk deps > clones
+          echo "clones:"
+          cat clones
+          bash clones
+      - name: version-deps
+        id: version-deps
+        run: |
+          versionDeps=$(gawk -f repo/.github/scripts/generateVersionOverrides.gawk deps)
+          echo "versonDeps: $versionDeps"
+      - name: test
+        id: test
+        run: cat /dev/null | sbt $versionDeps +test
+        working-directory: ./repo
