@@ -18,6 +18,7 @@ jobs:
 
     steps:
       - name: id
+        id: id
         run: |
           uid=$(id -u)
           echo ::set-env name=CONTAINER_HOME::$(if [ "$uid" = "0" ]; then echo "/root"; else echo "/home/github"; fi)
@@ -25,6 +26,13 @@ jobs:
           whoami
           git --version
           pwd
+      # Currently, sbt seems to either ignore (or doesn't see) $HOME inside the container,
+      #  and insists on using /home/<user> (i.e., /home/github).
+      # Set up symbolic links so /home/gitsub/.{sbt,cache} (inside the container) are links to
+      #  the equivalent directories in $HOME (i.e, /github/home)
+      - name: link-caches
+        id: link-caches
+        run: |
           echo "Link $CONTAINER_HOME caches to $HOME"
           echo mkdir -p $HOME/.cache $HOME/.ivy2 $HOME/.sbt
           mkdir -p $HOME/.cache $HOME/.ivy2 $HOME/.sbt
@@ -36,11 +44,29 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: repo
+      - name: cache-sbt
+        uses: actions/cache@v1
+        env:
+          cache-name: cache-sbt
+        with:
+          path: ~/.sbt
+          key: build-${{ env.cache-name }}-v1
+          restore-keys: |
+            build-${{ env.cache-name }}-
+      - name: cache-coursier
+        uses: actions/cache@v1
+        env:
+          cache-name: cache-coursier
+        with:
+          path: ~/.cache
+          key: build-${{ env.cache-name }}-v1
+          restore-keys: |
+            build-${{ env.cache-name }}-
       - name: list
         id: list
         run: |
-          echo ls -la . repo
-          ls -la . repo repo/.github/scripts
+          echo ls -la . repo ~/.sbt ~/.cache /home/github /home/github/.??*
+          ls -la . repo ~/.sbt ~/.cache /home/github /home/github/.??*
       - name: env
         id: env
         run: |
@@ -52,13 +78,23 @@ jobs:
           gawk -f repo/.github/scripts/ExtractBuildDependenciesFromPullRequest.gawk $GITHUB_EVENT_PATH > deps
           ls -l deps
           cat deps
+          gawk -f repo/.github/scripts/generateGitClones.gawk deps > clones.sh 3> shas.sh
+          cat shas.sh
+          bash shas.sh > shas
+      - name: cache-dependencies
+        id: cache-dependencies
+        uses: actions/cache@v1
+        env:
+          cache-name: cache-dependencies
+        with:
+          path: ~/.ivy2/local
+          key: build-${{ env.cache-name }}-v1-${{ hashFiles('shas') }}
       - name: clone-deps
         id: clone-deps
         run: |
-          gawk -f repo/.github/scripts/generateGitClones.gawk deps > clones
-          echo "clones:"
-          cat clones
-          bash clones
+          cat clones.sh
+          bash clones.sh
+        if: steps.cache-dependencies.outputs.cache-hit != 'true'
       - name: version-deps
         id: version-deps
         run: |
