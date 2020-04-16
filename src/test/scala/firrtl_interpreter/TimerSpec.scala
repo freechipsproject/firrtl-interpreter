@@ -16,10 +16,11 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 // scalastyle:off magic.number
-class TimerSpec extends FlatSpec with Matchers {
+class TimerSpec extends AnyFlatSpec with Matchers {
   behavior of "timer"
 
   it should "count times" in {

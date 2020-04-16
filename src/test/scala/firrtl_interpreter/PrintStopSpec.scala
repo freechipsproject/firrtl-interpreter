@@ -16,9 +16,10 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class PrintStopSpec extends FlatSpec with Matchers {
+class PrintStopSpec extends AnyFlatSpec with Matchers {
   behavior of "stop"
 
   it should "return not stop if condition is not met" in {

@@ -17,14 +17,15 @@ limitations under the License.
 package firrtl_interpreter
 
 import firrtl_interpreter.TestUtils._
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 // scalastyle:off magic.number
 
 /**
   * Created by chick on 4/27/16.
   */
-class ConcreteSpec extends FlatSpec with Matchers {
+class ConcreteSpec extends AnyFlatSpec with Matchers {
   val maxWidth = TestUtils.MaxWidth
 
   behavior of "random BigInt generation"

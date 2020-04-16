@@ -16,10 +16,11 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 //scalastyle:off magic.number
-class AndrOrrXorrSpec extends FreeSpec with Matchers {
+class AndrOrrXorrSpec extends AnyFreeSpec with Matchers {
   "Xorr reduction should work with vec converted to uint" in {
     val input =
       """
