@@ -16,12 +16,13 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /**
   * Created by chick on 5/4/16.
   */
-class DynamicMemorySearch extends FlatSpec with Matchers {
+class DynamicMemorySearch extends AnyFlatSpec with Matchers {
   behavior of "dynamic memory search"
 
   it should "run with correct results" ignore {

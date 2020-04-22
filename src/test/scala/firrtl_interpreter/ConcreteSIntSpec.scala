@@ -16,10 +16,11 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 // scalastyle:off magic.number
-class ConcreteSIntSpec extends FlatSpec with Matchers {
+class ConcreteSIntSpec extends AnyFlatSpec with Matchers {
   behavior of "constructor"
 
   it should "throw exception if not enough bits to hold" in {

@@ -17,12 +17,13 @@ limitations under the License.
 package firrtl_interpreter
 
 import firrtl.ir._
-import org.scalatest.{FlatSpec, Matchers}
 
 import scala.collection.mutable
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 // scalastyle:off magic.number
-class CircuitStateSpec extends FlatSpec with Matchers {
+class CircuitStateSpec extends AnyFlatSpec with Matchers {
   behavior of "CircuitState"
 
   it should "be creatable" in {
