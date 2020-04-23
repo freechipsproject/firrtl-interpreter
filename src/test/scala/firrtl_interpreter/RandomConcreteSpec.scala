@@ -16,11 +16,12 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{Matchers, FlatSpec}
 
 import scala.collection.mutable
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class RandomConcreteSpec extends FlatSpec with Matchers {
+class RandomConcreteSpec extends AnyFlatSpec with Matchers {
   behavior of "random sint generator"
 
   they should "work over all possible values of given width" in {

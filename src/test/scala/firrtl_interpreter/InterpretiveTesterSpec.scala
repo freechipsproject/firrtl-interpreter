@@ -16,9 +16,10 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class InterpretiveTesterSpec extends FlatSpec with Matchers {
+class InterpretiveTesterSpec extends AnyFlatSpec with Matchers {
   behavior of "cycle mechanism"
 
   it should "mark circuit as stale after poke" in {

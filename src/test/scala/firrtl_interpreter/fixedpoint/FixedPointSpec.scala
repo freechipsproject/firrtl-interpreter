@@ -17,9 +17,10 @@ limitations under the License.
 package firrtl_interpreter.fixedpoint
 
 import firrtl_interpreter._
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class FixedPointSpec extends FlatSpec with Matchers {
+class FixedPointSpec extends AnyFlatSpec with Matchers {
   behavior of "dumb fixed point multiply test"
 
   it should "expand instances as found" in {

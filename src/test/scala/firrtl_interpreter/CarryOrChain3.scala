@@ -16,9 +16,10 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{Matchers, FreeSpec}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
-class CarryOrChain3 extends FreeSpec with Matchers {
+class CarryOrChain3 extends AnyFreeSpec with Matchers {
   val input =
     """
       |circuit ORChain :

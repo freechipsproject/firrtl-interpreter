@@ -16,10 +16,11 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{Matchers, FreeSpec}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 //scalastyle:off magic.number
-class PoisonSpec extends FreeSpec with Matchers {
+class PoisonSpec extends AnyFreeSpec with Matchers {
   val TestWidth = 6
 
   "poison should propagate through evaluation" in {

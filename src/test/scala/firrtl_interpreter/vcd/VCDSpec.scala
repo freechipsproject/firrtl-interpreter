@@ -22,10 +22,11 @@ import firrtl.util.BackendCompilationUtilities
 import java.io.File
 
 import logger.{Logger, LogLevel}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 // scalastyle:off magic.number
-class VCDSpec extends FlatSpec with Matchers with BackendCompilationUtilities {
+class VCDSpec extends AnyFlatSpec with Matchers with BackendCompilationUtilities {
   private def getVcd = {
     VCD("test_circuit")
   }

@@ -17,10 +17,11 @@ limitations under the License.
 package firrtl_interpreter
 
 import firrtl.ir.{DefMemory, IntWidth, NoInfo, UIntType}
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 // scalastyle:off magic.number
-class MemorySpec extends FlatSpec with Matchers {
+class MemorySpec extends AnyFlatSpec with Matchers {
 
   behavior of "Memory instances"
 

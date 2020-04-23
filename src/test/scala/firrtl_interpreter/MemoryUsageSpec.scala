@@ -16,12 +16,13 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 /**
   * Created by chick on 4/30/16.
   */
-class MemoryUsageSpec extends FlatSpec with Matchers {
+class MemoryUsageSpec extends AnyFlatSpec with Matchers {
 
   behavior of "chirrtl mems"
 

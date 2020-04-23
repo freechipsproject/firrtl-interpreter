@@ -16,9 +16,10 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{Matchers, FreeSpec}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
-class RegisterCycleTest extends FreeSpec with Matchers {
+class RegisterCycleTest extends AnyFreeSpec with Matchers {
   "cycle behavtest-only firior should not crash on various register init methods" - {
     "method 1" in {
       val input =
