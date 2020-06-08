@@ -67,8 +67,11 @@ resolvers ++= Seq(
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
 val defaultVersions = Map("firrtl" -> "1.4-SNAPSHOT")
 
+// Ignore dependencies on Berkeley artifacts.
+// scala-steward:off
 libraryDependencies ++= (Seq("firrtl").map {
   dep: String => "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", defaultVersions(dep)) })
+// scala-steward:on
 
 // sbt 1.2.6 fails with `Symbol 'term org.junit' is missing from the classpath`
 // when compiling tests under 2.11.12
