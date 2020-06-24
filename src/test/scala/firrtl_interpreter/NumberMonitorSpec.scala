@@ -42,46 +42,6 @@ class NumberMonitorSpec extends FreeSpec with Matchers {
       println(s"bins = ${monitor.showBins}")
     }
   }
-  "even distribution inputs should create mean close to zero, variance 0" in {
-    val monitor = new NumberMonitor(carla, canBeNegative = true, 16, 8)
-
-    for(_ <- 0 until sampleSize) {
-      val value = rand.nextInt(1 << 16) + monitor.minPossible
-      monitor.update(value)
-    }
-
-    println(s"mean = ${monitor.mean}, σ = ${monitor.stddev} min = ${monitor.minValue} max = ${monitor.maxValue}")
-    println(s"bins = ${monitor.showBins}")
-
-    //    monitor.mean.abs should be (5.0)
-    //    monitor.variance should be (0.0)
-    //    monitor.minValue should be (42.0)
-    //    monitor.maxValue should be (42.0)
-
-    println(s"mean = ${monitor.mean}, σ = ${monitor.stddev} min = ${monitor.minValue} max = ${monitor.maxValue}")
-    println(s"bins = ${monitor.showBins}")
-  }
-
-  "gaussian distribution inputs should create mean close to zero, variance 0" in {
-    val monitor = new NumberMonitor(carla, canBeNegative = true, 16, 8)
-
-    for(_ <- 0 until sampleSize) {
-      val randomNum = (rand.nextGaussian() / 6.0) * (1 << 14)
-      val value = BigInt(randomNum.toLong)
-      monitor.update(value)
-    }
-
-    println(s"mean = ${monitor.mean}, σ = ${monitor.stddev} min = ${monitor.minValue} max = ${monitor.maxValue}")
-    println(s"bins = ${monitor.showBins}")
-
-    //    monitor.mean.abs should be (5.0)
-    //    monitor.variance should be (0.0)
-    //    monitor.minValue should be (42.0)
-    //    monitor.maxValue should be (42.0)
-
-    println(s"mean = ${monitor.mean}, σ = ${monitor.stddev} min = ${monitor.minValue} max = ${monitor.maxValue}")
-    println(s"bins = ${monitor.showBins}")
-  }
 
   "when possible values less than bins, just use bin per value" in {
     val monitor = new NumberMonitor(carla, canBeNegative = false, 2, 32)
@@ -166,9 +126,6 @@ class NumberMonitorSpec extends FreeSpec with Matchers {
 
     monitor.bins.head should be (2)
     monitor.bins.last should be (2)
-
-    // println(s"Bins ${monitor.bins.mkString(",")}")
-
   }
 
 }
