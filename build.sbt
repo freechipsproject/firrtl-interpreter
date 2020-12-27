@@ -79,7 +79,7 @@ libraryDependencies ++= (Seq("firrtl").map {
 libraryDependencies ++= Seq(
   "junit" % "junit" % "4.13" % "test",
   "org.scalatest" %% "scalatest" % "3.1.3" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.14.3" % "test",
+  "org.scalacheck" %% "scalacheck" % "1.15.2" % "test",
   "org.scala-lang.modules" % "scala-jline" % "2.12.1"
 )
 
