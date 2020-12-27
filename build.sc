@@ -94,7 +94,7 @@ class firrtlInterpreterCrossModule(crossVersionValue: String) extends CommonModu
   def mainClass = Some("firrtl_interpreter.FirrtlRepl")
 
   def ivyDeps = super.ivyDeps() ++ Agg(
-    ivy"com.github.scopt::scopt:3.7.1",
+    ivy"com.github.scopt::scopt:4.0.0",
     ivy"org.scala-lang.modules:scala-jline:2.12.1",
     ivy"org.json4s::json4s-native:3.6.10"
   )
