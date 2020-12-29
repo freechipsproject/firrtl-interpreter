@@ -13,7 +13,7 @@ trait CrossUnRootedSbtModule extends CrossSbtModule {
 }
 
 trait CommonModule extends CrossUnRootedSbtModule with PublishModule {
-  def publishVersion = "1.3.2"
+  def publishVersion = "1.3.3"
 
   def pomSettings = PomSettings(
     description = artifactName(),
@@ -69,7 +69,7 @@ object firrtlInterpreter extends Cross[FirrtlInterpreterModule](crossVersions: _
 }
 
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
-val defaultVersions = Map("firrtl" -> "1.3.2")
+val defaultVersions = Map("firrtl" -> "1.3.3")
 
 def getVersion(dep: String, org: String = "edu.berkeley.cs") = {
   val version = sys.env.getOrElse(dep + "Version", defaultVersions(dep))
