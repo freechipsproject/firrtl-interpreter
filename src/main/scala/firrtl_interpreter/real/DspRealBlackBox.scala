@@ -36,14 +36,14 @@ abstract class DspRealTwoArgumentToDouble extends BlackBoxImplementation {
     */
   def twoOp(double1: Double, double2: Double): Double
 
-  def outputDependencies(outputName: String): Seq[(String)] = {
+  def outputDependencies(outputName: String): immutable.Seq[(String)] = {
     outputName match {
-      case "out" => Seq("in1", "in2")
-      case _ => Seq.empty
+      case "out" => immutable.Seq("in1", "in2")
+      case _ => immutable.Seq.empty
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
+  def execute(inputValues: immutable.Seq[Concrete], tpe: Type, outputName: String): Concrete = {
     val arg1 :: arg2 :: _ = inputValues
     val doubleArg1 = bigIntBitsToDouble(arg1.value)
     val doubleArg2 = bigIntBitsToDouble(arg2.value)
@@ -64,14 +64,14 @@ abstract class DspRealOneArgumentToDouble extends BlackBoxImplementation {
     */
   def oneOp(double1: Double): Double
 
-  def outputDependencies(outputName: String): Seq[(String)] = {
+  def outputDependencies(outputName: String): immutable.Seq[(String)] = {
     outputName match {
-      case "out" => Seq("in")
-      case _ => Seq.empty
+      case "out" => immutable.Seq("in")
+      case _ => immutable.Seq.empty
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
+  def execute(inputValues: immutable.Seq[Concrete], tpe: Type, outputName: String): Concrete = {
     val arg1 :: _ = inputValues
     val doubleArg1 = bigIntBitsToDouble(arg1.value)
     val doubleResult = oneOp(doubleArg1)
@@ -90,10 +90,10 @@ abstract class DspRealTwoArgumentToBoolean extends BlackBoxImplementation {
     */
   def twoOp(double1: Double, double2: Double): Boolean
 
-  def outputDependencies(outputName: String): Seq[(String)] = {
+  def outputDependencies(outputName: String): immutable.Seq[(String)] = {
     outputName match {
-      case "out" => Seq("in1", "in2")
-      case _ => Seq.empty
+      case "out" => immutable.Seq("in1", "in2")
+      case _ => immutable.Seq.empty
     }
   }
   def cycle(): Unit = {}
@@ -155,14 +155,14 @@ class DspRealIntPart(val name: String) extends DspRealOneArgumentToDouble {
 }
 
 class DspRealToInt(val name: String) extends BlackBoxImplementation {
-  def outputDependencies(outputName: String): Seq[(String)] = {
+  def outputDependencies(outputName: String): immutable.Seq[(String)] = {
     outputName match {
-      case "out" => Seq("in")
-      case _ => Seq.empty
+      case "out" => immutable.Seq("in")
+      case _ => immutable.Seq.empty
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
+  def execute(inputValues: immutable.Seq[Concrete], tpe: Type, outputName: String): Concrete = {
     val arg1 :: _ = inputValues
     val result = arg1.value
     TypeInstanceFactory(tpe, result)
@@ -170,14 +170,14 @@ class DspRealToInt(val name: String) extends BlackBoxImplementation {
 }
 
 class DspRealFromInt(val name: String) extends BlackBoxImplementation {
-  def outputDependencies(outputName: String): Seq[(String)] = {
+  def outputDependencies(outputName: String): immutable.Seq[(String)] = {
     outputName match {
-      case "out" => Seq("in")
-      case _ => Seq.empty
+      case "out" => immutable.Seq("in")
+      case _ => immutable.Seq.empty
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
+  def execute(inputValues: immutable.Seq[Concrete], tpe: Type, outputName: String): Concrete = {
     val arg1 :: _ = inputValues
     val result = arg1.value
     TypeInstanceFactory(tpe, result)
