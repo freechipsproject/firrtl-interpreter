@@ -22,28 +22,9 @@ enablePlugins(GhpagesPlugin)
 
 git.remoteRepo := "git@github.com:freechipsproject/firrtl-interpreter.git"
 
-def scalacOptionsVersion(scalaVersion: String): Seq[String] = {
-  Seq() ++ {
-    // If we're building with Scala > 2.11, enable the compile option
-    //  switch to support our anonymous Bundle definitions:
-    //  https://github.com/scala/bug/issues/10047
-    CrossVersion.partialVersion(scalaVersion) match {
-      case Some((2, scalaMajor: Long)) if scalaMajor < 12 => Seq()
-      case _ => Seq()
-    }
-  }
-}
+def scalacOptionsVersion(scalaVersion: String): Seq[String] = Seq()
 
-def javacOptionsVersion(scalaVersion: String): Seq[String] = {
-  Seq() ++ {
-    CrossVersion.partialVersion(scalaVersion) match {
-      case Some((2, scalaMajor: Long)) if scalaMajor < 12 =>
-        Seq("-source", "1.7", "-target", "1.7")
-      case _ =>
-        Seq("-source", "1.8", "-target", "1.8")
-    }
-  }
-}
+def javacOptionsVersion(scalaVersion: String): Seq[String] = Seq("-source", "1.8", "-target", "1.8")
 
 name := "firrtl-interpreter"
 
@@ -51,7 +32,7 @@ organization := "edu.berkeley.cs"
 
 version := "1.5-SNAPSHOT"
 
-scalaVersion := "2.13.4"
+scalaVersion := "2.12.12"
 
 crossScalaVersions := Seq("2.12.12", "2.13.4")
 

@@ -20,8 +20,8 @@ import firrtl._
 import firrtl.ir._
 import firrtl.PrimOps._
 
-import scala.collection.{immutable, mutable}
 import scala.collection.mutable.ArrayBuffer
+import collection.mutable.HashSet
 
 /**
   * This is the evaluation engine for the FirrtlTerp
@@ -31,7 +31,7 @@ import scala.collection.mutable.ArrayBuffer
   */
 class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circuitState: firrtl_interpreter.CircuitState)
   extends SimpleLogger {
-  var toResolve = mutable.HashSet(dependencyGraph.keys.toSeq:_*)
+  var toResolve = HashSet(dependencyGraph.keys.toSeq:_*)
 
   var evaluateAll = false
 
@@ -44,7 +44,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
   val evaluationStack = new ExpressionExecutionStack(this)
 
   var defaultKeysToResolve: Array[String] = {
-    val keys = new mutable.HashSet[String]
+    val keys = new HashSet[String]
 
     keys ++= circuitState.memories.flatMap {
       case (_, memory) => memory.getAllFieldDependencies
@@ -391,7 +391,7 @@ class LoFirrtlExpressionEvaluator(val dependencyGraph: DependencyGraph, val circ
         case c: SIntLiteral => Concrete(c).forceWidth(c.tpe)
         case blackBoxOutput: BlackBoxOutput =>
           log(s"got a black box, $blackBoxOutput")
-          val concreteInputs: immutable.Seq[Concrete] =
+          val concreteInputs: Seq[Concrete] =
             blackBoxOutput.dependentInputs.map { input => getValue(input)}.toSeq
           blackBoxOutput.execute(concreteInputs)
       }

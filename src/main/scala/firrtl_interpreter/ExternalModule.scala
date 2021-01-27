@@ -18,8 +18,6 @@ package firrtl_interpreter
 
 import firrtl.ir.{Type, Expression, Width}
 
-import scala.collection._
-
 /**
   * During dependency graph processing one of these will be created for each output of
   * each instantiated black box in the circuit
@@ -30,7 +28,7 @@ import scala.collection._
   */
 case class BlackBoxOutput(name: String,
                           implementation: BlackBoxImplementation,
-                          dependentInputs: immutable.Seq[String],
+                          dependentInputs: Seq[String],
                           tpe: Type
                          ) extends Expression {
   def mapExpr(f: Expression => Expression): Expression = f(this)
@@ -39,7 +37,7 @@ case class BlackBoxOutput(name: String,
   def foreachExpr(f: Expression => Unit): Unit = f(this)
   def foreachType(f: Type => Unit): Unit = ()
   def foreachWidth(f: Width => Unit): Unit = ()
-  def execute(inputValues: immutable.Seq[Concrete]): Concrete = {
+  def execute(inputValues: Seq[Concrete]): Concrete = {
     implementation.execute(inputValues, tpe: Type, name)
   }
   def serialize: String = s"BlackBoxOutput($name,$tpe)"
@@ -64,7 +62,7 @@ abstract class BlackBoxImplementation {
     * @param outputName  The name of this output
     * @return            Computed current concrete value for the name output
     */
-  def execute(inputValues: immutable.Seq[Concrete], tpe: Type, outputName: String = ""): Concrete
+  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String = ""): Concrete
 
   /**
     * Called whenever the cycle command of the interpreter is called.
@@ -77,7 +75,7 @@ abstract class BlackBoxImplementation {
     * @param outputName the output whose dependencies are being described
     * @return
     */
-  def outputDependencies(outputName: String): immutable.Seq[String]
+  def outputDependencies(outputName: String): Seq[String]
 }
 
 /**
