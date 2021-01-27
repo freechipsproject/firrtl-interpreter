@@ -48,7 +48,7 @@ trait CommonModule extends ScalaModule with SbtModule with PublishModule {
     MavenRepository("https://oss.sonatype.org/content/repositories/releases")
   )
 
-  private def scalacCrossOptions =  Seq("-Xsource:2.11")
+  private def scalacCrossOptions =  Seq("-Xsource:2.13")
 
   private def javacCrossOptions = Seq("-source", "1.8", "-target", "1.8")
 
@@ -59,11 +59,13 @@ trait CommonModule extends ScalaModule with SbtModule with PublishModule {
 
   override def javacOptions = super.javacOptions() ++ javacCrossOptions
 
-  private val macroParadise = ivy"org.scalamacros:::paradise:2.1.1"
+  // private val macroParadise = ivy"org.scalamacros:::paradise:2.1.1"
 
-  override def compileIvyDeps = Agg(macroParadise)
+//  override def compileIvyDeps = Agg()
+//  override def compileIvyDeps = Agg(macroParadise)
 
-  override def scalacPluginIvyDeps = Agg(macroParadise)
+//  override def scalacPluginIvyDeps = Agg(macroParadise)
+//  override def scalacPluginIvyDeps = Agg()
 
   def pomSettings = PomSettings(
     description = artifactName(),
