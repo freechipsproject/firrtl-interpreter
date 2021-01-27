@@ -48,7 +48,7 @@ trait CommonModule extends ScalaModule with SbtModule with PublishModule {
     MavenRepository("https://oss.sonatype.org/content/repositories/releases")
   )
 
-  private def scalacCrossOptions =  Seq("-Xsource:2.13")
+  private def scalacCrossOptions =  Seq()
 
   private def javacCrossOptions = Seq("-source", "1.8", "-target", "1.8")
 
