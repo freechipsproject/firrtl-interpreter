@@ -19,6 +19,8 @@ package firrtl_interpreter.real
 import firrtl.ir.Type
 import firrtl_interpreter._
 
+import scala.collection.immutable
+
 
 object DspReal {
   val UnderlyingWidth = 64
@@ -95,7 +97,7 @@ abstract class DspRealTwoArgumentToBoolean extends BlackBoxImplementation {
     }
   }
   def cycle(): Unit = {}
-  def execute(inputValues: Seq[Concrete], tpe: Type, outputName: String): Concrete = {
+  def execute(inputValues: immutable.Seq[Concrete], tpe: Type, outputName: String): Concrete = {
     val arg1 :: arg2 :: _ = inputValues
     val doubleArg1 = bigIntBitsToDouble(arg1.value)
     val doubleArg2 = bigIntBitsToDouble(arg2.value)

@@ -50,7 +50,7 @@ class NumberMonitor(val name: String, val canBeNegative: Boolean, val bitSize: I
   }
   private val doBinning = if(numberOfBins > 2) updateBins _ else noBinning _
 
-  def noBinning(value: BigInt): Unit = Unit
+  def noBinning(value: BigInt): Unit = ()
   def updateBins(value: BigInt): Unit = {
     val adjustedValue = value - minPossible
     val fixedValue = if(adjustedValue < 0) {

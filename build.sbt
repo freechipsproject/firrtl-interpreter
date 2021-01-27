@@ -29,16 +29,13 @@ def scalacOptionsVersion(scalaVersion: String): Seq[String] = {
     //  https://github.com/scala/bug/issues/10047
     CrossVersion.partialVersion(scalaVersion) match {
       case Some((2, scalaMajor: Long)) if scalaMajor < 12 => Seq()
-      case _ => Seq("-Xsource:2.11")
+      case _ => Seq()
     }
   }
 }
 
 def javacOptionsVersion(scalaVersion: String): Seq[String] = {
   Seq() ++ {
-    // Scala 2.12 requires Java 8. We continue to generate
-    //  Java 7 compatible code for Scala 2.11
-    //  for compatibility with old clients.
     CrossVersion.partialVersion(scalaVersion) match {
       case Some((2, scalaMajor: Long)) if scalaMajor < 12 =>
         Seq("-source", "1.7", "-target", "1.7")
@@ -54,9 +51,9 @@ organization := "edu.berkeley.cs"
 
 version := "1.5-SNAPSHOT"
 
-scalaVersion := "2.12.10"
+scalaVersion := "2.13.4"
 
-crossScalaVersions := Seq("2.12.10", "2.11.12")
+crossScalaVersions := Seq("2.12.12", "2.13.4")
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("snapshots"),
@@ -69,13 +66,11 @@ val defaultVersions = Map("firrtl" -> "1.5-SNAPSHOT")
 
 // Ignore dependencies on Berkeley artifacts.
 // scala-steward:off
+// scala-steward:off
 libraryDependencies ++= (Seq("firrtl").map {
   dep: String => "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", defaultVersions(dep)) })
 // scala-steward:on
 
-// sbt 1.2.6 fails with `Symbol 'term org.junit' is missing from the classpath`
-// when compiling tests under 2.11.12
-// An explicit dependency on junit seems to alleviate this.
 libraryDependencies ++= Seq(
   "junit" % "junit" % "4.13" % "test",
   "org.scalatest" %% "scalatest" % "3.1.3" % "test",
