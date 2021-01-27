@@ -30,7 +30,7 @@ import scala.collection._
   */
 case class BlackBoxOutput(name: String,
                           implementation: BlackBoxImplementation,
-                          dependentInputs: Seq[String],
+                          dependentInputs: immutable.Seq[String],
                           tpe: Type
                          ) extends Expression {
   def mapExpr(f: Expression => Expression): Expression = f(this)
@@ -77,7 +77,7 @@ abstract class BlackBoxImplementation {
     * @param outputName the output whose dependencies are being described
     * @return
     */
-  def outputDependencies(outputName: String): Seq[String]
+  def outputDependencies(outputName: String): immutable.Seq[String]
 }
 
 /**
