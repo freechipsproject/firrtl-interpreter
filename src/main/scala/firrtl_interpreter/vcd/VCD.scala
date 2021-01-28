@@ -84,7 +84,7 @@ object VCD extends LazyLogging {
     def hasNext: Boolean = _hasNext
     var nextWord = ""
 
-    def next: String = {
+    def next(): String = {
       val lastWord = nextWord
       loadNextWord()
       lastWord

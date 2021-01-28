@@ -8,7 +8,7 @@ import coursier.maven.MavenRepository
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION`
 import mill.contrib.buildinfo.BuildInfo
 
-object firrtlInterpreter extends mill.Cross[firrtlInterpreterCrossModule]("2.11.12", "2.12.11")
+object firrtlInterpreter extends mill.Cross[firrtlInterpreterCrossModule]("2.13.4", "2.12.12")
 
 // The following stanza is searched for and used when preparing releases.
 // Please retain it.
@@ -37,7 +37,6 @@ trait CommonModule extends ScalaModule with SbtModule with PublishModule {
 
   def publishVersion = "1.5-SNAPSHOT"
 
-  // 2.12.11 -> Array("2", "12", "10") -> "12" -> 12
   protected def majorVersion = crossVersion.split('.')(1).toInt
 
   def crossVersion: String
@@ -49,15 +48,9 @@ trait CommonModule extends ScalaModule with SbtModule with PublishModule {
     MavenRepository("https://oss.sonatype.org/content/repositories/releases")
   )
 
-  private def scalacCrossOptions = majorVersion match {
-    case i if i < 12 => Seq()
-    case _           => Seq("-Xsource:2.11")
-  }
+  private def scalacCrossOptions =  Seq()
 
-  private def javacCrossOptions = majorVersion match {
-    case i if i < 12 => Seq("-source", "1.7", "-target", "1.7")
-    case _           => Seq("-source", "1.8", "-target", "1.8")
-  }
+  private def javacCrossOptions = Seq("-source", "1.8", "-target", "1.8")
 
   override def scalacOptions = super.scalacOptions() ++ Agg(
     "-deprecation",
@@ -65,12 +58,6 @@ trait CommonModule extends ScalaModule with SbtModule with PublishModule {
   ) ++ scalacCrossOptions
 
   override def javacOptions = super.javacOptions() ++ javacCrossOptions
-
-  private val macroParadise = ivy"org.scalamacros:::paradise:2.1.1"
-
-  override def compileIvyDeps = Agg(macroParadise)
-
-  override def scalacPluginIvyDeps = Agg(macroParadise)
 
   def pomSettings = PomSettings(
     description = artifactName(),
@@ -100,10 +87,7 @@ class firrtlInterpreterCrossModule(crossVersionValue: String) extends CommonModu
   )
 
   object test extends Tests {
-    private def ivyCrossDeps = majorVersion match {
-      case i if i < 12 => Agg(ivy"junit:junit:4.13")
-      case _           => Agg()
-    }
+    private def ivyCrossDeps = Agg()
 
     def ivyDeps = Agg(
       ivy"org.scalatest::scalatest:3.1.3",
