@@ -19,7 +19,6 @@ package firrtl_interpreter.real
 import firrtl.ir.Type
 import firrtl_interpreter._
 
-
 object DspReal {
   val UnderlyingWidth = 64
 }
