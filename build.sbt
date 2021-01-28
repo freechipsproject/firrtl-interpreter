@@ -47,7 +47,6 @@ val defaultVersions = Map("firrtl" -> "1.5-SNAPSHOT")
 
 // Ignore dependencies on Berkeley artifacts.
 // scala-steward:off
-// scala-steward:off
 libraryDependencies ++= (Seq("firrtl").map {
   dep: String => "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", defaultVersions(dep)) })
 // scala-steward:on

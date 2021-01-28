@@ -59,14 +59,6 @@ trait CommonModule extends ScalaModule with SbtModule with PublishModule {
 
   override def javacOptions = super.javacOptions() ++ javacCrossOptions
 
-  // private val macroParadise = ivy"org.scalamacros:::paradise:2.1.1"
-
-//  override def compileIvyDeps = Agg()
-//  override def compileIvyDeps = Agg(macroParadise)
-
-//  override def scalacPluginIvyDeps = Agg(macroParadise)
-//  override def scalacPluginIvyDeps = Agg()
-
   def pomSettings = PomSettings(
     description = artifactName(),
     organization = "edu.berkeley.cs",
