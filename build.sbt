@@ -52,7 +52,7 @@ libraryDependencies ++= (Seq("firrtl").map {
 // scala-steward:on
 
 libraryDependencies ++= Seq(
-  "junit" % "junit" % "4.13" % "test",
+  "junit" % "junit" % "4.13.2" % "test",
   "org.scalatest" %% "scalatest" % "3.1.3" % "test",
   "org.scalacheck" %% "scalacheck" % "1.14.3" % "test",
   "org.scala-lang.modules" % "scala-jline" % "2.12.1"
