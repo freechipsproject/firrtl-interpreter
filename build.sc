@@ -83,15 +83,15 @@ class firrtlInterpreterCrossModule(crossVersionValue: String) extends CommonModu
   def ivyDeps = super.ivyDeps() ++ Agg(
     ivy"com.github.scopt::scopt:3.7.1",
     ivy"org.scala-lang.modules:scala-jline:2.12.1",
-    ivy"org.json4s::json4s-native:3.6.10"
+    ivy"org.json4s::json4s-native:3.6.11"
   )
 
   object test extends Tests {
     private def ivyCrossDeps = Agg()
 
     def ivyDeps = Agg(
-      ivy"org.scalatest::scalatest:3.1.3",
-      ivy"org.scalacheck::scalacheck:1.15.3"
+      ivy"org.scalatest::scalatest:3.1.4",
+      ivy"org.scalacheck::scalacheck:1.14.3"
     ) ++ ivyCrossDeps
 
     def testFrameworks = Seq("org.scalatest.tools.Framework")
