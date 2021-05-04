@@ -54,13 +54,8 @@ libraryDependencies ++= (Seq("firrtl").map {
 libraryDependencies ++= Seq(
   "junit" % "junit" % "4.13" % "test",
   "org.scalatest" %% "scalatest" % "3.1.4" % "test",
-  "org.scalacheck" %% "scalacheck" % "1.15.4" % "test",
   "org.scala-lang.modules" % "scala-jline" % "2.12.1"
 )
-
-//javaOptions in run ++= Seq(
-    //"-Xms2G", "-Xmx4G", "-XX:MaxPermSize=1024M", "-XX:+UseConcMarkSweepGC")
-//)
 
 publishMavenStyle := true
 

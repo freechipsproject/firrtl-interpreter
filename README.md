@@ -31,8 +31,7 @@ libraryDependencies ++= Seq(
   "edu.berkeley.cs" %% "chisel3" % chiselVersion,
   "edu.berkeley.cs" %% "chisel-iotesters" % "1.0",
   "edu.berkeley.cs" %% "firrtl-interpreter" % "0.1-SNAPSHOT",
-  "org.scalatest" % "scalatest_2.11" % "2.2.4",
-  "org.scalacheck" %% "scalacheck" % "1.12.4")
+  "org.scalatest" % "scalatest_2.11" % "2.2.4")
 ```
 for other usage consult **sbt** documentation
 
