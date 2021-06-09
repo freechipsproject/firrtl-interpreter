@@ -90,7 +90,7 @@ class firrtlInterpreterCrossModule(crossVersionValue: String) extends CommonModu
     private def ivyCrossDeps = Agg()
 
     def ivyDeps = Agg(
-      ivy"org.scalatest::scalatest:3.1.4",
+      ivy"org.scalatest::scalatest:3.2.9",
       ivy"org.scalacheck::scalacheck:1.15.4"
     ) ++ ivyCrossDeps
 
