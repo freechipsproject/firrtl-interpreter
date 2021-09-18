@@ -16,10 +16,11 @@ limitations under the License.
 
 package firrtl_interpreter
 
-import org.scalatest.{FreeSpec, Matchers}
+import org.scalatest.freespec.AnyFreeSpec
+import org.scalatest.matchers.should.Matchers
 
 //scalastyle:off magic.number
-class NumberMonitorSpec extends FreeSpec with Matchers {
+class NumberMonitorSpec extends AnyFreeSpec with Matchers {
   private val rand = scala.util.Random
   private val sampleSize = 10000000
   private val carla = "Carla"
