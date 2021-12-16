@@ -31,6 +31,7 @@ import java.io.{File, PrintWriter}
   * @param input              a firrtl program contained in a string
   * @param optionsManager     collection of options for the interpreter
   */
+@deprecated("firrtl-interpreter is end-of-life. Use treadle instead.", "firrtl-interpreter 1.5.0")
 class InterpretiveTester(input: String, optionsManager: HasInterpreterSuite = new InterpreterOptionsManager) {
   var expectationsMet = 0
 

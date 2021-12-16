@@ -18,6 +18,7 @@ package firrtl_interpreter
 
 import firrtl.{ExecutionOptionsManager, HasFirrtlOptions}
 
+@deprecated("firrtl-interpreter is end-of-life. Use treadle instead.", "firrtl-interpreter 1.5.0")
 case class InterpreterOptions(
     writeVCD:          Boolean              = false,
     vcdShowUnderscored:Boolean              = false,
@@ -57,6 +58,7 @@ case class InterpreterOptions(
   }
 }
 
+@deprecated("firrtl-interpreter is end-of-life. Use treadle instead.", "firrtl-interpreter 1.5.0")
 trait HasInterpreterOptions {
   self: ExecutionOptionsManager =>
 
@@ -188,8 +190,10 @@ object Driver {
   }
 }
 
+@deprecated("firrtl-interpreter is end-of-life. Use treadle instead.", "firrtl-interpreter 1.5.0")
 class InterpreterOptionsManager extends ExecutionOptionsManager("interpreter") with HasInterpreterSuite
 
+@deprecated("firrtl-interpreter is end-of-life. Use treadle instead.", "firrtl-interpreter 1.5.0")
 trait HasInterpreterSuite extends ExecutionOptionsManager with HasFirrtlOptions with HasInterpreterOptions {
   self : ExecutionOptionsManager =>
 }
