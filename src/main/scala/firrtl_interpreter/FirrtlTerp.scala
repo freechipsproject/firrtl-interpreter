@@ -36,6 +36,7 @@ import firrtl.ir._
   *
   * @param ast the circuit to be simulated
   */
+@deprecated("firrtl-interpreter is end-of-life. Use treadle instead.", "firrtl-interpreter 1.5.0")
 class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) extends SimpleLogger {
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
 
@@ -306,6 +307,7 @@ class FirrtlTerp(val ast: Circuit, val optionsManager: HasInterpreterSuite) exte
   }
 }
 
+@deprecated("firrtl-interpreter is end-of-life. Use treadle instead.", "firrtl-interpreter 1.5.0")
 object FirrtlTerp {
   val blackBoxFactory = new DspRealFactory
 

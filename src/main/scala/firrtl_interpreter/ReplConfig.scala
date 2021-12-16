@@ -18,6 +18,7 @@ package firrtl_interpreter
 
 import firrtl.ExecutionOptionsManager
 
+@deprecated("firrtl-interpreter is end-of-life. Use treadle instead.", "firrtl-interpreter 1.5.0")
 case class ReplConfig(
     firrtlSourceName:  String  = "",
     scriptName:        String  = "",
@@ -27,6 +28,7 @@ case class ReplConfig(
     runScriptAtStart:  Boolean = false)
   extends firrtl.ComposableOptions
 
+@deprecated("firrtl-interpreter is end-of-life. Use treadle instead.", "firrtl-interpreter 1.5.0")
 trait HasReplConfig {
   self: ExecutionOptionsManager =>
 

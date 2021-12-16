@@ -39,6 +39,7 @@ abstract class Command(val name: String) {
   }
 }
 
+@deprecated("firrtl-interpreter is end-of-life. Use treadle instead.", "firrtl-interpreter 1.5.0")
 class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfig) {
   val replConfig: ReplConfig = optionsManager.replConfig
   val interpreterOptions: InterpreterOptions = optionsManager.interpreterOptions
@@ -1190,6 +1191,7 @@ class FirrtlRepl(val optionsManager: InterpreterOptionsManager with HasReplConfi
   }
 }
 
+@deprecated("firrtl-interpreter is end-of-life. Use treadle instead.", "firrtl-interpreter 1.5.0")
 object FirrtlRepl {
   def execute(optionsManager: InterpreterOptionsManager with HasReplConfig): Unit = {
     val repl = new FirrtlRepl(optionsManager)
