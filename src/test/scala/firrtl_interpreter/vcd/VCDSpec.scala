@@ -26,7 +26,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 // scalastyle:off magic.number
-class VCDSpec extends AnyFlatSpec with Matchers with BackendCompilationUtilities {
+class VCDSpec extends AnyFlatSpec with Matchers {
   private def getVcd = {
     VCD("test_circuit")
   }
@@ -132,7 +132,7 @@ class VCDSpec extends AnyFlatSpec with Matchers with BackendCompilationUtilities
   it should "be able to read a file" in {
     val tempFile = File.createTempFile("GCD", ".vcd")
     tempFile.deleteOnExit()
-    copyResourceToFile("/GCD.vcd", tempFile)
+    BackendCompilationUtilities.copyResourceToFile("/GCD.vcd", tempFile)
     val vcdFile = VCD.read(tempFile.getCanonicalPath)
 
     vcdFile.date should be ("2016-10-13T16:31+0000")
