@@ -14,7 +14,7 @@ object firrtlInterpreter extends mill.Cross[firrtlInterpreterCrossModule]("2.13.
 // Please retain it.
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
 val defaultVersions = Map(
-  "firrtl" -> "1.5.0"
+  "firrtl" -> "1.5.1"
 )
 
 def getVersion(dep: String, org: String = "edu.berkeley.cs") = {
@@ -35,7 +35,7 @@ trait CommonModule extends ScalaModule with SbtModule with PublishModule {
 
   def ivyDeps = super.ivyDeps() ++ firrtlIvyDeps
 
-  def publishVersion = "1.5.0"
+  def publishVersion = "1.5.1"
 
   protected def majorVersion = crossVersion.split('.')(1).toInt
 
