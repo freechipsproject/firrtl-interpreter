@@ -30,7 +30,7 @@ name := "firrtl-interpreter"
 
 organization := "edu.berkeley.cs"
 
-version := "1.5.4"
+version := "1.5.5"
 
 scalaVersion := "2.12.13"
 
@@ -43,7 +43,7 @@ resolvers ++= Seq(
 )
 
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
-val defaultVersions = Map("firrtl" -> "1.5.4")
+val defaultVersions = Map("firrtl" -> "1.5.5")
 
 // Ignore dependencies on Berkeley artifacts.
 // scala-steward:off
